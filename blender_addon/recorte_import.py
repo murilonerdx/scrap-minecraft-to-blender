@@ -60,6 +60,8 @@ class RECORTE_OT_import_latest(bpy.types.Operator):
                     if node.type == "TEX_IMAGE":
                         node.interpolation = "Closest"
 
+        _activate_animations(new_objs)
+
         # Match the in-game sky as the world background.
         try:
             import json as _json
@@ -103,6 +105,34 @@ def _apply_pixel_art(objs):
                 for node in mat.node_tree.nodes:
                     if node.type == "TEX_IMAGE":
                         node.interpolation = "Closest"
+
+
+def _activate_animations(objs):
+    """glTF stashes animations in the NLA; pull them onto the active Action so the tracks are
+    editable in the Dope Sheet / Graph Editor, and fit the scene frame range to them."""
+    end = 1
+    for obj in objs:
+        ad = getattr(obj, "animation_data", None)
+        if not ad:
+            continue
+        act = ad.action
+        if act is None and ad.nla_tracks:
+            for tr in list(ad.nla_tracks):
+                for st in tr.strips:
+                    if st.action and act is None:
+                        act = st.action
+                ad.nla_tracks.remove(tr)
+            if act:
+                ad.action = act
+        if act:
+            try:
+                end = max(end, int(act.frame_range[1]))
+            except Exception:  # noqa: BLE001
+                pass
+    scene = bpy.context.scene
+    if scene and end > 1:
+        scene.frame_start = 0
+        scene.frame_end = end
 
 
 class RECORTE_OT_live(bpy.types.Operator):
@@ -150,6 +180,7 @@ class RECORTE_OT_live(bpy.types.Operator):
             return
         self._objs = [o for o in bpy.data.objects if o not in before]
         _apply_pixel_art(self._objs)
+        _activate_animations(self._objs)
 
     def execute(self, context):
         context.scene.recorte_live = True
