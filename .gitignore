@@ -28,3 +28,7 @@ forge*changelog.txt
 build_log.txt
 runclient_log*.txt
 mdk.zip
+
+# python
+__pycache__
+*.pyc
