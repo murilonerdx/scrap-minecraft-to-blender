@@ -99,9 +99,10 @@ cinematics**. ✅ marks what already exists. (Versão em português abaixo / Por
 - ✅ **Arbitrary region** — `/recorte export region <from> <to>` exports the exact box between two
   corners (a whole build), not just a radius around you. Next: NBT structures / `.litematic` import.
 - **Signs (text), paintings, item frames, maps** as textured meshes/planes.
-- ✅ **Animated textures** (water, lava, fire, portal) — the model uses the correct first frame (instead
-  of the whole stacked source), and the full **frame sequence** is written next to it (`*_f000.png` …)
-  with an `animated_textures.json` manifest. Next: auto-wire an Image Sequence node in the add-on.
+- ✅ **Animated textures** (water, lava, fire, portal) — the model uses the correct first frame, the full
+  **frame sequence** is written (`*_f000.png` … + `animated_textures.json`), and the **add-on now builds a
+  looping Image Sequence** per material (frames served over `/anim_textures` + `/anim_frame`), so water/
+  lava actually flow in Blender as the scene plays.
 - ✅ **Resource-pack PBR** (LabPBR normal + specular→metallic-roughness); next: connected textures.
 - **Real transparency** (glass, water) in BLEND mode, not just MASK.
 

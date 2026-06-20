@@ -68,9 +68,9 @@ the Timeline** ready to edit.
 - 🧩 **Render passes** — the add-on assigns object IDs and enables Z/normal/mist passes for compositing.
 - 🪨 **Resource-pack PBR (LabPBR)** — `_n` normal maps + `_s` specular → glTF metallic-roughness.
 - 🎚️ **Timeline markers** — block breaks/placements and sounds become Blender markers (+ `events.csv`).
-- 🌊 **Animated textures** — water/lava/fire/portal use the correct frame (not the stacked source) and
-  the full **frame sequence** is exported (`*_f000.png` … + `animated_textures.json`) to build an
-  image-sequence loop in Blender.
+- 🌊 **Animated textures** — water/lava/fire/portal use the correct frame, the full **frame sequence** is
+  exported, and the add-on **auto-builds a looping Image Sequence** per material, so they actually flow
+  in Blender as the scene plays.
 - 💧 **Fluid surfaces** — water and lava (skipped before, since they have no block model) now export
   their **top surface and exposed sides** (waterfalls, pool edges) at the real height, biome-tinted/
   emissive, as a separate `Fluids` object.

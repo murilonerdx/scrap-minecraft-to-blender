@@ -30,12 +30,16 @@ public final class HttpBridge {
     private static volatile String env = "{}";
     private static volatile String events = "{\"fps\":30,\"events\":[]}";   // timeline markers of the latest recording
     private static volatile String sun = "{}";                             // day/night timelapse track
+    private static volatile String animTextures = "{\"textures\":[]}";     // animated-texture manifest
+    private static volatile java.util.Map<String, java.util.List<byte[]>> animFrames = java.util.Collections.emptyMap();
     private static HttpServer server;
 
     public static void setLastGlb(Path glb) {
         lastGlb = glb;
         events = "{\"fps\":30,\"events\":[]}";   // clear stale markers; a recording sets them after
         sun = "{}";                              // clear stale sun track too
+        animTextures = "{\"textures\":[]}";
+        animFrames = java.util.Collections.emptyMap();
         generation++;
     }
 
@@ -54,6 +58,12 @@ public final class HttpBridge {
         sun = json;
     }
 
+    /** Animated-texture frames (water/lava/fire…) so the add-on can build an Image Sequence per material. */
+    public static void setAnimTextures(String manifestJson, java.util.Map<String, java.util.List<byte[]>> frames) {
+        animTextures = manifestJson;
+        animFrames = frames != null ? frames : java.util.Collections.emptyMap();
+    }
+
     public static void start() {
         if (server != null) return;
         try {
@@ -67,6 +77,31 @@ public final class HttpBridge {
                     events.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
             server.createContext("/sun", exchange -> respond(exchange, 200, "application/json",
                     sun.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+            server.createContext("/anim_textures", exchange -> respond(exchange, 200, "application/json",
+                    animTextures.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+            server.createContext("/anim_frame", exchange -> {
+                String q = exchange.getRequestURI().getRawQuery();
+                String mat = null;
+                int idx = -1;
+                if (q != null) {
+                    for (String part : q.split("&")) {
+                        int eq = part.indexOf('=');
+                        if (eq <= 0) continue;
+                        String k = part.substring(0, eq), v = part.substring(eq + 1);
+                        if (k.equals("m")) {
+                            mat = java.net.URLDecoder.decode(v, java.nio.charset.StandardCharsets.UTF_8);
+                        } else if (k.equals("i")) {
+                            try { idx = Integer.parseInt(v); } catch (NumberFormatException ignored) { }
+                        }
+                    }
+                }
+                java.util.List<byte[]> frames = mat == null ? null : animFrames.get(mat);
+                if (frames == null || idx < 0 || idx >= frames.size()) {
+                    respond(exchange, 404, "text/plain", "no frame".getBytes());
+                    return;
+                }
+                respond(exchange, 200, "image/png", frames.get(idx));
+            });
             server.createContext("/latest", exchange -> {
                 Path glb = lastGlb;
                 if (glb == null || !Files.exists(glb)) {

@@ -64,9 +64,9 @@ na Timeline** prontas pra editar.
 - 🧩 **Render passes** — o addon dá IDs de objeto e liga os passes Z/normal/mist pra composição.
 - 🪨 **PBR de resource pack (LabPBR)** — normal map `_n` + specular `_s` → metallic-roughness do glTF.
 - 🎚️ **Markers na timeline** — quebra/colocação de blocos e sons viram markers no Blender (+ `events.csv`).
-- 🌊 **Texturas animadas** — água/lava/fogo/portal usam o frame correto (não a fonte empilhada) e a
-  **sequência de frames** inteira é exportada (`*_f000.png` … + `animated_textures.json`) pra montar um
-  loop de image-sequence no Blender.
+- 🌊 **Texturas animadas** — água/lava/fogo/portal usam o frame correto, a **sequência de frames** inteira
+  é exportada, e o addon **monta sozinho um Image Sequence em loop** por material, então elas **correm de
+  verdade** no Blender enquanto a cena toca.
 - 💧 **Superfícies de fluido** — água e lava (antes puladas, por não terem modelo de bloco) agora
   exportam a **superfície de cima e as laterais expostas** (cachoeiras, bordas de poça) na altura real,
   com tint de bioma/emissão, num objeto `Fluids`.

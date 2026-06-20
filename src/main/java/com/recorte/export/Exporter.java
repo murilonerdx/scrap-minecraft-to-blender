@@ -657,6 +657,7 @@ public final class Exporter {
     private static void writeAll(Ir.Model ir, Path dir, String base) throws IOException {
         Files.createDirectories(dir);
         StringBuilder animTex = new StringBuilder();
+        java.util.Map<String, java.util.List<byte[]>> animMap = new java.util.HashMap<>();
         for (Ir.Material m : ir.materials) {
             if (m.png != null && m.textureFile != null) {
                 Files.write(dir.resolve(m.textureFile), m.png);
@@ -679,11 +680,13 @@ public final class Exporter {
                 animTex.append(String.format(java.util.Locale.ROOT,
                         "{\"material\":\"%s\",\"base\":\"%s\",\"frames\":%d}",
                         esc(m.name), esc(stem), m.frameSequence.size()));
+                animMap.put(m.name, m.frameSequence);
             }
         }
         if (animTex.length() > 0) {
-            Files.writeString(dir.resolve("animated_textures.json"),
-                    "{\"fps\":20,\"textures\":[" + animTex + "]}");
+            String manifest = "{\"fps\":20,\"textures\":[" + animTex + "]}";
+            Files.writeString(dir.resolve("animated_textures.json"), manifest);
+            HttpBridge.setAnimTextures(manifest, animMap);   // serve frames so the add-on can animate them
         }
         Path glb = dir.resolve(base + ".glb");
         GltfWriter.write(ir, glb);

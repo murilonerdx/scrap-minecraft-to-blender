@@ -11,6 +11,7 @@ bl_info = {
 import os
 import tempfile
 import urllib.request
+import urllib.parse
 
 import bpy
 
@@ -82,12 +83,15 @@ class RECORTE_OT_import_latest(bpy.types.Operator):
             pass
 
         n_sun = _apply_sun(port, new_objs)   # day/night timelapse (after the static world is set)
+        n_anim = _apply_animated_textures(port)
 
         msg = "Imported latest Recorte export (%d objects)" % len(new_objs)
         if n_events:
             msg += " — %d timeline marker(s)" % n_events
         if n_sun:
             msg += " — timelapse sun/sky animated"
+        if n_anim:
+            msg += " — %d animated texture(s)" % n_anim
         self.report({"INFO"}, msg)
         return {"FINISHED"}
 
@@ -255,6 +259,75 @@ def _apply_sun(port, objs):
     return keys
 
 
+def _apply_animated_textures(port):
+    """Build a looping Image Sequence for each animated-texture material (water/lava/fire/portal),
+    downloading the frames from the running game and wiring them into the imported material so they
+    animate as the scene plays. Returns the number of materials animated."""
+    try:
+        import json as _json
+        data = _json.loads(_fetch(port, "anim_textures").decode("utf-8"))
+    except Exception:  # noqa: BLE001
+        return 0
+    texs = data.get("textures") or []
+    if not texs:
+        return 0
+    fps = int(data.get("fps") or 20)
+    animated = 0
+    for t in texs:
+        mat_name = t.get("material")
+        frames = int(t.get("frames") or 0)
+        if not mat_name or frames < 2:
+            continue
+        folder = os.path.join(tempfile.gettempdir(), "recorte_anim", str(mat_name))
+        try:
+            os.makedirs(folder, exist_ok=True)
+        except Exception:  # noqa: BLE001
+            continue
+        first = None
+        for i in range(frames):
+            try:
+                raw = _fetch(port, "anim_frame?m=%s&i=%d" % (urllib.parse.quote(str(mat_name)), i))
+            except Exception:  # noqa: BLE001
+                first = None
+                break
+            fp = os.path.join(folder, "frame_%04d.png" % (i + 1))
+            with open(fp, "wb") as f:
+                f.write(raw)
+            if first is None:
+                first = fp
+        if first is None:
+            continue
+        try:
+            img = bpy.data.images.load(first, check_existing=False)
+            img.source = "SEQUENCE"
+        except Exception:  # noqa: BLE001
+            continue
+        for mat in bpy.data.materials:
+            if not (mat.name == mat_name or mat.name.startswith(str(mat_name) + ".")):
+                continue
+            if not mat.use_nodes:
+                continue
+            for node in mat.node_tree.nodes:
+                if node.type == "TEX_IMAGE":
+                    node.image = img
+                    node.interpolation = "Closest"
+                    try:
+                        node.image_user.frame_duration = frames
+                        node.image_user.use_cyclic = True
+                        node.image_user.use_auto_refresh = True
+                        node.image_user.frame_start = 1
+                    except Exception:  # noqa: BLE001
+                        pass
+                    animated += 1
+                    break
+    if animated:
+        try:
+            bpy.context.scene.render.fps = fps
+        except Exception:  # noqa: BLE001
+            pass
+    return animated
+
+
 class RECORTE_OT_activate_anim(bpy.types.Operator):
     """Pull glTF animations out of the NLA onto the active Action for the selected (or all) objects,
     so the keyframes show up in the Timeline / Dope Sheet ready to edit. Use this after a manual
@@ -323,6 +396,7 @@ class RECORTE_OT_live(bpy.types.Operator):
         _activate_animations(self._objs)
         _apply_events(port)
         _apply_sun(port, self._objs)
+        _apply_animated_textures(port)
 
     def execute(self, context):
         context.scene.recorte_live = True
