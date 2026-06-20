@@ -8,8 +8,10 @@
 ![Java](https://img.shields.io/badge/Java-17-red)
 
 > **Recorte** — exporte (quase) qualquer coisa do Minecraft direto pro **Blender**: seu personagem,
-> mobs, itens, blocos, mods inteiros e até **cenas do mundo** — com **esqueleto (ossos)**, texturas,
-> emissão e tints, em **glTF (`.glb`)** e **OBJ**.
+> mobs, itens, blocos, mods inteiros, **cenas do mundo** e **cinematics** completos — com **esqueleto
+> (ossos)**, **animações gravadas suaves** (keyframes editáveis), **iluminação bakeada**, **PBR** de
+> resource pack, **múltiplas câmeras**, **timelapse dia/noite** e **markers** de quebra/som na timeline,
+> em **glTF (`.glb`)** e **OBJ**.
 
 Mod **client-side** para **Minecraft 1.20.1 / Forge**. Você aperta uma tecla (ou usa um comando) dentro
 do jogo e os arquivos aparecem prontos pra importar no Blender.
@@ -27,20 +29,42 @@ do jogo e os arquivos aparecem prontos pra importar no Blender.
 | `/recorte export entity <id>` | um **mob** (ex.: `minecraft:zombie`) | ✅ vanilla¹ |
 | `/recorte export item <id>` | modelo 3D de um **item** (espada, ovo…) | – |
 | `/recorte export block <id>` | modelo de um **bloco** | – |
-| `/recorte export mod <modid>` | **todos** os itens + blocos de um mod (lote) | – |
+| `/recorte export mod <modid>` | **todos** os itens + blocos **+ entidades** de um mod (lote) | ✅ |
+| `/recorte export animlib` | uma **biblioteca de animações** do player (idle/walk/run/sneak) num rig | ✅ |
 | `/recorte export scene [raio]` | 🎬 **cenário** ao redor (diorama do seu build/terreno) | – |
 | `/recorte export snapshot [raio]` | 🎬 **o momento**: cena + todos os mobs por perto (mobs **rigados**) | ✅ |
 
 ¹ Mobs vanilla (`HumanoidModel`/`HierarchicalModel`) saem **com ossos**. Mobs de **GeckoLib** caem
 para uma captura estática (mas saem!).
 
+### 🎥 Gravar animação ao vivo & cinematics
+
+| Comando / tecla | O que faz |
+|---|---|
+| `R` (tecla) ou `/recorte record start` … `stop` | grava **um mob/player**: membros **e** o caminho no mundo → animação glTF com keyframes |
+| `/recorte record scene start [raio]` … `stop` | 🎬 **cinematic**: o momento inteiro — cena + cada mob animando + **câmera POV animada** + sol + céu |
+| `/recorte live` | link em tempo real: o mod auto-exporta ~1×/s e o addon do Blender re-importa enquanto você joga |
+
+As gravações são amostradas **por frame renderizado com interpolação (~30 fps)**, então o movimento
+fica liso, não travado no tick de 20 Hz. O addon puxa o clip pra Action ativa, então as **keys aparecem
+na Timeline** prontas pra editar.
+
 **Extras automáticos:**
 - 🦴 **Esqueleto/armature** pronto pra animar (player e mobs).
 - 🎨 **Texturas** recortadas por sprite (pequenas, não o atlas inteiro).
 - 💡 **Emissão** — lava, glowstone, tochas e lanternas **brilham** no Blender.
 - 🌿 **Tints** de bioma (grama/folha/água) como **cor de vértice**.
-- 🧱 **Culling** das faces escondidas nas cenas (não exporta interiores).
-- 👕 Armadura, item na mão e **acessórios Curios/Artifacts** do player (objeto `Accessories` separado).
+- 🔆 **Iluminação bakeada** — block + sky light e sombreamento de face na cor de vértice; a cena já vem
+  iluminada como no jogo.
+- 🧱 **Culling** das faces escondidas + **block entities** (baús, placas, estandartes, camas…) nas cenas.
+- 📷 **Multi-câmera** — `scene`/`snapshot`/cinematic exportam a câmera POV do jogo **+** câmeras de
+  render (orbital + topo).
+- ☀️ **Sol** — luz direcional pela hora do dia; cinematics animam um **timelapse dia/noite** (sol + céu).
+- 🧩 **Render passes** — o addon dá IDs de objeto e liga os passes Z/normal/mist pra composição.
+- 🪨 **PBR de resource pack (LabPBR)** — normal map `_n` + specular `_s` → metallic-roughness do glTF.
+- 🎚️ **Markers na timeline** — quebra/colocação de blocos e sons viram markers no Blender (+ `events.csv`).
+- 👕 Armadura, itens nas duas mãos e **acessórios Curios/Artifacts** (objeto `Accessories` separado); a
+  **capa/elytra** vem como objeto `Cape` próprio.
 
 ---
 
@@ -80,9 +104,12 @@ Rodar um cliente de teste (dev): `./gradlew runClient`
 /recorte export entity minecraft:zombie
 /recorte export item minecraft:diamond_sword
 /recorte export block minecraft:furnace
-/recorte export mod artifacts
+/recorte export mod artifacts          # itens + blocos + entidades do mod
+/recorte export animlib                # Actions idle/walk/run/sneak no seu rig
 /recorte export scene 12
 /recorte export snapshot 16
+/recorte record scene start 16         # …aja no jogo… depois:
+/recorte record scene stop             # → cinematic animado com câmera POV + markers
 ```
 
 ## 🟦 Abrir no Blender
@@ -91,6 +118,21 @@ Rodar um cliente de teste (dev): `./gradlew runClient`
 - Visual **pixel-art** sem borrão: troque o filtro da textura para **Closest**.
 - **Emissão** (lava/glowstone): `emissiveFactor`/`emissiveTexture` (EEVEE/Cycles).
 - **Tints** (grama/água): *Color Attribute* (`COLOR_0`). Escala: 1 unidade = 1 bloco.
+
+## 🔌 Link ao vivo — addon do Blender (importar com 1 clique)
+
+Com o jogo aberto, o mod serve o último export em `http://127.0.0.1:25599`. Instale o addon e importe
+sem mexer em arquivos:
+
+1. Blender → *Edit → Preferences → Add-ons → Install…* → escolha `blender_addon/recorte_import.py` → ative.
+2. Na viewport aperte **N** → aba **Recorte**.
+3. Exporte no jogo (tecla `O`) e clique **Import latest from Minecraft**.
+
+O **Import latest** faz mais que importar: filtro pixel-art (Closest), puxa as animações pra Action ativa
+(as **keys aparecem na Timeline**), cria **markers** de quebra/som, keyframa o **timelapse dia/noite**
+(Sun + fundo do mundo) e liga os **render passes**. O botão **Show animation keys** reativa animações de
+arquivos importados na mão. **Live:** rode `/recorte live` e clique **Start Live link** — o mod
+auto-exporta a cena ao redor a cada ~2s e o Blender re-importa sozinho.
 
 ---
 

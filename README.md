@@ -9,8 +9,10 @@
 ![Java](https://img.shields.io/badge/Java-17-red)
 
 > **Recorte** — export (almost) anything from Minecraft straight into **Blender**: your character,
-> mobs, items, blocks, whole mods, and even **world scenes** — with a **skeleton (bones)**, textures,
-> emission and biome tints, as **glTF (`.glb`)** and **OBJ**.
+> mobs, items, blocks, whole mods, **world scenes** and full **cinematics** — with a **skeleton
+> (bones)**, **smooth recorded animations** (editable keyframes), baked **world lighting**, resource-pack
+> **PBR**, multiple **cameras**, a **day/night timelapse** and block/sound **timeline markers**, as
+> **glTF (`.glb`)** and **OBJ**.
 
 A **client-side** mod for **Minecraft 1.20.1 / Forge**. Press a key (or run a command) in-game and the
 files appear ready to import into Blender.
@@ -30,22 +32,43 @@ files appear ready to import into Blender.
 | `/recorte export entity <id>` | a **mob** (e.g. `minecraft:zombie`) | ✅ vanilla¹ |
 | `/recorte export item <id>` | a 3D **item** model (sword, egg…) | – |
 | `/recorte export block <id>` | a **block** model | – |
-| `/recorte export mod <modid>` | **all** items + blocks of a mod (batch) | – |
+| `/recorte export mod <modid>` | **all** items + blocks **+ entities** of a mod (batch) | ✅ |
+| `/recorte export animlib` | a **library of player animations** (idle/walk/run/sneak) on one rig | ✅ |
 | `/recorte export scene [radius]` | 🎬 the **surroundings** (a diorama of your build/terrain) | – |
 | `/recorte export snapshot [radius]` | 🎬 the **moment**: scene + every nearby mob (**rigged**) | ✅ |
 
 ¹ Vanilla mobs (`HumanoidModel`/`HierarchicalModel`) export **with bones**. **GeckoLib** mobs fall back
 to a static capture (but they still export!).
 
+### 🎥 Record live animation & cinematics
+
+| Command / key | What it does |
+|---|---|
+| `R` (key) or `/recorte record start` … `stop` | record **one mob/player**: limbs **and** world path → a keyframed glTF animation |
+| `/recorte record scene start [radius]` … `stop` | 🎬 **cinematic**: the whole moment — scene + every nearby mob animating + **animated POV camera** + sun + sky |
+| `/recorte live` | real-time link: the mod auto-exports ~1×/s and the Blender add-on re-imports as you play |
+
+Recordings are sampled on **render frames with interpolation (~30 fps)**, so motion is smooth, not
+stepped at the 20 Hz tick. The add-on pulls the clip onto the active Action so the **keyframes show in
+the Timeline** ready to edit.
+
 **Automatic extras:**
 - 🦴 **Skeleton/armature** ready to animate (player and mobs).
 - 🎨 **Per-sprite textures** (small — not the whole atlas).
 - 💡 **Emission** — lava, glowstone, torches and lanterns **glow** in Blender.
 - 🌿 **Biome tints** (grass/leaves/water) baked as **vertex colors**.
-- 🧱 **Hidden-face culling** in scenes (interiors aren't exported).
-- 📷 **Camera** — `scene`/`snapshot` include a glTF camera framed to your in-game view.
-- ☀️ **Sun** — `scene`/`snapshot` include a directional light angled & colored by the time of day.
-- 👕 Player armor, held item and **Curios/Artifacts accessories** (as a separate `Accessories` object).
+- 🔆 **Baked world lighting** — block + sky light and face shading baked into vertex colors, so the
+  scene already looks lit like the game.
+- 🧱 **Hidden-face culling** + **block entities** (chests, signs, banners, beds…) rendered into scenes.
+- 📷 **Multi-camera** — `scene`/`snapshot`/cinematic export the in-game POV camera **plus** preset orbit
+  + top-down render cameras.
+- ☀️ **Sun** — a directional light angled & colored by the time of day; cinematics animate a full
+  **day/night timelapse** (sun + sky).
+- 🧩 **Render passes** — the add-on assigns object IDs and enables Z/normal/mist passes for compositing.
+- 🪨 **Resource-pack PBR (LabPBR)** — `_n` normal maps + `_s` specular → glTF metallic-roughness.
+- 🎚️ **Timeline markers** — block breaks/placements and sounds become Blender markers (+ `events.csv`).
+- 👕 Player armor, held items (both hands) and **Curios/Artifacts accessories** (separate `Accessories`
+  object); the **cape/elytra** comes in as its own `Cape` object.
 
 ---
 
@@ -92,9 +115,12 @@ Run a dev client: `./gradlew runClient`
 /recorte export entity minecraft:zombie
 /recorte export item minecraft:diamond_sword
 /recorte export block minecraft:furnace
-/recorte export mod artifacts
+/recorte export mod artifacts          # items + blocks + entities of the mod
+/recorte export animlib                # idle/walk/run/sneak Actions on your rig
 /recorte export scene 12
 /recorte export snapshot 16
+/recorte record scene start 16         # …act in-game… then:
+/recorte record scene stop             # → an animated cinematic with POV camera + markers
 ```
 
 ## 🟦 Importing into Blender
@@ -115,6 +141,12 @@ add-on and import without touching files:
 2. In the 3D viewport press **N** → **Recorte** tab.
 3. Export in-game (key `O`), then click **Import latest from Minecraft**.
 
+**Import latest** does more than import: it sets pixel-art (Closest) filtering, pulls recorded
+animations onto the active Action so the **keyframes show in the Timeline**, drops **timeline markers**
+for block/sound events, keyframes the **day/night timelapse** (Sun lamp + World background), and turns
+on the compositor **render passes**. A **Show animation keys** button re-activates animations on any
+manually-imported file.
+
 **Live mode:** run `/recorte live` (or the panel's *Live link* button) in-game and click **Start Live
 link** in the add-on — the mod auto-exports a snapshot (**the world around you + nearby entities**)
 every ~2s and Blender re-imports it automatically, so the whole scene updates as you play.
@@ -125,16 +157,19 @@ every ~2s and Blender re-imports it automatically, so the whole scene updates as
 
 ```
 com.recorte
-├── Recorte / client/*         @Mod, keybind, /recorte export command tree
+├── Recorte / client/*         @Mod, keybinds, GUI panel, /recorte command tree
 └── export
-    ├── Exporter               orchestrates each mode (player/entity/item/block/scene/snapshot/mod)
+    ├── Exporter               orchestrates each mode (player/entity/item/block/scene/snapshot/mod/animlib)
     ├── ModelExtractor         player + mobs → skeleton (ModelPart walk) with geometry
     ├── BakedModelExtractor    items/blocks → geometry from the BakedModel + sprite
-    ├── SceneExtractor         world blocks → diorama (culling, tint, emission)
-    ├── LayerCapturer          captures the REAL render (armor, Curios, GeckoLib mobs)
-    ├── Ir                     intermediate representation (bones, materials, mesh, color)
-    ├── GltfWriter / ObjWriter  write .glb (skinned, multi-object) and .obj/.mtl
-    ├── TextureExporter        reads textures back from the GPU → PNG
+    ├── SceneExtractor         world blocks + block entities → diorama (culling, baked light, tint, PBR)
+    ├── LayerCapturer          captures the REAL render (armor, Curios, cape, GeckoLib mobs)
+    ├── Recorder               records ONE entity's animation over time (render-frame sampled)
+    ├── SceneRecorder          cinematic: scene + every mob + POV camera + sun/sky timelapse, animated
+    ├── Ir                     intermediate representation (bones, materials, mesh, animation, events)
+    ├── GltfWriter / ObjWriter  write .glb (skinned, multi-object, multi-clip) and .obj/.mtl
+    ├── TextureExporter        reads textures back from the GPU; LabPBR normal/specular maps
+    ├── HttpBridge             localhost server for the Blender add-on (latest/env/events/sun)
     └── Convert / ReflectUtil   axis conversion; reflection BY TYPE (survives obfuscation)
 ```
 

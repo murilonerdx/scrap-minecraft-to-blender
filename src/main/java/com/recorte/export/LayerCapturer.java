@@ -69,8 +69,8 @@ public final class LayerCapturer {
                         layer.getClass().getSimpleName(), t);
             }
         }
-        appendCaptured(accessories, out, Convert.matrixCaptured(), BODY_BONE, "Accessories");
-        appendCaptured(cape, out, Convert.matrixCaptured(), BODY_BONE, "Cape");
+        appendCaptured(accessories, out, Convert.matrixCaptured(), BODY_BONE, "Accessories", SHELL);
+        appendCaptured(cape, out, Convert.matrixCaptured(), BODY_BONE, "Cape", SHELL);
     }
 
     /** Whole-entity capture (mobs). Renders the entity renderer into the buffer; static (no bones). */
@@ -90,12 +90,14 @@ public final class LayerCapturer {
         } catch (Throwable t) {
             Recorte.LOGGER.warn("Entity render capture failed for {}", entity.getType(), t);
         }
-        appendCaptured(buffer, out, new Matrix4f(), 0, "Entity");
+        appendCaptured(buffer, out, new Matrix4f(), 0, "Entity", SHELL);
         return out;
     }
 
-    /** Converts the recorded quads into IR primitives, one material per distinct texture. */
-    private static void appendCaptured(CapturingBuffer buffer, Ir.Model out, Matrix4f m, int boneIndex, String group) {
+    /** Converts the recorded quads into IR primitives, one material per distinct texture. The {@code shell}
+     *  pushes vertices out along their normal (worn items, to avoid clipping a body); pass 0 otherwise. */
+    static void appendCaptured(CapturingBuffer buffer, Ir.Model out, Matrix4f m, int boneIndex,
+                               String group, float shell) {
         Map<Integer, Integer> texIdToMaterial = new HashMap<>();
         int textureCounter = out.materials.size();
         java.util.Set<String> seenQuads = new java.util.HashSet<>();   // drop duplicate passes (enchant glint, etc.)
@@ -141,7 +143,7 @@ public final class LayerCapturer {
                     if (n.lengthSquared() > 1.0e-8f) n.normalize();
                     // push slightly outward along the normal so worn items sit just OUTSIDE the body
                     // surface instead of z-fighting / clipping into it
-                    quad[k] = new Ir.Vertex(p.x + n.x * SHELL, p.y + n.y * SHELL, p.z + n.z * SHELL,
+                    quad[k] = new Ir.Vertex(p.x + n.x * shell, p.y + n.y * shell, p.z + n.z * shell,
                             n.x, n.y, n.z, a[3], a[4], boneIndex);
                 }
                 prim.addQuad(quad[0], quad[1], quad[2], quad[3]);

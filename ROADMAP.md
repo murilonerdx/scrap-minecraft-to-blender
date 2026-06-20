@@ -64,6 +64,8 @@ cinematics**. ✅ marks what already exists. (Versão em português abaixo / Por
 - **In-game preview**: a render of the model/scene inside the control panel before exporting.
 - ✅ **Batch a mod's entities**: `export mod` now also exports every one of the mod's entities (rigged
   or captured) into an `entities/` folder, plus a `manifest.json` summarising the batch.
+- ✅ **Block entities in scenes**: chests, signs, banners, beds, bells, shulker boxes… are rendered via
+  their `BlockEntityRenderer` and folded into `scene`/`snapshot` as a `BlockEntities` object.
 
 ## 🦴 Animation
 - **Export animation cycles** (idle/walk/attack) as glTF animation: sample `setupAnim` over time and

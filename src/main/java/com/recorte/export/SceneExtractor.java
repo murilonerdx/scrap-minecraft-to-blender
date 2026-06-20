@@ -50,13 +50,45 @@ public final class SceneExtractor {
                 for (int dz = -radius; dz <= radius; dz++) {
                     BlockPos pos = center.offset(dx, dy, dz);
                     BlockState state = level.getBlockState(pos);
-                    if (state.isAir() || state.getRenderShape() != RenderShape.MODEL) continue;
+                    if (state.isAir()) continue;
+                    // block entities (chests, signs, banners, beds, bells, shulkers…) via their renderer
+                    net.minecraft.world.level.block.entity.BlockEntity be = level.getBlockEntity(pos);
+                    if (be != null) captureBlockEntity(out, be, pos, center);
+                    if (state.getRenderShape() != RenderShape.MODEL) continue;
                     BakedModel model = blockRenderer.getBlockModel(state);
                     addBlock(out, level, pos, center, state, model, blockColors, random);
                 }
             }
         }
         return out;
+    }
+
+    /**
+     * Renders a block entity (chest/sign/banner/bed/bell/shulker…) into a {@link CapturingBuffer} and
+     * folds the captured geometry into the scene at the block's position (X negated, no inflation).
+     * Runs on the render thread (scene export does), so the GL texture binds inside {@code appendCaptured} work.
+     */
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private void captureBlockEntity(Ir.Model out, net.minecraft.world.level.block.entity.BlockEntity be,
+                                    BlockPos pos, BlockPos center) {
+        Minecraft mc = Minecraft.getInstance();
+        net.minecraft.client.renderer.blockentity.BlockEntityRenderer renderer =
+                mc.getBlockEntityRenderDispatcher().getRenderer(be);
+        if (renderer == null) return;
+        CapturingBuffer buffer = new CapturingBuffer();
+        com.mojang.blaze3d.vertex.PoseStack pose = new com.mojang.blaze3d.vertex.PoseStack();
+        try {
+            renderer.render(be, 0f, pose, buffer,
+                    net.minecraft.client.renderer.LightTexture.FULL_BRIGHT,
+                    net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY);
+        } catch (Throwable t) {
+            return;   // some block entities (text, modded) may not render headless — skip
+        }
+        int dx = pos.getX() - center.getX();
+        int dy = pos.getY() - center.getY();
+        int dz = pos.getZ() - center.getZ();
+        Matrix4f m = new Matrix4f().translate(-dx, dy, dz).scale(-1f, 1f, 1f);
+        LayerCapturer.appendCaptured(buffer, out, m, 0, "BlockEntities", 0f);
     }
 
     private void addBlock(Ir.Model out, Level level, BlockPos pos, BlockPos center, BlockState state,
