@@ -21,6 +21,7 @@ public final class Ir {
         public final List<Bone> bones = new ArrayList<>();
         public final List<Material> materials = new ArrayList<>();
         public final List<Primitive> primitives = new ArrayList<>();
+        public Camera camera;   // optional: the in-game camera, framed to match the export
 
         public int addBone(Bone b) {
             bones.add(b);
@@ -81,6 +82,19 @@ public final class Ir {
         public void key(int bone, float[] translation, float[] rotation) {
             translations.computeIfAbsent(bone, k -> new ArrayList<>()).add(translation);
             rotations.computeIfAbsent(bone, k -> new ArrayList<>()).add(rotation);
+        }
+    }
+
+    /** A perspective camera matching the in-game view (position + rotation in export space). */
+    public static final class Camera {
+        public final float[] position;       // x, y, z
+        public final float[] rotation;       // quaternion x, y, z, w
+        public final float yfovRadians;
+
+        public Camera(float[] position, float[] rotation, float yfovRadians) {
+            this.position = position;
+            this.rotation = rotation;
+            this.yfovRadians = yfovRadians;
         }
     }
 

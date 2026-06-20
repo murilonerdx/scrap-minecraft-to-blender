@@ -43,6 +43,7 @@ to a static capture (but they still export!).
 - 💡 **Emission** — lava, glowstone, torches and lanterns **glow** in Blender.
 - 🌿 **Biome tints** (grass/leaves/water) baked as **vertex colors**.
 - 🧱 **Hidden-face culling** in scenes (interiors aren't exported).
+- 📷 **Camera** — `scene`/`snapshot` include a glTF camera framed to your in-game view.
 - 👕 Player armor, held item and **Curios/Artifacts accessories** (as a separate `Accessories` object).
 
 ---

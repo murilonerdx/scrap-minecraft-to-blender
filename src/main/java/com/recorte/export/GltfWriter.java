@@ -104,6 +104,33 @@ public final class GltfWriter {
             meshNodes.add(nodes.size() - 1);
         }
         root.add("meshes", meshes);
+
+        // optional camera matching the in-game view
+        int cameraNode = -1;
+        if (model.camera != null) {
+            JsonObject perspective = new JsonObject();
+            perspective.addProperty("yfov", model.camera.yfovRadians);
+            perspective.addProperty("znear", 0.05);
+            perspective.addProperty("zfar", 1000.0);
+            JsonObject cam = new JsonObject();
+            cam.addProperty("type", "perspective");
+            cam.add("perspective", perspective);
+            JsonArray cameras = new JsonArray();
+            cameras.add(cam);
+            root.add("cameras", cameras);
+
+            JsonObject camNode = new JsonObject();
+            camNode.addProperty("name", "Camera");
+            camNode.addProperty("camera", 0);
+            JsonArray t = new JsonArray();
+            for (float v : model.camera.position) t.add(v);
+            camNode.add("translation", t);
+            JsonArray r = new JsonArray();
+            for (float v : model.camera.rotation) r.add(v);
+            camNode.add("rotation", r);
+            nodes.add(camNode);
+            cameraNode = nodes.size() - 1;
+        }
         root.add("nodes", nodes);
 
         JsonArray sceneNodes = new JsonArray();
@@ -111,6 +138,7 @@ public final class GltfWriter {
             if (model.bones.get(i).parentIndex < 0) sceneNodes.add(i);
         }
         for (int idx : meshNodes) sceneNodes.add(idx);
+        if (cameraNode >= 0) sceneNodes.add(cameraNode);
         JsonObject scene = new JsonObject();
         scene.add("nodes", sceneNodes);
         JsonArray scenes = new JsonArray();

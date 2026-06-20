@@ -12,6 +12,8 @@ cinematics**. ✅ marks what already exists. (Versão em português abaixo / Por
 - **Live animation recording** (key `R`) → keyframed glTF animation.
 - **Blender add-on + HTTP bridge** (real-time link *phase A*): one-click "Import latest from Minecraft"
   pulls the newest export from the running game (`blender_addon/recorte_import.py`).
+- **Camera export** — `scene`/`snapshot` include a glTF camera framed to your in-game view (position
+  + FOV), so the diorama opens already lined up with your shot.
 
 ## 🔜 In progress
 - **Real-time link phase B**: stream bone transforms over WebSocket so the mob mirrors the game live
@@ -38,7 +40,8 @@ cinematics**. ✅ marks what already exists. (Versão em português abaixo / Por
 - Export **sky/fog/biome color + sun angle** → recreate the in-game look in Blender (sun + world).
 - **Block light / sky light** baked (vertex color or light probes) to match the game's lighting.
 - Skybox, clouds, stars.
-- **Camera**: export the player's position/FOV → a Blender camera matching your view.
+- ✅ **Camera** (done) → next: also export the **sun angle + sky/fog color** so world lighting matches;
+  plus optional **depth-of-field** focused on whatever you're looking at.
 
 ## 🧱 More to extract
 - **Larger regions / schematics** (NBT structures, `.litematic`).

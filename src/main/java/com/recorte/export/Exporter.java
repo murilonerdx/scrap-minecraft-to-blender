@@ -183,6 +183,7 @@ public final class Exporter {
             BlockPos center = mc.player.blockPosition();
             feedback("§7Capturando cena (raio " + r + ")... pode travar alguns segundos.");
             Ir.Model ir = new SceneExtractor().extract(mc.level, center, r);
+            ir.camera = playerCamera(center);
             Path dir = newDir("scene_r" + r);
             writeAll(ir, dir, "scene");
             report("cena (raio " + r + ")", ir, dir);
@@ -202,6 +203,7 @@ public final class Exporter {
             BlockPos center = mc.player.blockPosition();
             feedback("§7Capturando snapshot (raio " + r + ")... pode travar alguns segundos.");
             Ir.Model ir = new SceneExtractor().extract(mc.level, center, r);
+            ir.camera = playerCamera(center);
 
             int entities = 0;
             AABB box = new AABB(center).inflate(r);
@@ -407,6 +409,22 @@ public final class Exporter {
         GltfWriter.write(ir, glb);
         ObjWriter.write(ir, dir.resolve(base + ".obj"), dir.resolve(base + ".mtl"));
         HttpBridge.setLastGlb(glb);
+    }
+
+    /** The in-game camera, converted into the scene's export space (X negated, relative to {@code center}). */
+    private static Ir.Camera playerCamera(BlockPos center) {
+        Minecraft mc = Minecraft.getInstance();
+        net.minecraft.client.Camera cam = mc.gameRenderer.getMainCamera();
+        net.minecraft.world.phys.Vec3 p = cam.getPosition();
+        float px = -(float) (p.x - center.getX());
+        float py = (float) (p.y - center.getY());
+        float pz = (float) (p.z - center.getZ());
+        org.joml.Vector3f f = cam.getLookVector();
+        org.joml.Vector3f u = cam.getUpVector();
+        org.joml.Quaternionf q = new org.joml.Quaternionf()
+                .lookAlong(-f.x, f.y, f.z, -u.x, u.y, u.z).conjugate();
+        float yfov = (float) Math.toRadians(mc.options.fov().get());
+        return new Ir.Camera(new float[]{px, py, pz}, new float[]{q.x, q.y, q.z, q.w}, yfov);
     }
 
     private static Path newDir(String label) {
