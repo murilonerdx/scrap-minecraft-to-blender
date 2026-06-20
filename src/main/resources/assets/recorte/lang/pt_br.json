@@ -1,4 +1,5 @@
 {
   "key.categories.recorte": "Recorte",
-  "key.recorte.export": "Exportar Modelo do Jogador"
+  "key.recorte.export": "Exportar (que está olhando / você)",
+  "key.recorte.record": "Gravar Animação (liga/desliga)"
 }

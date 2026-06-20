@@ -36,6 +36,10 @@ public final class GltfWriter {
     private static final int CLAMP_TO_EDGE = 33071;
 
     public static void write(Ir.Model model, Path glbPath) throws IOException {
+        write(model, null, glbPath);
+    }
+
+    public static void write(Ir.Model model, Ir.Animation animation, Path glbPath) throws IOException {
         Bin bin = new Bin();
 
         JsonObject root = new JsonObject();
@@ -192,6 +196,11 @@ public final class GltfWriter {
             root.add("extensionsUsed", used);
         }
 
+        // --- animation (optional) -----------------------------------------------------------------
+        if (animation != null && !animation.times.isEmpty()) {
+            writeAnimation(root, bin, animation);
+        }
+
         // --- buffer + bufferViews + accessors -----------------------------------------------------
         byte[] binData = bin.data.toByteArray();
         JsonObject buffer = new JsonObject();
@@ -279,6 +288,71 @@ public final class GltfWriter {
         primitive.addProperty("indices", idxAcc);
         primitive.addProperty("material", prim.materialIndex);
         return primitive;
+    }
+
+    private static void writeAnimation(JsonObject root, Bin bin, Ir.Animation anim) {
+        int n = anim.times.size();
+        bin.align4();
+        int tStart = bin.length();
+        float tmin = Float.MAX_VALUE, tmax = -Float.MAX_VALUE;
+        for (float t : anim.times) {
+            bin.f(t);
+            tmin = Math.min(tmin, t);
+            tmax = Math.max(tmax, t);
+        }
+        int timeAcc = bin.accessor(bin.bufferView(tStart, bin.length() - tStart, null),
+                FLOAT, n, "SCALAR", new float[]{tmin}, new float[]{tmax});
+
+        JsonArray samplers = new JsonArray();
+        JsonArray channels = new JsonArray();
+        for (Map.Entry<Integer, java.util.List<float[]>> e : anim.translations.entrySet()) {
+            int bone = e.getKey();
+            java.util.List<float[]> trans = e.getValue();
+            java.util.List<float[]> rots = anim.rotations.get(bone);
+
+            bin.align4();
+            int s = bin.length();
+            for (float[] v : trans) { bin.f(v[0]); bin.f(v[1]); bin.f(v[2]); }
+            int transAcc = bin.accessor(bin.bufferView(s, bin.length() - s, null), FLOAT, trans.size(), "VEC3", null, null);
+
+            bin.align4();
+            s = bin.length();
+            for (float[] q : rots) { bin.f(q[0]); bin.f(q[1]); bin.f(q[2]); bin.f(q[3]); }
+            int rotAcc = bin.accessor(bin.bufferView(s, bin.length() - s, null), FLOAT, rots.size(), "VEC4", null, null);
+
+            int sT = samplers.size();
+            samplers.add(sampler(timeAcc, transAcc));
+            channels.add(channel(sT, bone, "translation"));
+            int sR = samplers.size();
+            samplers.add(sampler(timeAcc, rotAcc));
+            channels.add(channel(sR, bone, "rotation"));
+        }
+
+        JsonObject animation = new JsonObject();
+        animation.add("samplers", samplers);
+        animation.add("channels", channels);
+        animation.addProperty("name", "recording");
+        JsonArray animations = new JsonArray();
+        animations.add(animation);
+        root.add("animations", animations);
+    }
+
+    private static JsonObject sampler(int input, int output) {
+        JsonObject s = new JsonObject();
+        s.addProperty("input", input);
+        s.addProperty("output", output);
+        s.addProperty("interpolation", "LINEAR");
+        return s;
+    }
+
+    private static JsonObject channel(int sampler, int node, String path) {
+        JsonObject c = new JsonObject();
+        c.addProperty("sampler", sampler);
+        JsonObject target = new JsonObject();
+        target.addProperty("node", node);
+        target.addProperty("path", path);
+        c.add("target", target);
+        return c;
     }
 
     private static byte[] assembleGlb(byte[] json, byte[] binData) {

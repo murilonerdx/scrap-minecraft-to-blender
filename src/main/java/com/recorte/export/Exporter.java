@@ -327,6 +327,22 @@ public final class Exporter {
         }
     }
 
+    public static void exportRecording(Ir.Model model, Ir.Animation anim, String name, int frames) {
+        try {
+            Path dir = newDir("anim_" + name);
+            Files.createDirectories(dir);
+            for (Ir.Material m : model.materials) {
+                if (m.png != null && m.textureFile != null) Files.write(dir.resolve(m.textureFile), m.png);
+            }
+            GltfWriter.write(model, anim, dir.resolve(name + ".glb"));
+            ObjWriter.write(model, dir.resolve(name + ".obj"), dir.resolve(name + ".mtl"));
+            Recorte.LOGGER.info("Recorded {} ({} frames) to {}", name, frames, dir);
+            feedback(String.format("§a■ Animação gravada §f%s§a: %d frames §7→ §f%s", name, frames, dir));
+        } catch (Throwable t) {
+            fail(t);
+        }
+    }
+
     public static void exportMod(String modid) {
         Minecraft mc = Minecraft.getInstance();
         try {

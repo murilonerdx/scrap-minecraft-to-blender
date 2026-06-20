@@ -150,6 +150,7 @@ public final class ModelExtractor {
         Matrix4f abs = new Matrix4f(parentAbs).mul(localMC(part));
         Matrix4f global = new Matrix4f(convert).mul(abs);
         int boneIndex = out.addBone(new Ir.Bone(name, parentBone, global));
+        out.bones.get(boneIndex).sourcePart = part;
         addCubes(part, boneIndex, mat);
 
         @SuppressWarnings("unchecked")

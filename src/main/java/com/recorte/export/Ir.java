@@ -4,6 +4,7 @@ import org.joml.Matrix4f;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Intermediate Representation of a captured model.
@@ -59,11 +60,27 @@ public final class Ir {
         public final int parentIndex;        // -1 for the root
         public final Matrix4f globalBind;     // export-space global bind transform (axis + scale already applied)
         public Matrix4f localTransform;       // node transform relative to parent; filled in by the extractor
+        public transient Object sourcePart;   // the live ModelPart this bone samples (for animation recording)
 
         public Bone(String name, int parentIndex, Matrix4f globalBind) {
             this.name = name;
             this.parentIndex = parentIndex;
             this.globalBind = globalBind;
+        }
+    }
+
+    /**
+     * A recorded animation: shared keyframe times plus, per animated bone, the local translation and
+     * rotation at each keyframe. Maps directly onto glTF animation samplers/channels.
+     */
+    public static final class Animation {
+        public final List<Float> times = new ArrayList<>();          // seconds, one per keyframe
+        public final Map<Integer, List<float[]>> translations = new java.util.LinkedHashMap<>();  // bone -> [x,y,z]/key
+        public final Map<Integer, List<float[]>> rotations = new java.util.LinkedHashMap<>();      // bone -> [x,y,z,w]/key
+
+        public void key(int bone, float[] translation, float[] rotation) {
+            translations.computeIfAbsent(bone, k -> new ArrayList<>()).add(translation);
+            rotations.computeIfAbsent(bone, k -> new ArrayList<>()).add(rotation);
         }
     }
 

@@ -4,6 +4,7 @@ import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.recorte.Recorte;
 import com.recorte.export.Exporter;
+import com.recorte.export.Recorder;
 import net.minecraft.client.Minecraft;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
@@ -11,6 +12,7 @@ import net.minecraft.commands.arguments.ResourceLocationArgument;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.InputEvent;
 import net.minecraftforge.client.event.RegisterClientCommandsEvent;
+import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.registries.ForgeRegistries;
@@ -36,6 +38,16 @@ public final class InputHandler {
     public static void onKey(InputEvent.Key event) {
         if (KeyBindings.export != null && KeyBindings.export.consumeClick()) {
             Minecraft.getInstance().execute(Exporter::exportLookedAtOrSelf);
+        }
+        if (KeyBindings.record != null && KeyBindings.record.consumeClick()) {
+            Minecraft.getInstance().execute(Recorder::toggleLookedAtOrSelf);
+        }
+    }
+
+    @SubscribeEvent
+    public static void onClientTick(TickEvent.ClientTickEvent event) {
+        if (event.phase == TickEvent.Phase.END) {
+            Recorder.tick();
         }
     }
 
@@ -81,7 +93,10 @@ public final class InputHandler {
                                 .executes(c -> run(() -> Exporter.exportSnapshot(16)))
                                 .then(Commands.argument("radius", IntegerArgumentType.integer(1, 48))
                                         .executes(c -> run(() -> Exporter.exportSnapshot(
-                                                IntegerArgumentType.getInteger(c, "radius"))))))));
+                                                IntegerArgumentType.getInteger(c, "radius"))))))
+                        .then(Commands.literal("record")
+                                .then(Commands.literal("start").executes(c -> run(Recorder::startLookedAtOrSelf)))
+                                .then(Commands.literal("stop").executes(c -> run(Recorder::stop))))));
     }
 
     private static int run(Runnable task) {

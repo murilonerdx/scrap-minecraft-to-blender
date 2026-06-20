@@ -1,4 +1,5 @@
 {
   "key.categories.recorte": "Recorte",
-  "key.recorte.export": "Export Player Model"
+  "key.recorte.export": "Export (looked-at / self)",
+  "key.recorte.record": "Record Animation (toggle)"
 }

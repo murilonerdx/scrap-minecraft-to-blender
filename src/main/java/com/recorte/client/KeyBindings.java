@@ -12,6 +12,7 @@ public final class KeyBindings {
 
     public static final String CATEGORY = "key.categories.recorte";
     public static KeyMapping export;
+    public static KeyMapping record;
 
     public static void register(RegisterKeyMappingsEvent event) {
         export = new KeyMapping(
@@ -21,5 +22,13 @@ public final class KeyBindings {
                 GLFW.GLFW_KEY_O,
                 CATEGORY);
         event.register(export);
+
+        record = new KeyMapping(
+                "key.recorte.record",
+                KeyConflictContext.IN_GAME,
+                InputConstants.Type.KEYSYM,
+                GLFW.GLFW_KEY_R,
+                CATEGORY);
+        event.register(record);
     }
 }
