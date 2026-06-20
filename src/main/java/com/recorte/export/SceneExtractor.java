@@ -122,6 +122,7 @@ public final class SceneExtractor {
         int materialIndex = materialForSprite(out, sprite, lava);
         Ir.Primitive prim = out.primitiveForMaterial(materialIndex);
         prim.group = "Fluids";
+        if (!lava) out.materials.get(materialIndex).translucent = true;   // water is see-through
 
         float h = fluid.getHeight(level, pos);
         float cr = 1f, cg = 1f, cb = 1f;
@@ -203,23 +204,27 @@ public final class SceneExtractor {
     private void addBlock(Ir.Model out, Level level, BlockPos pos, BlockPos center, BlockState state,
                           BakedModel model, BlockColors blockColors, RandomSource random) {
         boolean emissive = state.getLightEmission() > 0;
+        boolean translucent = net.minecraft.client.renderer.ItemBlockRenderTypes.getChunkRenderType(state)
+                == net.minecraft.client.renderer.RenderType.translucent();
         for (Direction dir : Direction.values()) {
             if (!Block.shouldRenderFace(state, level, pos, dir, pos.relative(dir))) continue;
             random.setSeed(state.getSeed(pos));
             for (BakedQuad quad : model.getQuads(state, dir, random)) {
-                addQuad(out, quad, pos, center, state, level, blockColors, emissive);
+                addQuad(out, quad, pos, center, state, level, blockColors, emissive, translucent);
             }
         }
         random.setSeed(state.getSeed(pos));
         for (BakedQuad quad : model.getQuads(state, null, random)) {
-            addQuad(out, quad, pos, center, state, level, blockColors, emissive);
+            addQuad(out, quad, pos, center, state, level, blockColors, emissive, translucent);
         }
     }
 
     private void addQuad(Ir.Model out, BakedQuad quad, BlockPos pos, BlockPos center,
-                         BlockState state, Level level, BlockColors blockColors, boolean emissive) {
+                         BlockState state, Level level, BlockColors blockColors, boolean emissive,
+                         boolean translucent) {
         TextureAtlasSprite sprite = quad.getSprite();
         int materialIndex = materialForSprite(out, sprite, emissive);
+        if (translucent) out.materials.get(materialIndex).translucent = true;
         Ir.Primitive prim = out.primitiveForMaterial(materialIndex);
         prim.group = "Scene";
 

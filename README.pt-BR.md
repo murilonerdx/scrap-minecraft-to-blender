@@ -70,6 +70,8 @@ na Timeline** prontas pra editar.
 - 💧 **Superfícies de fluido** — água e lava (antes puladas, por não terem modelo de bloco) agora
   exportam a **superfície de cima e as laterais expostas** (cachoeiras, bordas de poça) na altura real,
   com tint de bioma/emissão, num objeto `Fluids`.
+- 🪟 **Transparência real** — vidro, vidro tingido, gelo e água saem como **BLEND** do glTF (vê-se
+  através de verdade); os recortes pixel-art (folhas, grama) continuam nítidos em MASK.
 - 👕 Armadura, itens nas duas mãos e **acessórios Curios/Artifacts** (objeto `Accessories` separado); a
   **capa/elytra** vem como objeto `Cape` próprio.
 

@@ -104,7 +104,8 @@ cinematics**. ✅ marks what already exists. (Versão em português abaixo / Por
   looping Image Sequence** per material (frames served over `/anim_textures` + `/anim_frame`), so water/
   lava actually flow in Blender as the scene plays.
 - ✅ **Resource-pack PBR** (LabPBR normal + specular→metallic-roughness); next: connected textures.
-- **Real transparency** (glass, water) in BLEND mode, not just MASK.
+- ✅ **Real transparency** — translucent blocks (glass, stained glass, ice, water…) export with glTF
+  `alphaMode: BLEND` instead of the MASK cutout, so they're actually see-through in Blender.
 
 ## 🎬 Cinematic / full scene
 - **"Cinematic" export**: scene + **rigged** entities + camera + lighting + sky → a Blender scene ready

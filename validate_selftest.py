@@ -55,6 +55,9 @@ def validate_common(name, js, bin_len):
     check(colored >= 1, f"at least one primitive has COLOR_0 ({colored})")
     mats = js.get("materials", [])
     check(len(mats) == 2, f"2 materials ({len(mats)})")
+    modes = [mm.get("alphaMode") for mm in mats]
+    check("BLEND" in modes, f"a material is alphaMode BLEND (translucent) -> {modes}")
+    check("MASK" in modes, f"a material is alphaMode MASK (cutout) -> {modes}")
     check(any("normalTexture" in mm for mm in mats), "a material has normalTexture")
     check(any("metallicRoughnessTexture" in mm.get("pbrMetallicRoughness", {}) for mm in mats),
           "a material has metallicRoughnessTexture")

@@ -316,8 +316,12 @@ public final class GltfWriter {
                 material.add("extensions", ext);
                 anyEmissive = true;
             }
-            material.addProperty("alphaMode", "MASK");
-            material.addProperty("alphaCutoff", 0.5);
+            if (m.translucent) {
+                material.addProperty("alphaMode", "BLEND");   // real see-through (glass, water, ice)
+            } else {
+                material.addProperty("alphaMode", "MASK");    // pixel-art cutout (leaves, grass, …)
+                material.addProperty("alphaCutoff", 0.5);
+            }
             material.addProperty("doubleSided", true);
             materials.add(material);
         }

@@ -74,6 +74,8 @@ the Timeline** ready to edit.
 - 💧 **Fluid surfaces** — water and lava (skipped before, since they have no block model) now export
   their **top surface and exposed sides** (waterfalls, pool edges) at the real height, biome-tinted/
   emissive, as a separate `Fluids` object.
+- 🪟 **Real transparency** — glass, stained glass, ice and water export as glTF **BLEND** (genuinely
+  see-through), while pixel-art cutouts (leaves, grass) stay crisp MASK.
 - 👕 Player armor, held items (both hands) and **Curios/Artifacts accessories** (separate `Accessories`
   object); the **cape/elytra** comes in as its own `Cape` object.
 

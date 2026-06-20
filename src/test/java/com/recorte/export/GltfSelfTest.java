@@ -92,6 +92,7 @@ public final class GltfSelfTest {
         int mat0 = m.materialIndex("tex_0");
         m.materials.get(mat0).png = png;
         m.materials.get(mat0).textureFile = "tex_0.png";
+        m.materials.get(mat0).translucent = true;   // exercises alphaMode BLEND
         int mat1 = m.materialIndex("tex_1");
         Ir.Material pbr = m.materials.get(mat1);
         pbr.png = png;
