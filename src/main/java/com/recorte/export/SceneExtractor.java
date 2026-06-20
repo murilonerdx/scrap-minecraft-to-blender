@@ -166,8 +166,20 @@ public final class SceneExtractor {
         try {
             NativeImage img = spriteImage(sprite);
             if (img != null) {
-                material.png = TextureExporter.pngBytes(img);
-                material.textureFile = file;
+                int frameH = sprite.contents().height();
+                if (img.getHeight() > frameH) {
+                    // animated texture (water/lava/fire/portal…): source is frames stacked vertically.
+                    // Use frame 0 for the model (the UVs expect a single frame) + keep the sequence.
+                    java.util.List<byte[]> frames = TextureExporter.sliceFrames(img, frameH);
+                    if (!frames.isEmpty()) {
+                        material.png = frames.get(0);
+                        material.frameSequence = frames;
+                        material.textureFile = file;
+                    }
+                } else {
+                    material.png = TextureExporter.pngBytes(img);
+                    material.textureFile = file;
+                }
             }
         } catch (Throwable ignored) {
         }

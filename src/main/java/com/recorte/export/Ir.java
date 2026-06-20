@@ -162,6 +162,7 @@ public final class Ir {
         public byte[] normalPng;               // optional normal map PNG bytes → glTF normalTexture
         public String mrFile;                  // optional metallic-roughness filename
         public byte[] mrPng;                   // optional glTF metallic-roughness PNG (from LabPBR _s)
+        public java.util.List<byte[]> frameSequence;   // animated texture: one PNG per frame (png = frame 0)
 
         public Material(String name) {
             this.name = name;

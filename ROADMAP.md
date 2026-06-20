@@ -93,7 +93,9 @@ cinematics**. ✅ marks what already exists. (Versão em português abaixo / Por
 ## 🧱 More to extract
 - **Larger regions / schematics** (NBT structures, `.litematic`).
 - **Signs (text), paintings, item frames, maps** as textured meshes/planes.
-- **Animated textures** (water, lava, fire, portal) exported as image sequences.
+- ✅ **Animated textures** (water, lava, fire, portal) — the model uses the correct first frame (instead
+  of the whole stacked source), and the full **frame sequence** is written next to it (`*_f000.png` …)
+  with an `animated_textures.json` manifest. Next: auto-wire an Image Sequence node in the add-on.
 - ✅ **Resource-pack PBR** (LabPBR normal + specular→metallic-roughness); next: connected textures.
 - **Real transparency** (glass, water) in BLEND mode, not just MASK.
 

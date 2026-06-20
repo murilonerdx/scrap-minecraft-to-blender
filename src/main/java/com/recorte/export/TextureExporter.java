@@ -98,6 +98,31 @@ public final class TextureExporter {
         }
     }
 
+    /**
+     * Slices a stacked animated-texture source (frames stacked vertically, as Minecraft stores water/
+     * lava/fire/portal/…) into one PNG per frame. {@code frameHeight} is the sprite's logical frame
+     * height; the source height divided by it gives the frame count.
+     */
+    public static java.util.List<byte[]> sliceFrames(NativeImage src, int frameHeight) {
+        java.util.List<byte[]> out = new java.util.ArrayList<>();
+        int w = src.getWidth(), h = src.getHeight();
+        if (frameHeight <= 0 || frameHeight > h) frameHeight = h;
+        int n = Math.max(1, h / frameHeight);
+        for (int f = 0; f < n; f++) {
+            try (NativeImage frame = new NativeImage(w, frameHeight, false)) {
+                for (int y = 0; y < frameHeight; y++) {
+                    for (int x = 0; x < w; x++) {
+                        frame.setPixelRGBA(x, y, src.getPixelRGBA(x, f * frameHeight + y));
+                    }
+                }
+                out.add(pngBytes(frame));
+            } catch (Throwable t) {
+                break;
+            }
+        }
+        return out;
+    }
+
     /** Encoded PNG bytes of an in-memory image (sprite contents, etc.). */
     public static byte[] pngBytes(NativeImage image) throws IOException {
         Path tmp = Files.createTempFile("recorte_img", ".png");

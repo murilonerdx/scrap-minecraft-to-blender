@@ -63,6 +63,9 @@ na Timeline** prontas pra editar.
 - 🧩 **Render passes** — o addon dá IDs de objeto e liga os passes Z/normal/mist pra composição.
 - 🪨 **PBR de resource pack (LabPBR)** — normal map `_n` + specular `_s` → metallic-roughness do glTF.
 - 🎚️ **Markers na timeline** — quebra/colocação de blocos e sons viram markers no Blender (+ `events.csv`).
+- 🌊 **Texturas animadas** — água/lava/fogo/portal usam o frame correto (não a fonte empilhada) e a
+  **sequência de frames** inteira é exportada (`*_f000.png` … + `animated_textures.json`) pra montar um
+  loop de image-sequence no Blender.
 - 👕 Armadura, itens nas duas mãos e **acessórios Curios/Artifacts** (objeto `Accessories` separado); a
   **capa/elytra** vem como objeto `Cape` próprio.
 

@@ -621,6 +621,7 @@ public final class Exporter {
 
     private static void writeAll(Ir.Model ir, Path dir, String base) throws IOException {
         Files.createDirectories(dir);
+        StringBuilder animTex = new StringBuilder();
         for (Ir.Material m : ir.materials) {
             if (m.png != null && m.textureFile != null) {
                 Files.write(dir.resolve(m.textureFile), m.png);
@@ -631,6 +632,23 @@ public final class Exporter {
             if (m.mrPng != null && m.mrFile != null) {
                 Files.write(dir.resolve(m.mrFile), m.mrPng);
             }
+            // animated texture: write the whole frame sequence + record it in a manifest
+            if (m.frameSequence != null && m.frameSequence.size() > 1 && m.textureFile != null) {
+                String stem = m.textureFile.endsWith(".png")
+                        ? m.textureFile.substring(0, m.textureFile.length() - 4) : m.textureFile;
+                for (int i = 0; i < m.frameSequence.size(); i++) {
+                    Files.write(dir.resolve(String.format(java.util.Locale.ROOT, "%s_f%03d.png", stem, i)),
+                            m.frameSequence.get(i));
+                }
+                if (animTex.length() > 0) animTex.append(',');
+                animTex.append(String.format(java.util.Locale.ROOT,
+                        "{\"material\":\"%s\",\"base\":\"%s\",\"frames\":%d}",
+                        esc(m.name), esc(stem), m.frameSequence.size()));
+            }
+        }
+        if (animTex.length() > 0) {
+            Files.writeString(dir.resolve("animated_textures.json"),
+                    "{\"fps\":20,\"textures\":[" + animTex + "]}");
         }
         Path glb = dir.resolve(base + ".glb");
         GltfWriter.write(ir, glb);
