@@ -48,10 +48,16 @@ Two tricks worth knowing before you touch the producers:
 3. Register a subcommand in `client/InputHandler` under `/recorte export`.
 4. Anything self-illuminating? set `Ir.Material.emissive`. Tinted? pass vertex colors to `Ir.Vertex`.
 
-## Testing an export without Blender
+## Testing without Blender
 
-`validate_export.py <export_dir>` parses the `.glb` (header, chunks, bones, vertex/triangle counts,
-bounding boxes) and the textures — quick sanity check that geometry and rigging came out right.
+Two levels, both headless:
+
+- **glTF writer self-test** (no Minecraft): `./gradlew gltfSelfTest` builds synthetic `.glb`s exercising
+  the tricky paths (skin, multi-object meshes, vertex colors, PBR normal + metallic-roughness, multi-camera,
+  sun, single- and multi-clip animation), then `python validate_selftest.py build/selftest` asserts the
+  structure. This runs in CI on every push — keep it green when you touch `GltfWriter`/`Ir`.
+- **Real export check**: `validate_export.py <export_dir>` parses an actual `.glb` from the game (header,
+  chunks, bones, vertex/triangle counts, bounding boxes) and the textures.
 
 ## Style & PRs
 

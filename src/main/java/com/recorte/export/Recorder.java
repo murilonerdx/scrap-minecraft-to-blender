@@ -78,10 +78,6 @@ public final class Recorder {
         }
     }
 
-    /** Sampling now happens on the render thread for smooth, high-fps keyframes (see {@link #renderTick}). */
-    public static void tick() {
-    }
-
     /** Called once per rendered frame with the render partial-tick, so limb poses and the travel
      *  path match what's on screen (interpolated), not just the 20 Hz ticks. Throttled to ~30 fps. */
     public static void renderTick(float partial) {

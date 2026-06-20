@@ -116,10 +116,6 @@ public final class SceneRecorder {
         }
     }
 
-    /** Sampling now happens on the render thread for smooth, high-fps keyframes (see {@link #renderTick}). */
-    public static void tick() {
-    }
-
     /** Called once per rendered frame with the render partial-tick, so the captured motion matches
      *  exactly what's on screen (interpolated), not just the 20 Hz game ticks. Throttled to ~30 fps. */
     public static void renderTick(float partial) {

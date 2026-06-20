@@ -205,3 +205,14 @@ publishing {
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8' // Use the UTF-8 charset for Java compilation
 }
+
+// Headless validation of the glTF writer (Ir + GltfWriter only need JOML + Gson, no Minecraft).
+// Run: ./gradlew gltfSelfTest   then: python validate_selftest.py build/selftest
+tasks.register('gltfSelfTest', JavaExec) {
+    dependsOn 'compileJava', 'compileTestJava'
+    group = 'verification'
+    description = 'Generates synthetic .glb files to validate GltfWriter without launching Minecraft.'
+    mainClass = 'com.recorte.export.GltfSelfTest'
+    classpath = sourceSets.test.runtimeClasspath
+    args = [ layout.buildDirectory.dir('selftest').get().asFile.toString() ]
+}

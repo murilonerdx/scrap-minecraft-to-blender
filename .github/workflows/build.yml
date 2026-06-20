@@ -22,6 +22,11 @@ jobs:
       - name: Build
         run: ./gradlew build --no-daemon
 
+      - name: Validate glTF writer (headless)
+        run: |
+          ./gradlew gltfSelfTest --no-daemon
+          python3 validate_selftest.py build/selftest
+
       - name: Upload jar
         uses: actions/upload-artifact@v4
         with:
