@@ -61,6 +61,7 @@ class RECORTE_OT_import_latest(bpy.types.Operator):
                         node.interpolation = "Closest"
 
         _activate_animations(new_objs)
+        _setup_render_passes(new_objs)
         n_events = _apply_events(port)
 
         # Match the in-game sky as the world background.
@@ -145,6 +146,26 @@ def _activate_animations(objs):
             scene.frame_start = 0
             scene.frame_end = end
     return n_act
+
+
+def _setup_render_passes(objs):
+    """Give each imported object a unique Object Index and turn on the common compositor passes
+    (Z/depth, mist, normal, object-index) so the scene is ready for advanced compositing (#7)."""
+    try:
+        vl = bpy.context.view_layer
+        for attr in ("use_pass_z", "use_pass_mist", "use_pass_normal", "use_pass_object_index"):
+            if hasattr(vl, attr):
+                setattr(vl, attr, True)
+    except Exception:  # noqa: BLE001
+        pass
+    idx = 1
+    for obj in objs:
+        if getattr(obj, "type", None) == "MESH":
+            try:
+                obj.pass_index = idx
+                idx += 1
+            except Exception:  # noqa: BLE001
+                pass
 
 
 def _apply_events(port):

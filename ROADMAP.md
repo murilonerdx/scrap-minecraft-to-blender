@@ -39,6 +39,9 @@ cinematics**. ✅ marks what already exists. (Versão em português abaixo / Por
 - **Multi-camera rig** — `scene`/`snapshot`/cinematic export **preset render cameras** (four 3/4 orbit
   views + a top-down) alongside the in-game POV camera, so you can switch angles in Blender without
   re-framing. They're extra nodes, so they never disturb the rig or the animated POV camera.
+- **Render passes ready** — on import the add-on gives every object a unique **Object Index** and turns
+  on the **Z/depth, mist, normal and object-index** compositor passes, so the scene is set up for
+  advanced compositing out of the box.
 
 ## 🔜 Big next steps
 - **Real-time link phase C**: true streaming (WebSocket/SSE) of bone transforms so it's frame-accurate,
