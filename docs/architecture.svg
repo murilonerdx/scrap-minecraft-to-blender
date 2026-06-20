@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 470" font-family="Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+  <rect width="980" height="470" rx="14" fill="#0d1117"/>
+  <text x="490" y="42" text-anchor="middle" fill="#e6edf3" font-size="26" font-weight="700">scrap-minecraft-to-blender · pipeline</text>
+  <text x="490" y="66" text-anchor="middle" fill="#7d8590" font-size="14">Recorte — exporta do Minecraft 1.20.1 para o Blender (glTF + OBJ, com ossos)</text>
+
+  <!-- Minecraft -->
+  <rect x="30" y="100" width="200" height="300" rx="12" fill="#161b22" stroke="#30363d"/>
+  <text x="130" y="130" text-anchor="middle" fill="#58a6ff" font-size="17" font-weight="700">Minecraft</text>
+  <g font-size="13" fill="#c9d1d9">
+    <rect x="52" y="150" width="156" height="34" rx="8" fill="#21262d"/><text x="130" y="172" text-anchor="middle">Player + Curios/armadura</text>
+    <rect x="52" y="194" width="156" height="34" rx="8" fill="#21262d"/><text x="130" y="216" text-anchor="middle">Mobs (vanilla + GeckoLib)</text>
+    <rect x="52" y="238" width="156" height="34" rx="8" fill="#21262d"/><text x="130" y="260" text-anchor="middle">Itens / Blocos / Mod</text>
+    <rect x="52" y="282" width="156" height="34" rx="8" fill="#21262d"/><text x="130" y="304" text-anchor="middle">Mundo (cena / snapshot)</text>
+  </g>
+  <text x="130" y="350" text-anchor="middle" fill="#7d8590" font-size="12">tecla O · /recorte export</text>
+
+  <!-- arrow -->
+  <path d="M236 250 L286 250" stroke="#58a6ff" stroke-width="2.5" marker-end="url(#a)"/>
+
+  <!-- Recorte -->
+  <rect x="292" y="100" width="270" height="300" rx="12" fill="#161b22" stroke="#30363d"/>
+  <text x="427" y="130" text-anchor="middle" fill="#3fb950" font-size="17" font-weight="700">Recorte (mod)</text>
+  <g font-size="12.5" fill="#c9d1d9">
+    <rect x="312" y="148" width="230" height="46" rx="8" fill="#21262d"/>
+    <text x="427" y="167" text-anchor="middle" font-weight="600">Capturar render</text>
+    <text x="427" y="184" text-anchor="middle" fill="#7d8590">VertexConsumer: armadura, Curios, GeckoLib</text>
+    <rect x="312" y="202" width="230" height="46" rx="8" fill="#21262d"/>
+    <text x="427" y="221" text-anchor="middle" font-weight="600">Extrair geometria</text>
+    <text x="427" y="238" text-anchor="middle" fill="#7d8590">ModelPart · BakedModel · blocos do mundo</text>
+    <rect x="312" y="256" width="230" height="60" rx="8" fill="#1f2a1f" stroke="#2ea043"/>
+    <text x="427" y="278" text-anchor="middle" font-weight="700" fill="#3fb950">IR</text>
+    <text x="427" y="296" text-anchor="middle" fill="#c9d1d9">ossos · materiais · malha · cor</text>
+    <text x="427" y="310" text-anchor="middle" fill="#7d8590">+ texturas da GPU (PNG)</text>
+  </g>
+  <text x="427" y="350" text-anchor="middle" fill="#7d8590" font-size="12">reflexão por tipo · conversão de eixos</text>
+
+  <!-- arrow -->
+  <path d="M568 250 L618 250" stroke="#3fb950" stroke-width="2.5" marker-end="url(#a)"/>
+
+  <!-- Writers -->
+  <rect x="624" y="100" width="170" height="300" rx="12" fill="#161b22" stroke="#30363d"/>
+  <text x="709" y="130" text-anchor="middle" fill="#d29922" font-size="17" font-weight="700">Writers</text>
+  <g font-size="13" fill="#c9d1d9">
+    <rect x="644" y="160" width="130" height="50" rx="8" fill="#21262d"/>
+    <text x="709" y="182" text-anchor="middle" font-weight="600">GltfWriter</text>
+    <text x="709" y="199" text-anchor="middle" fill="#7d8590" font-size="11">.glb skinned</text>
+    <rect x="644" y="222" width="130" height="50" rx="8" fill="#21262d"/>
+    <text x="709" y="244" text-anchor="middle" font-weight="600">ObjWriter</text>
+    <text x="709" y="261" text-anchor="middle" fill="#7d8590" font-size="11">.obj + .mtl</text>
+  </g>
+  <text x="709" y="310" text-anchor="middle" fill="#7d8590" font-size="12">emissão · tint</text>
+  <text x="709" y="328" text-anchor="middle" fill="#7d8590" font-size="12">multi-objeto</text>
+
+  <!-- arrow -->
+  <path d="M800 250 L850 250" stroke="#d29922" stroke-width="2.5" marker-end="url(#a)"/>
+
+  <!-- Blender -->
+  <rect x="856" y="160" width="98" height="180" rx="12" fill="#161b22" stroke="#30363d"/>
+  <text x="905" y="245" text-anchor="middle" fill="#ff7b39" font-size="16" font-weight="700">Blender</text>
+  <text x="905" y="266" text-anchor="middle" fill="#7d8590" font-size="12">armature</text>
+  <text x="905" y="282" text-anchor="middle" fill="#7d8590" font-size="12">+ materiais</text>
+
+  <defs>
+    <marker id="a" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0 0 L9 4.5 L0 9 z" fill="#8b949e"/>
+    </marker>
+  </defs>
+</svg>

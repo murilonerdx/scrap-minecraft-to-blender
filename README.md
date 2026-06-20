@@ -7,6 +7,10 @@
 Mod **client-side** para **Minecraft 1.20.1 / Forge**. Você aperta uma tecla (ou usa um comando) dentro
 do jogo e os arquivos aparecem prontos pra importar no Blender.
 
+![pipeline](docs/architecture.svg)
+
+> 📸 Screenshots do jogo e do Blender em breve (veja [docs/](docs/)).
+
 ---
 
 ## ✨ O que dá pra exportar
