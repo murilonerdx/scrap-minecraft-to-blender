@@ -109,8 +109,10 @@ def _apply_pixel_art(objs):
 
 def _activate_animations(objs):
     """glTF stashes animations in the NLA; pull them onto the active Action so the tracks are
-    editable in the Dope Sheet / Graph Editor, and fit the scene frame range to them."""
+    editable in the Dope Sheet / Graph Editor, and fit the scene frame range to them. Returns the
+    number of objects that ended up with an active animation."""
     end = 1
+    n_act = 0
     for obj in objs:
         ad = getattr(obj, "animation_data", None)
         if not ad:
@@ -125,14 +127,40 @@ def _activate_animations(objs):
             if act:
                 ad.action = act
         if act:
+            n_act += 1
             try:
-                end = max(end, int(act.frame_range[1]))
+                end = max(end, int(round(act.frame_range[1])))
             except Exception:  # noqa: BLE001
                 pass
     scene = bpy.context.scene
-    if scene and end > 1:
-        scene.frame_start = 0
-        scene.frame_end = end
+    if scene:
+        # the in-game recorder samples at ~30 fps (render-frame interpolated) — match it so
+        # playback is smooth and keyframes land on whole frames
+        scene.render.fps = 30
+        if end > 1:
+            scene.frame_start = 0
+            scene.frame_end = end
+    return n_act
+
+
+class RECORTE_OT_activate_anim(bpy.types.Operator):
+    """Pull glTF animations out of the NLA onto the active Action for the selected (or all) objects,
+    so the keyframes show up in the Timeline / Dope Sheet ready to edit. Use this after a manual
+    File > Import (the 'Import latest' button already does it automatically)."""
+    bl_idname = "recorte.activate_anim"
+    bl_label = "Show animation keys"
+    bl_options = {"REGISTER", "UNDO"}
+
+    def execute(self, context):
+        objs = list(context.selected_objects) or list(bpy.data.objects)
+        n = _activate_animations(objs)
+        if n:
+            self.report({"INFO"}, "Animation keys activated on %d object(s) — open the Timeline / "
+                                  "Dope Sheet to edit. Playback set to 20 fps." % n)
+        else:
+            self.report({"WARNING"}, "No animations found on those objects. Select the armature "
+                                     "(or nothing, to scan all) and try again.")
+        return {"FINISHED"}
 
 
 class RECORTE_OT_live(bpy.types.Operator):
@@ -209,6 +237,7 @@ class RECORTE_PT_panel(bpy.types.Panel):
         layout.prop(context.scene, "recorte_port")
         layout.operator("recorte.import_latest", icon="IMPORT")
         layout.operator("recorte.ping", icon="PLUGIN")
+        layout.operator("recorte.activate_anim", icon="ACTION")
         layout.separator()
         layout.label(text="Real-time link:")
         if context.scene.recorte_live:
@@ -218,7 +247,8 @@ class RECORTE_PT_panel(bpy.types.Panel):
         layout.label(text="In-game: /recorte live (or panel button)")
 
 
-classes = (RECORTE_OT_import_latest, RECORTE_OT_ping, RECORTE_OT_live, RECORTE_PT_panel)
+classes = (RECORTE_OT_import_latest, RECORTE_OT_ping, RECORTE_OT_activate_anim,
+           RECORTE_OT_live, RECORTE_PT_panel)
 
 
 def register():

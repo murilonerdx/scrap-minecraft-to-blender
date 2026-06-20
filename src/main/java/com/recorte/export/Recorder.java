@@ -22,7 +22,7 @@ import org.joml.Vector3f;
 public final class Recorder {
     private Recorder() {}
 
-    private static final int MAX_FRAMES = 20 * 120;   // ~2 minutes cap
+    private static final int MAX_FRAMES = 30 * 120;   // ~2 minutes cap at 30 fps
     private static Session active;
 
     public static boolean isRecording() {
@@ -78,10 +78,16 @@ public final class Recorder {
         }
     }
 
+    /** Sampling now happens on the render thread for smooth, high-fps keyframes (see {@link #renderTick}). */
     public static void tick() {
+    }
+
+    /** Called once per rendered frame with the render partial-tick, so limb poses and the travel
+     *  path match what's on screen (interpolated), not just the 20 Hz ticks. Throttled to ~30 fps. */
+    public static void renderTick(float partial) {
         if (active == null) return;
         try {
-            active.sample();
+            active.sample(partial);
         } catch (Throwable t) {
             Recorte.LOGGER.warn("Recording sample failed", t);
         }
@@ -117,12 +123,16 @@ public final class Recorder {
 
     /** One in-progress recording. */
     private static final class Session {
+        static final float SAMPLE_DT = 1f / 30f;   // throttle render-frame sampling to ~30 fps
+
         final LivingEntity entity;
         final EntityModel<?> model;
         final Ir.Model ir;
         final Ir.Animation anim = new Ir.Animation();
         final double startX, startY, startZ;
         final float startYaw;
+        double startSeconds = -1;
+        float lastT = -1f;
         int frames;
 
         Session(LivingEntity entity, EntityModel<?> model, Ir.Model ir) {
@@ -136,8 +146,17 @@ public final class Recorder {
         }
 
         @SuppressWarnings({"rawtypes", "unchecked"})
-        void sample() {
-            float partial = 1.0f;
+        void sample(float partial) {
+            Minecraft mc = Minecraft.getInstance();
+            if (mc.level == null) return;
+
+            // real elapsed time + throttle, so playback speed is correct and files stay sane
+            double nowSec = (mc.level.getGameTime() + partial) * 0.05;
+            if (startSeconds < 0) startSeconds = nowSec;
+            float t = (float) (nowSec - startSeconds);
+            if (lastT >= 0f && t - lastT < SAMPLE_DT) return;
+            lastT = t;
+
             float limbAmount = Math.min(entity.walkAnimation.speed(partial), 1.0f);
             float limbSwing = entity.walkAnimation.position(partial);
             float ageInTicks = entity.tickCount + partial;
@@ -147,11 +166,15 @@ public final class Recorder {
             raw.prepareMobModel(entity, limbSwing, limbAmount, partial);
             raw.setupAnim(entity, limbSwing, limbAmount, ageInTicks, 0f, headPitch);
 
-            anim.times.add(frames * 0.05f);   // 20 ticks per second
+            anim.times.add(t);
 
-            // root bone (0): world movement + body yaw, so the mob travels its path (not in place)
-            double dx = entity.getX() - startX, dy = entity.getY() - startY, dz = entity.getZ() - startZ;
-            float dyaw = (float) Math.toRadians(entity.yBodyRot - startYaw);
+            // root bone (0): world movement + body yaw (interpolated), so the mob travels its path
+            double cx = net.minecraft.util.Mth.lerp(partial, entity.xOld, entity.getX());
+            double cy = net.minecraft.util.Mth.lerp(partial, entity.yOld, entity.getY());
+            double cz = net.minecraft.util.Mth.lerp(partial, entity.zOld, entity.getZ());
+            double dx = cx - startX, dy = cy - startY, dz = cz - startZ;
+            float bodyYaw = net.minecraft.util.Mth.rotLerp(partial, entity.yBodyRotO, entity.yBodyRot);
+            float dyaw = (float) Math.toRadians(bodyYaw - startYaw);
             Matrix4f rootM = new Matrix4f()
                     .translate((float) -dx, (float) dy, (float) dz)   // negate X to match export space
                     .rotateY(-dyaw)

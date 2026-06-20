@@ -92,6 +92,17 @@ public final class SceneExtractor {
             cg = ((color >> 8) & 255) / 255f;
             cb = (color & 255) / 255f;
         }
+
+        // bake world lighting: block+sky light at the face's neighbour + Minecraft face shading
+        BlockPos lightPos = pos.relative(quad.getDirection());
+        int blockL = level.getBrightness(net.minecraft.world.level.LightLayer.BLOCK, lightPos);
+        int skyL = level.getBrightness(net.minecraft.world.level.LightLayer.SKY, lightPos);
+        float lightLevel = Math.max(blockL, skyL) / 15f;
+        float bright = (0.12f + 0.88f * lightLevel) * level.getShade(quad.getDirection(), true);
+        cr *= bright;
+        cg *= bright;
+        cb *= bright;
+
         Vector3f n = new Vector3f(quad.getDirection().step());
 
         int[] data = quad.getVertices();

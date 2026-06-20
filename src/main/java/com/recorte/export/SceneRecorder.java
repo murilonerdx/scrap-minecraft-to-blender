@@ -31,7 +31,7 @@ import java.util.Map;
 public final class SceneRecorder {
     private SceneRecorder() {}
 
-    private static final int MAX_FRAMES = 20 * 120;   // ~2 minutes
+    private static final int MAX_FRAMES = 30 * 120;   // ~2 minutes at 30 fps
     private static Session active;
 
     public static boolean isRecording() {
@@ -90,10 +90,16 @@ public final class SceneRecorder {
         }
     }
 
+    /** Sampling now happens on the render thread for smooth, high-fps keyframes (see {@link #renderTick}). */
     public static void tick() {
+    }
+
+    /** Called once per rendered frame with the render partial-tick, so the captured motion matches
+     *  exactly what's on screen (interpolated), not just the 20 Hz game ticks. Throttled to ~30 fps. */
+    public static void renderTick(float partial) {
         if (active == null) return;
         try {
-            active.sample();
+            active.sample(partial);
         } catch (Throwable t) {
             Recorte.LOGGER.warn("Cinematic sample failed", t);
         }
@@ -176,10 +182,14 @@ public final class SceneRecorder {
     }
 
     private static final class Session {
+        static final float SAMPLE_DT = 1f / 30f;   // throttle render-frame sampling to ~30 fps
+
         final Ir.Model out;
         final BlockPos center;
         final List<Tracked> tracked;
         final Ir.Animation anim = new Ir.Animation();
+        double startSeconds = -1;
+        float lastT = -1f;
         int frames;
 
         Session(Ir.Model out, BlockPos center, List<Tracked> tracked) {
@@ -189,12 +199,21 @@ public final class SceneRecorder {
         }
 
         @SuppressWarnings({"rawtypes", "unchecked"})
-        void sample() {
-            float partial = 1.0f;
-            anim.times.add(frames * 0.05f);
+        void sample(float partial) {
+            Minecraft mc = Minecraft.getInstance();
+            if (mc.level == null) return;
+
+            // real elapsed time (so the glTF plays back at true speed regardless of frame rate),
+            // throttled so we don't write hundreds of keys per second on a fast machine
+            double nowSec = (mc.level.getGameTime() + partial) * 0.05;
+            if (startSeconds < 0) startSeconds = nowSec;
+            float t = (float) (nowSec - startSeconds);
+            if (lastT >= 0f && t - lastT < SAMPLE_DT) return;
+            lastT = t;
+            anim.times.add(t);
 
             // POV camera: the player's eye this frame, in scene space (X negated like the scene)
-            net.minecraft.client.Camera cam = Minecraft.getInstance().gameRenderer.getMainCamera();
+            net.minecraft.client.Camera cam = mc.gameRenderer.getMainCamera();
             net.minecraft.world.phys.Vec3 cp = cam.getPosition();
             org.joml.Vector3f cf = cam.getLookVector();
             org.joml.Vector3f cu = cam.getUpVector();
@@ -216,16 +235,21 @@ public final class SceneRecorder {
                 } catch (Throwable ignored) {
                 }
 
-                // root: absolute world placement + body yaw, relative to the scene centre
+                // root: absolute world placement + body yaw (interpolated between ticks), so the
+                // travel path is smooth instead of stepping 20×/s
+                double ex = net.minecraft.util.Mth.lerp(partial, e.xOld, e.getX());
+                double ey = net.minecraft.util.Mth.lerp(partial, e.yOld, e.getY());
+                double ez = net.minecraft.util.Mth.lerp(partial, e.zOld, e.getZ());
+                float bodyYaw = net.minecraft.util.Mth.rotLerp(partial, e.yBodyRotO, e.yBodyRot);
                 Matrix4f rootM = new Matrix4f()
-                        .translate((float) -(e.getX() - center.getX()),
-                                (float) (e.getY() - center.getY()),
-                                (float) (e.getZ() - center.getZ()))
-                        .rotateY((float) Math.toRadians(-e.yBodyRot))
+                        .translate((float) -(ex - center.getX()),
+                                (float) (ey - center.getY()),
+                                (float) (ez - center.getZ()))
+                        .rotateY((float) Math.toRadians(-bodyYaw))
                         .mul(Convert.matrix());
-                Vector3f t = rootM.getTranslation(new Vector3f());
+                Vector3f t2 = rootM.getTranslation(new Vector3f());
                 Quaternionf q = rootM.getNormalizedRotation(new Quaternionf());
-                anim.key(tr.boneOffset, new float[]{t.x, t.y, t.z}, new float[]{q.x, q.y, q.z, q.w});
+                anim.key(tr.boneOffset, new float[]{t2.x, t2.y, t2.z}, new float[]{q.x, q.y, q.z, q.w});
 
                 // limbs
                 for (int i = 1; i < tr.parts.size(); i++) {

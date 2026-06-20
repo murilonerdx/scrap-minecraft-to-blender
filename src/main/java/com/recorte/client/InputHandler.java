@@ -49,11 +49,20 @@ public final class InputHandler {
         }
     }
 
+    /** Recording is sampled per rendered frame (interpolated) for smooth, high-fps keyframes. */
+    @SubscribeEvent
+    public static void onRenderTick(TickEvent.RenderTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) return;
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level == null || mc.player == null) return;
+        float partial = mc.getFrameTime();
+        Recorder.renderTick(partial);
+        SceneRecorder.renderTick(partial);
+    }
+
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
-        Recorder.tick();
-        SceneRecorder.tick();
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null) return;
         long time = mc.level.getGameTime();
