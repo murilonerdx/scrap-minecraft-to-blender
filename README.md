@@ -2,6 +2,7 @@
 
 **🌐 Language:** **English** · [Português](README.pt-BR.md)
 
+[![build](https://github.com/murilonerdx/scrap-minecraft-to-blender/actions/workflows/build.yml/badge.svg)](https://github.com/murilonerdx/scrap-minecraft-to-blender/actions/workflows/build.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 ![Minecraft](https://img.shields.io/badge/Minecraft-1.20.1-brightgreen)
 ![Forge](https://img.shields.io/badge/Forge-47.x-orange)
