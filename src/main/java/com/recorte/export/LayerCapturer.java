@@ -34,7 +34,7 @@ public final class LayerCapturer {
 
     private static final int BODY_BONE = 1;          // ModelExtractor bone order: root=0, body=1
     private static final int FULL_BRIGHT = LightTexture.pack(15, 15);
-    private static final float SHELL = 0.025f;       // outward push so accessories don't clip the body
+    private static final float PUSH_OUT = 0.15f;     // how far worn accessories are moved OUT from the body axis
 
     /** Player accessories: replay each render layer and attach to the body bone as a separate object. */
     @SuppressWarnings({"rawtypes", "unchecked"})
@@ -69,8 +69,8 @@ public final class LayerCapturer {
                         layer.getClass().getSimpleName(), t);
             }
         }
-        appendCaptured(accessories, out, Convert.matrixCaptured(), BODY_BONE, "Accessories", SHELL);
-        appendCaptured(cape, out, Convert.matrixCaptured(), BODY_BONE, "Cape", SHELL);
+        appendCaptured(accessories, out, Convert.matrixCaptured(), BODY_BONE, "Accessories", PUSH_OUT);
+        appendCaptured(cape, out, Convert.matrixCaptured(), BODY_BONE, "Cape", PUSH_OUT);
     }
 
     /** Whole-entity capture (mobs). Renders the entity renderer into the buffer; static (no bones). */
@@ -90,14 +90,20 @@ public final class LayerCapturer {
         } catch (Throwable t) {
             Recorte.LOGGER.warn("Entity render capture failed for {}", entity.getType(), t);
         }
-        appendCaptured(buffer, out, new Matrix4f(), 0, "Entity", SHELL);
+        appendCaptured(buffer, out, new Matrix4f(), 0, "Entity", 0f);   // standalone mob: no push
         return out;
     }
 
-    /** Converts the recorded quads into IR primitives, one material per distinct texture. The {@code shell}
-     *  pushes vertices out along their normal (worn items, to avoid clipping a body); pass 0 otherwise. */
+    /**
+     * Converts the recorded quads into IR primitives, one material per distinct texture. When
+     * {@code pushOut > 0} each captured object (grouped by render type ≈ one accessory) is moved as a
+     * whole OUT from the body's vertical axis by that distance, so worn 3D accessories (orbs, packs,
+     * belts) sit OUTSIDE the body instead of intersecting it — pushing per-vertex along normals only
+     * inflates a centred accessory, it never moves it clear. Pass 0 for standalone meshes (mobs, block
+     * entities).
+     */
     static void appendCaptured(CapturingBuffer buffer, Ir.Model out, Matrix4f m, int boneIndex,
-                               String group, float shell) {
+                               String group, float pushOut) {
         Map<Integer, Integer> texIdToMaterial = new HashMap<>();
         int textureCounter = out.materials.size();
         java.util.Set<String> seenQuads = new java.util.HashSet<>();   // drop duplicate passes (enchant glint, etc.)
@@ -126,6 +132,29 @@ public final class LayerCapturer {
 
             Ir.Primitive prim = out.primitiveForMaterial(materialIndex);
             prim.group = group;
+
+            // Move the whole accessory horizontally OUT from the body's vertical axis (export X=0,Z=0),
+            // by its centroid's outward direction. This actually separates a 3D accessory from the body;
+            // a dead-centre one is pushed forward.
+            float pushX = 0f, pushZ = 0f;
+            if (pushOut > 0f) {
+                float cx = 0f, cz = 0f;
+                for (float[] a : verts) {
+                    Vector3f p = m.transformPosition(new Vector3f(a[0], a[1], a[2]));
+                    cx += p.x;
+                    cz += p.z;
+                }
+                cx /= verts.size();
+                cz /= verts.size();
+                float rlen = (float) Math.sqrt(cx * cx + cz * cz);
+                if (rlen > 1.0e-3f) {
+                    pushX = cx / rlen * pushOut;
+                    pushZ = cz / rlen * pushOut;
+                } else {
+                    pushZ = pushOut;   // centred accessory: push forward off the chest
+                }
+            }
+
             for (int i = 0; i + 3 < verts.size(); i += 4) {
                 StringBuilder key = new StringBuilder();
                 for (int k = 0; k < 4; k++) {
@@ -141,9 +170,7 @@ public final class LayerCapturer {
                     Vector3f p = m.transformPosition(new Vector3f(a[0], a[1], a[2]));
                     Vector3f n = m.transformDirection(new Vector3f(a[5], a[6], a[7]));
                     if (n.lengthSquared() > 1.0e-8f) n.normalize();
-                    // push slightly outward along the normal so worn items sit just OUTSIDE the body
-                    // surface instead of z-fighting / clipping into it
-                    quad[k] = new Ir.Vertex(p.x + n.x * shell, p.y + n.y * shell, p.z + n.z * shell,
+                    quad[k] = new Ir.Vertex(p.x + pushX, p.y, p.z + pushZ,
                             n.x, n.y, n.z, a[3], a[4], boneIndex);
                 }
                 prim.addQuad(quad[0], quad[1], quad[2], quad[3]);
