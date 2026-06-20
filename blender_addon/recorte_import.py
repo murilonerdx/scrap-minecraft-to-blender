@@ -17,9 +17,13 @@ import bpy
 DEFAULT_PORT = 25599
 
 
+# Bypass any system/Blender proxy — localhost must not be routed through a proxy.
+_opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+
+
 def _fetch(port, path):
     url = "http://127.0.0.1:%d/%s" % (port, path)
-    with urllib.request.urlopen(url, timeout=5) as r:
+    with _opener.open(url, timeout=5) as r:
         return r.read()
 
 

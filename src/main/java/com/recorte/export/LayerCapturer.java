@@ -90,6 +90,7 @@ public final class LayerCapturer {
     private static void appendCaptured(CapturingBuffer buffer, Ir.Model out, Matrix4f m, int boneIndex, String group) {
         Map<Integer, Integer> texIdToMaterial = new HashMap<>();
         int textureCounter = out.materials.size();
+        java.util.Set<String> seenQuads = new java.util.HashSet<>();   // drop duplicate passes (enchant glint, etc.)
 
         for (Map.Entry<RenderType, CapturingBuffer.Captured> entry : buffer.captured().entrySet()) {
             List<float[]> verts = entry.getValue().verts;
@@ -116,6 +117,14 @@ public final class LayerCapturer {
             Ir.Primitive prim = out.primitiveForMaterial(materialIndex);
             prim.group = group;
             for (int i = 0; i + 3 < verts.size(); i += 4) {
+                StringBuilder key = new StringBuilder();
+                for (int k = 0; k < 4; k++) {
+                    float[] a = verts.get(i + k);
+                    key.append(Math.round(a[0] * 1000)).append(',')
+                            .append(Math.round(a[1] * 1000)).append(',')
+                            .append(Math.round(a[2] * 1000)).append(';');
+                }
+                if (!seenQuads.add(key.toString())) continue;   // duplicate pass (glint/overlay) — skip
                 Ir.Vertex[] quad = new Ir.Vertex[4];
                 for (int k = 0; k < 4; k++) {
                     float[] a = verts.get(i + k);
