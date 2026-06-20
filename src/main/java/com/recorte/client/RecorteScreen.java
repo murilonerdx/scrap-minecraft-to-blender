@@ -38,6 +38,14 @@ public final class RecorteScreen extends Screen {
         String recLabel = Recorder.isRecording() ? "■ Stop recording" : "● Record (looked-at / self)";
         addRenderableWidget(Button.builder(Component.literal(recLabel),
                 b -> run(Recorder::toggleLookedAtOrSelf)).bounds(left, y, w, 20).build());
+        y += 24;
+
+        String liveLabel = com.recorte.export.HttpBridge.liveMode
+                ? "◉ Live link: ON (Blender auto-updates)" : "○ Live link: OFF";
+        addRenderableWidget(Button.builder(Component.literal(liveLabel), b -> {
+            com.recorte.export.Exporter.toggleLive();
+            this.rebuildWidgets();
+        }).bounds(left, y, w, 20).build());
         y += 32;
 
         // --- radius + scene/snapshot ---

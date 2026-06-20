@@ -55,7 +55,9 @@ public final class InputHandler {
         Recorder.tick();
         SceneRecorder.tick();
         Minecraft mc = Minecraft.getInstance();
-        if (mc.level != null && mc.player != null && mc.level.getGameTime() % 10 == 0) {
+        if (mc.level == null || mc.player == null) return;
+        long time = mc.level.getGameTime();
+        if (time % 10 == 0) {
             try {
                 net.minecraft.world.phys.Vec3 sky = mc.level.getSkyColor(mc.player.position(), 1.0f);
                 float t = mc.level.getTimeOfDay(1.0f);
@@ -63,6 +65,9 @@ public final class InputHandler {
                         "{\"sky\":[%.4f,%.4f,%.4f],\"timeOfDay\":%.4f}", sky.x, sky.y, sky.z, t));
             } catch (Throwable ignored) {
             }
+        }
+        if (HttpBridge.liveMode && time % 20 == 0) {
+            Exporter.exportLive();   // on the render thread, so GPU reads are valid
         }
     }
 
@@ -118,7 +123,8 @@ public final class InputHandler {
                                                 .then(Commands.argument("radius", IntegerArgumentType.integer(2, 24))
                                                         .executes(c -> run(() -> SceneRecorder.start(
                                                                 IntegerArgumentType.getInteger(c, "radius"))))))
-                                        .then(Commands.literal("stop").executes(c -> run(SceneRecorder::stop)))))));
+                                        .then(Commands.literal("stop").executes(c -> run(SceneRecorder::stop)))))
+                        .then(Commands.literal("live").executes(c -> run(Exporter::toggleLive)))));
     }
 
     private static int run(Runnable task) {

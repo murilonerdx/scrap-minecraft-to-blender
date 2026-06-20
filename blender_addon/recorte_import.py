@@ -91,6 +91,77 @@ class RECORTE_OT_ping(bpy.types.Operator):
         return {"FINISHED"}
 
 
+def _apply_pixel_art(objs):
+    for obj in objs:
+        for slot in getattr(obj, "material_slots", []):
+            mat = slot.material
+            if mat and mat.use_nodes:
+                for node in mat.node_tree.nodes:
+                    if node.type == "TEX_IMAGE":
+                        node.interpolation = "Closest"
+
+
+class RECORTE_OT_live(bpy.types.Operator):
+    """Auto-reimport the live export whenever the game pushes a new one (real-time link)."""
+    bl_idname = "recorte.live"
+    bl_label = "Start Live link"
+
+    _timer = None
+    _last_gen = None
+    _objs = None
+
+    def modal(self, context, event):
+        if not context.scene.recorte_live:
+            self.cancel(context)
+            return {"CANCELLED"}
+        if event.type == "TIMER":
+            port = context.scene.recorte_port
+            try:
+                gen = _fetch(port, "gen").decode("utf-8").strip()
+            except Exception:  # noqa: BLE001
+                return {"PASS_THROUGH"}
+            if gen != self._last_gen:
+                self._last_gen = gen
+                self._reimport(context, port)
+        return {"PASS_THROUGH"}
+
+    def _reimport(self, context, port):
+        for o in list(self._objs or []):
+            try:
+                bpy.data.objects.remove(o, do_unlink=True)
+            except Exception:  # noqa: BLE001
+                pass
+        self._objs = []
+        try:
+            data = _fetch(port, "latest")
+        except Exception:  # noqa: BLE001
+            return
+        path = os.path.join(tempfile.gettempdir(), "recorte_live.glb")
+        with open(path, "wb") as f:
+            f.write(data)
+        before = set(bpy.data.objects)
+        try:
+            bpy.ops.import_scene.gltf(filepath=path)
+        except Exception:  # noqa: BLE001
+            return
+        self._objs = [o for o in bpy.data.objects if o not in before]
+        _apply_pixel_art(self._objs)
+
+    def execute(self, context):
+        context.scene.recorte_live = True
+        self._objs = []
+        self._last_gen = None
+        self._timer = context.window_manager.event_timer_add(1.0, window=context.window)
+        context.window_manager.modal_handler_add(self)
+        self.report({"INFO"}, "Live link started — turn on 'Live link' in-game (/recorte live)")
+        return {"RUNNING_MODAL"}
+
+    def cancel(self, context):
+        if self._timer is not None:
+            context.window_manager.event_timer_remove(self._timer)
+            self._timer = None
+
+
 class RECORTE_PT_panel(bpy.types.Panel):
     bl_label = "Recorte"
     bl_idname = "RECORTE_PT_panel"
@@ -103,15 +174,22 @@ class RECORTE_PT_panel(bpy.types.Panel):
         layout.prop(context.scene, "recorte_port")
         layout.operator("recorte.import_latest", icon="IMPORT")
         layout.operator("recorte.ping", icon="PLUGIN")
-        layout.label(text="Export in-game (key O), then click Import.")
+        layout.separator()
+        layout.label(text="Real-time link:")
+        if context.scene.recorte_live:
+            layout.prop(context.scene, "recorte_live", text="Live link: ON", toggle=True)
+        else:
+            layout.operator("recorte.live", icon="PLAY")
+        layout.label(text="In-game: /recorte live (or panel button)")
 
 
-classes = (RECORTE_OT_import_latest, RECORTE_OT_ping, RECORTE_PT_panel)
+classes = (RECORTE_OT_import_latest, RECORTE_OT_ping, RECORTE_OT_live, RECORTE_PT_panel)
 
 
 def register():
     bpy.types.Scene.recorte_port = bpy.props.IntProperty(
         name="Port", default=DEFAULT_PORT, min=1, max=65535)
+    bpy.types.Scene.recorte_live = bpy.props.BoolProperty(name="Live link", default=False)
     for c in classes:
         bpy.utils.register_class(c)
 
@@ -120,6 +198,7 @@ def unregister():
     for c in reversed(classes):
         bpy.utils.unregister_class(c)
     del bpy.types.Scene.recorte_port
+    del bpy.types.Scene.recorte_live
 
 
 if __name__ == "__main__":

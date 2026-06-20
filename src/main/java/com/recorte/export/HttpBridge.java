@@ -24,12 +24,15 @@ public final class HttpBridge {
     private HttpBridge() {}
 
     public static final int PORT = 25599;
+    public static volatile boolean liveMode = false;   // auto-export the target each second for the live link
     private static volatile Path lastGlb;
+    private static volatile int generation = 0;        // bumped on every export, polled by the Blender add-on
     private static volatile String env = "{}";
     private static HttpServer server;
 
     public static void setLastGlb(Path glb) {
         lastGlb = glb;
+        generation++;
     }
 
     /** Latest environment (sky color, time of day) as JSON, refreshed on the client tick. */
@@ -44,6 +47,8 @@ public final class HttpBridge {
             server.createContext("/ping", exchange -> respond(exchange, 200, "text/plain", "recorte".getBytes()));
             server.createContext("/env", exchange -> respond(exchange, 200, "application/json",
                     env.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+            server.createContext("/gen", exchange -> respond(exchange, 200, "text/plain",
+                    String.valueOf(generation).getBytes()));
             server.createContext("/latest", exchange -> {
                 Path glb = lastGlb;
                 if (glb == null || !Files.exists(glb)) {

@@ -49,6 +49,47 @@ public final class Exporter {
         }
     }
 
+    /** Silent export of the looked-at/self target to a fixed "_live" folder, for the real-time link. */
+    public static void exportLive() {
+        Minecraft mc = Minecraft.getInstance();
+        try {
+            Ir.Model ir;
+            net.minecraft.world.entity.Entity looked = mc.crosshairPickEntity;
+            if (looked instanceof LivingEntity living && !(looked instanceof AbstractClientPlayer)) {
+                @SuppressWarnings("rawtypes")
+                EntityRenderer renderer = mc.getEntityRenderDispatcher().getRenderer(looked);
+                ir = riggedEntity(living, renderer);
+                if (ir == null) ir = LayerCapturer.captureEntity(renderer, looked);
+            } else if (mc.player != null) {
+                EntityRenderer<?> r = mc.getEntityRenderDispatcher().getRenderer(mc.player);
+                if (!(r instanceof PlayerRenderer pr)) return;
+                PlayerModel<?> model = pr.getModel();
+                ir = new ModelExtractor().extract(model, mc.player, "skin.png");
+                ir.materials.get(0).png = TextureExporter.skinBytes(mc.player);
+                LayerCapturer.captureExtras(pr, mc.player, model, ir);
+            } else {
+                return;
+            }
+            Path dir = mc.gameDirectory.toPath().resolve("recorte_exports").resolve("_live");
+            Files.createDirectories(dir);
+            for (Ir.Material m : ir.materials) {
+                if (m.png != null && m.textureFile != null) Files.write(dir.resolve(m.textureFile), m.png);
+            }
+            Path glb = dir.resolve("live.glb");
+            GltfWriter.write(ir, glb);
+            HttpBridge.setLastGlb(glb);
+        } catch (Throwable t) {
+            Recorte.LOGGER.warn("Live export failed", t);
+        }
+    }
+
+    public static void toggleLive() {
+        HttpBridge.liveMode = !HttpBridge.liveMode;
+        feedback(HttpBridge.liveMode
+                ? "§a● Live link LIGADO §7— Blender atualiza ~1×/s (marque 'Live link' no addon)"
+                : "§e○ Live link DESLIGADO");
+    }
+
     public static void exportPlayerByName(String name) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null) return;

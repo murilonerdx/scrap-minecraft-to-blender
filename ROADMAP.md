@@ -19,16 +19,19 @@ cinematics**. ✅ marks what already exists. (Versão em português abaixo / Por
 - **Blender add-on + HTTP bridge** (real-time link *phase A*): one-click "Import latest from Minecraft"
   pulls the newest export from the running game (`blender_addon/recorte_import.py`) and sets the World
   background to the live in-game sky color (`/env`).
+- **Real-time link *phase B* (live)**: `/recorte live` makes the mod auto-export the target ~1×/s; the
+  add-on's "Live link" watches `/gen` and auto-reimports — you play, Blender updates.
 - **Camera export** — `scene`/`snapshot` include a glTF camera framed to your in-game view (position
   + FOV), so the diorama opens already lined up with your shot.
 - **Sun light** — `scene`/`snapshot` include a directional light (`KHR_lights_punctual`) colored and
   angled by the in-game time of day (warm at dusk, blue at night). Blender imports it as a Sun lamp.
 
 ## 🔜 Big next steps
-- **Real-time link phase B**: stream bone transforms over WebSocket so the mob mirrors the game live
-  in Blender (no export round-trip).
+- **Real-time link phase C**: true streaming (WebSocket/SSE) of bone transforms so it's frame-accurate,
+  not ~1×/s.
 - **Particle/VFX capture**: record particle systems (fire, portal, explosions) as animated point clouds.
 - **In-game preview**: a render of the model/scene inside the control panel before exporting.
+- **Batch a mod's entities**: `export mod` currently does items+blocks; add all the mod's mobs.
 
 ## 🦴 Animation
 - **Export animation cycles** (idle/walk/attack) as glTF animation: sample `setupAnim` over time and

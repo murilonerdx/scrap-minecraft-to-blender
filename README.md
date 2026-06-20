@@ -115,8 +115,9 @@ add-on and import without touching files:
 2. In the 3D viewport press **N** → **Recorte** tab.
 3. Export in-game (key `O`), then click **Import latest from Minecraft**.
 
-> This is *phase A* of the real-time link. Phase B will stream bone transforms live (the mob mirrors the
-> game in Blender in real time).
+**Live mode:** run `/recorte live` (or the panel's *Live link* button) in-game and click **Start Live
+link** in the add-on — the mod auto-exports the looked-at target ~1×/s and Blender re-imports it
+automatically, so the scene updates as you play.
 
 ---
 
