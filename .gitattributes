@@ -1,5 +1,28 @@
-# Disable autocrlf on generated files, they always generate with LF
-# Add any extra files or paths here to make git stop saying they
-# are changed when only line endings change.
+# Normalize line endings: text files are LF in the repo (checked out native on Windows)
+* text=auto eol=lf
+
+# Scripts that must keep their platform endings
+*.bat        text eol=crlf
+gradlew      text eol=lf
+gradlew.bat  text eol=crlf
+
+# Source & docs as LF
+*.java       text eol=lf
+*.gradle     text eol=lf
+*.json       text eol=lf
+*.toml       text eol=lf
+*.cfg        text eol=lf
+*.mcmeta     text eol=lf
+*.properties text eol=lf
+*.md         text eol=lf
+*.svg        text eol=lf
+
+# Binaries (never touch)
+*.jar  binary
+*.png  binary
+*.glb  binary
+*.zip  binary
+
+# Forge MDK generated files always come out as LF
 src/generated/**/.cache/cache text eol=lf
-src/generated/**/*.json text eol=lf
+src/generated/**/*.json       text eol=lf

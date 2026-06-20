@@ -1,65 +1,65 @@
 # Roadmap — scrap-minecraft-to-blender
 
-Ideias para transformar o Recorte numa ponte completa **Minecraft → Blender**, focada em
-**animação, VFX e cinema**. Marcado com ✅ o que já existe.
+Ideas to grow Recorte into a complete **Minecraft → Blender** bridge, focused on **animation, VFX and
+cinematics**. ✅ marks what already exists. (Versão em português abaixo / Portuguese version below.)
 
-## ✅ Já funciona
-- Player (corpo, skin, 2ª camada, **armadura + Curios/Artifacts**) com esqueleto.
-- Mobs com ossos (vanilla) + fallback de captura (GeckoLib).
-- Itens, blocos e **mod inteiro** em lote.
-- **Cena** (diorama do mundo) e **Snapshot** (cena + mobs rigados) com culling, tint e emissão.
-- glTF skinned multi-objeto + OBJ, texturas por sprite, cor de vértice.
+## ✅ Already works
+- Player (body, skin, 2nd layer, **armor + Curios/Artifacts**) with a skeleton.
+- Mobs with bones (vanilla) + capture fallback (GeckoLib).
+- Items, blocks and a **whole mod** in batch.
+- **Scene** (world diorama) and **Snapshot** (scene + rigged mobs) with culling, tint and emission.
+- Skinned multi-object glTF + OBJ, per-sprite textures, vertex colors.
 
-## 🦴 Animação
-- **Exportar ciclos de animação** (idle/andar/atacar) como animação glTF: amostrar `setupAnim` ao longo
-  do tempo e gravar keyframes por osso → o modelo **se mexe** no Blender.
-- **Gravar uma animação ao vivo**: capturar a pose de uma entidade por N ticks reais → qualquer coisa
-  que o mob fizer no jogo vira animação bakeada.
-- **Animações de block entity** (baú abrindo, portão, conduit, beacon).
-- **Animação do item na mão / 1ª pessoa** (swing, uso, bloqueio).
-- Suporte a **GeckoLib animations** (ler os `.animation.json`).
+## 🦴 Animation
+- **Export animation cycles** (idle/walk/attack) as glTF animation: sample `setupAnim` over time and
+  write per-bone keyframes → the model **moves** in Blender.
+- **Record a live animation**: capture an entity's pose over N real ticks → whatever the mob does
+  in-game becomes a baked animation.
+- **Block-entity animations** (chest opening, gates, conduit, beacon).
+- **Held-item / first-person animation** (swing, use, block).
+- **GeckoLib animations** (read the `.animation.json`).
 
-## ✨ VFX / Partículas
-- **Exportar partículas** (fogo, fumaça, portal, redstone, poções, totem) como *point cloud* / malha
-  instanciada com posição+cor → Geometry/Particle Nodes no Blender.
-- **Capturar um efeito ao longo do tempo** → VFX animado (rastro de partículas).
-- **Beacon beam, end gateway, dragon breath, explosões**.
-- **Superfície de fluidos** (água/lava) com normal/flow e textura animada.
+## ✨ VFX / Particles
+- **Export particles** (fire, smoke, portal, redstone, potions, totem) as a point cloud / instanced
+  mesh with position + color → Geometry/Particle Nodes in Blender.
+- **Capture an effect over time** → animated VFX (particle trails).
+- **Beacon beam, end gateway, dragon breath, explosions.**
+- **Fluid surfaces** (water/lava) with normals/flow and animated texture.
 
-## 💡 Iluminação & ambiente
-- Exportar **cor de céu/fog/bioma + ângulo do sol** → recriar a ambientação no Blender (sun + world).
-- **Block light / sky light** bakeado (vertex color ou light probes) para casar com a iluminação do jogo.
-- Skybox, nuvens, estrelas.
-- **Câmera**: exportar posição/FOV do player → uma câmera do Blender igual à sua visão.
+## 💡 Lighting & environment
+- Export **sky/fog/biome color + sun angle** → recreate the in-game look in Blender (sun + world).
+- **Block light / sky light** baked (vertex color or light probes) to match the game's lighting.
+- Skybox, clouds, stars.
+- **Camera**: export the player's position/FOV → a Blender camera matching your view.
 
-## 🧱 Mais coisas pra extrair
-- **Regiões maiores / schematics** (NBT structures, `.litematic`).
-- **Placas (texto), quadros, item frames, mapas** como malhas/planos texturizados.
-- **Texturas animadas** (água, lava, fogo, portal) exportadas como sequência de imagens.
-- **PBR de resource packs** (LabPBR: normal/specular) e *connected textures*.
-- **Transparência real** (vidro, água) em modo BLEND, não só MASK.
+## 🧱 More to extract
+- **Larger regions / schematics** (NBT structures, `.litematic`).
+- **Signs (text), paintings, item frames, maps** as textured meshes/planes.
+- **Animated textures** (water, lava, fire, portal) exported as image sequences.
+- **Resource-pack PBR** (LabPBR: normal/specular) and connected textures.
+- **Real transparency** (glass, water) in BLEND mode, not just MASK.
 
-## 🎬 Cinema / cena completa
-- **Export "cinematic"**: cena + entidades **rigadas** + câmera + luz + céu → uma cena Blender pronta
-  pra renderizar de um momento do jogo.
-- **Timeline**: capturar uma sequência de frames (mobs andando, água correndo) → animação completa.
-- Integração com mods de **replay** para exportar trechos gravados.
+## 🎬 Cinematic / full scene
+- **"Cinematic" export**: scene + **rigged** entities + camera + lighting + sky → a Blender scene ready
+  to render of a game moment.
+- **Timeline**: capture a sequence of frames (mobs walking, water flowing) → a full animation.
+- Integration with **replay** mods to export recorded clips.
 
-## 🧰 Workflow & conforto
-- **Addon de Blender** que importa o export sozinho: monta materiais (nearest, emissão, alpha), faz
-  *parent* no esqueleto e arruma a escala — 1 clique.
-- **Tela in-game** (GUI) com **preview** pra escolher o que exportar e as opções (raio, interiores,
-  detalhe), em vez de digitar comando.
-- **Presets** (low/high detail, com/sem interiores, com/sem entidades).
-- Exportar **vários mobs do mod** (entidades em lote, hoje só itens/blocos).
-- Botão **"abrir pasta"** após exportar.
+## 🧰 Workflow & comfort
+- **Blender add-on** that imports the export automatically: builds materials (nearest, emission, alpha),
+  parents to the armature, fixes scale — one click.
+- **In-game GUI** with a **preview** to choose what to export and the options (radius, interiors,
+  detail), instead of typing commands.
+- **Presets** (low/high detail, with/without interiors, with/without entities).
+- Export **all of a mod's mobs** (entities in batch; today only items/blocks).
+- An **"open folder"** button after exporting.
 
-## 🏗️ Qualidade técnica
-- **Atlas compartilhado** no lote de mod (hoje cada item duplica seu sprite).
-- **Merge por material** entre objetos para reduzir draw calls no Blender.
-- Opção de **bind pose / T-pose** vs pose atual.
-- Bones de mob mais limpos (nomear pelas partes mesmo no jogo ofuscado).
+## 🏗️ Technical quality
+- **Shared atlas** in mod-batch (today each item duplicates its sprite).
+- **Merge by material** across objects to reduce draw calls in Blender.
+- **Bind pose / T-pose** option vs. current pose.
+- Cleaner mob bone names (name by part even in the obfuscated game).
 
 ---
 
-Sugestões? Abra uma issue. 🙌
+Got suggestions? Open an issue. 🙌

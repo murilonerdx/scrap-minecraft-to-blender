@@ -1,86 +1,89 @@
 # scrap-minecraft-to-blender
 
-> **Recorte** — exporte (quase) qualquer coisa do Minecraft direto pro **Blender**: seu personagem,
-> mobs, itens, blocos, mods inteiros e até **cenas do mundo** — com **esqueleto (ossos)**, texturas,
-> emissão e tints, em **glTF (`.glb`)** e **OBJ**.
+**🌐 Language:** **English** · [Português](README.pt-BR.md)
 
-Mod **client-side** para **Minecraft 1.20.1 / Forge**. Você aperta uma tecla (ou usa um comando) dentro
-do jogo e os arquivos aparecem prontos pra importar no Blender.
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+![Minecraft](https://img.shields.io/badge/Minecraft-1.20.1-brightgreen)
+![Forge](https://img.shields.io/badge/Forge-47.x-orange)
+![Java](https://img.shields.io/badge/Java-17-red)
+
+> **Recorte** — export (almost) anything from Minecraft straight into **Blender**: your character,
+> mobs, items, blocks, whole mods, and even **world scenes** — with a **skeleton (bones)**, textures,
+> emission and biome tints, as **glTF (`.glb`)** and **OBJ**.
+
+A **client-side** mod for **Minecraft 1.20.1 / Forge**. Press a key (or run a command) in-game and the
+files appear ready to import into Blender.
 
 ![pipeline](docs/architecture.svg)
 
-> 📸 Screenshots do jogo e do Blender em breve (veja [docs/](docs/)).
+> 📸 In-game and Blender screenshots coming soon (see [docs/](docs/)).
 
 ---
 
-## ✨ O que dá pra exportar
+## ✨ What you can export
 
-| Comando | O que faz | Ossos |
+| Command | What it does | Bones |
 |---|---|:---:|
-| `O` (tecla) ou `/recorte export` | o player/mob que você está **olhando**, ou você | ✅ |
-| `/recorte export player <nome>` | um player pelo nome | ✅ |
-| `/recorte export entity <id>` | um **mob** (ex.: `minecraft:zombie`) | ✅ vanilla¹ |
-| `/recorte export item <id>` | modelo 3D de um **item** (espada, ovo…) | – |
-| `/recorte export block <id>` | modelo de um **bloco** | – |
-| `/recorte export mod <modid>` | **todos** os itens + blocos de um mod (lote) | – |
-| `/recorte export scene [raio]` | 🎬 **cenário** ao redor (diorama do seu build/terreno) | – |
-| `/recorte export snapshot [raio]` | 🎬 **o momento**: cena + todos os mobs por perto (mobs **rigados**) | ✅ |
+| `O` (key) or `/recorte export` | the player/mob you're **looking at**, or yourself | ✅ |
+| `/recorte export player <name>` | a player by name | ✅ |
+| `/recorte export entity <id>` | a **mob** (e.g. `minecraft:zombie`) | ✅ vanilla¹ |
+| `/recorte export item <id>` | a 3D **item** model (sword, egg…) | – |
+| `/recorte export block <id>` | a **block** model | – |
+| `/recorte export mod <modid>` | **all** items + blocks of a mod (batch) | – |
+| `/recorte export scene [radius]` | 🎬 the **surroundings** (a diorama of your build/terrain) | – |
+| `/recorte export snapshot [radius]` | 🎬 the **moment**: scene + every nearby mob (**rigged**) | ✅ |
 
-¹ Mobs vanilla (`HumanoidModel`/`HierarchicalModel`) saem **com ossos**. Mobs de **GeckoLib** caem
-para uma captura estática (mas saem!).
+¹ Vanilla mobs (`HumanoidModel`/`HierarchicalModel`) export **with bones**. **GeckoLib** mobs fall back
+to a static capture (but they still export!).
 
-**Extras automáticos:**
-- 🦴 **Esqueleto/armature** pronto pra animar (player e mobs).
-- 🎨 **Texturas** recortadas por sprite (pequenas, não o atlas inteiro).
-- 💡 **Emissão** — lava, glowstone, tochas e lanternas **brilham** no Blender.
-- 🌿 **Tints** de bioma (grama/folha/água) como **cor de vértice**.
-- 🧱 **Culling** das faces escondidas nas cenas (não exporta interiores).
-- 👕 Armadura, item na mão e **acessórios Curios/Artifacts** do player (objeto `Accessories` separado).
+**Automatic extras:**
+- 🦴 **Skeleton/armature** ready to animate (player and mobs).
+- 🎨 **Per-sprite textures** (small — not the whole atlas).
+- 💡 **Emission** — lava, glowstone, torches and lanterns **glow** in Blender.
+- 🌿 **Biome tints** (grass/leaves/water) baked as **vertex colors**.
+- 🧱 **Hidden-face culling** in scenes (interiors aren't exported).
+- 👕 Player armor, held item and **Curios/Artifacts accessories** (as a separate `Accessories` object).
 
 ---
 
-## 🚀 Instalação
+## 🚀 Install
 
-1. Tenha **Minecraft 1.20.1** com **Forge 47.x**.
-2. Baixe/gere o `recorte-0.1.0.jar` (veja **Build** abaixo) e jogue na pasta `mods` da sua instância.
-3. Pronto. O mod é só-cliente; pode usar em mundo single-player ou em servidores.
+1. Have **Minecraft 1.20.1** with **Forge 47.x**.
+2. Build or download `recorte-0.1.0.jar` (see **Build** below) and drop it into your instance's `mods` folder.
+3. That's it. The mod is client-only; works in single-player and on servers.
 
-## 🔨 Build (a partir do código)
+## 🔨 Build from source
 
-Requisitos: nada além do repositório — o Gradle Wrapper baixa tudo (inclusive um **JDK 17** via toolchain).
+No prerequisites beyond the repo — the Gradle Wrapper downloads everything (including a **JDK 17** via toolchain).
 
 ```bash
 # Windows
 .\gradlew.bat build
-# Linux/Mac
+# Linux/macOS
 ./gradlew build
-# Resultado: build/libs/recorte-0.1.0.jar
+# Output: build/libs/recorte-0.1.0.jar
 ```
 
-Rodar um cliente de teste (dev):
+Run a dev client: `./gradlew runClient`
 
-```bash
-./gradlew runClient
-```
-
-> Obs.: mods com mixins (Oculus/Embeddium) **não** carregam no `runClient` de dev por diferença de
-> mapeamento. Para testar junto com esses mods, instale o `.jar` na sua instância real.
+> Note: mixin mods (Oculus/Embeddium) **won't** load in the dev `runClient` due to a mappings mismatch.
+> To test alongside those, install the `.jar` into your real instance.
 
 ---
 
-## 🎮 Como usar
+## 🎮 Usage
 
-1. Entre num mundo.
-2. Aperte **`O`** (rebindável em *Opções → Controles → Recorte*) ou use um `/recorte export …`.
-3. Os arquivos saem em:
+1. Join a world.
+2. Press **`O`** (rebindable under *Options → Controls → Recorte*) or run a `/recorte export …` command.
+3. Files land in:
    ```
-   <pasta da instância>/recorte_exports/<data_hora>_<nome>/
-     ├── <nome>.glb     ← glTF (melhor): ossos + texturas embutidas
-     ├── <nome>.obj/.mtl
-     └── *.png          ← texturas
+   <instance folder>/recorte_exports/<timestamp>_<name>/
+     ├── <name>.glb     ← glTF (best): bones + embedded textures
+     ├── <name>.obj/.mtl
+     └── *.png          ← textures
    ```
 
-### Exemplos
+### Examples
 ```
 /recorte export entity minecraft:zombie
 /recorte export item minecraft:diamond_sword
@@ -90,48 +93,54 @@ Rodar um cliente de teste (dev):
 /recorte export snapshot 16
 ```
 
-## 🟦 Abrir no Blender
+## 🟦 Importing into Blender
 
-- **glTF (recomendado):** `Arquivo → Importar → glTF 2.0` e escolha o `.glb`. Vem com armature e
-  materiais ligados.
-- Para visual **pixel-art** sem borrão: no material, troque o filtro da textura para **Closest**.
-- **Emissão** (lava/glowstone): aparece no `emissiveFactor`/`emissiveTexture` — visível no EEVEE/Cycles.
-- **Tints** (grama/água): vêm como *Color Attribute* (`COLOR_0`), multiplicado na cor base.
-- Escala: 1 unidade = 1 bloco.
+- **glTF (recommended):** `File → Import → glTF 2.0` and pick the `.glb`. Comes with the armature and
+  materials wired up.
+- For crisp **pixel-art** (no blur): set the texture filter to **Closest** in the material.
+- **Emission** (lava/glowstone): exposed via `emissiveFactor`/`emissiveTexture` — visible in EEVEE/Cycles.
+- **Tints** (grass/water): imported as a *Color Attribute* (`COLOR_0`), multiplied over the base color.
+- Scale: 1 unit = 1 block.
 
 ---
 
-## 🧠 Como funciona
+## 🧠 How it works
 
 ```
 com.recorte
-├── Recorte / client/*        @Mod, keybind, comando /recorte export
+├── Recorte / client/*         @Mod, keybind, /recorte export command tree
 └── export
-    ├── Exporter              orquestra cada modo (player/entity/item/block/scene/snapshot/mod)
-    ├── ModelExtractor        player + mobs → esqueleto (walk de ModelPart) com geometria
-    ├── BakedModelExtractor   itens/blocos → geometria a partir do BakedModel + sprite
-    ├── SceneExtractor        blocos do mundo → diorama (culling, tint, emissão)
-    ├── LayerCapturer         captura o RENDER real (armadura, Curios, mobs GeckoLib)
-    ├── Ir                    representação intermediária (ossos, materiais, malha, cor)
-    ├── GltfWriter / ObjWriter  escrevem .glb (skinned, multi-objeto) e .obj/.mtl
-    ├── TextureExporter       lê texturas da GPU → PNG
-    └── Convert / ReflectUtil  conversão de eixos; reflexão por TIPO (sobrevive à ofuscação)
+    ├── Exporter               orchestrates each mode (player/entity/item/block/scene/snapshot/mod)
+    ├── ModelExtractor         player + mobs → skeleton (ModelPart walk) with geometry
+    ├── BakedModelExtractor    items/blocks → geometry from the BakedModel + sprite
+    ├── SceneExtractor         world blocks → diorama (culling, tint, emission)
+    ├── LayerCapturer          captures the REAL render (armor, Curios, GeckoLib mobs)
+    ├── Ir                     intermediate representation (bones, materials, mesh, color)
+    ├── GltfWriter / ObjWriter  write .glb (skinned, multi-object) and .obj/.mtl
+    ├── TextureExporter        reads textures back from the GPU → PNG
+    └── Convert / ReflectUtil   axis conversion; reflection BY TYPE (survives obfuscation)
 ```
 
-**Ideias-chave**
-- **Reflexão por *tipo de campo*** (não por nome) → o mesmo código funciona no dev e no jogo ofuscado,
-  sem *access transformer*.
-- **Captura do render real** num `VertexConsumer` → pega armadura, Curios e GeckoLib sem conhecer cada
-  sistema de render.
-- **Conversão de eixos** num único lugar; geometria capturada já vem ÷16 do jogo (cuidado documentado no
-  código).
+**Key ideas**
+- **Reflection by field *type*** (not name) → the same code works in dev and in the obfuscated game,
+  with no access transformer.
+- **Capturing the real render** into a `VertexConsumer` → grabs armor, Curios and GeckoLib without
+  knowing each rendering system.
+- **A single axis conversion**; captured geometry already arrives divided by 16 from the game (a gotcha
+  documented in the code).
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how to add a new export type.
 
 ---
 
 ## 🗺️ Roadmap
 
-Animações, VFX/partículas, iluminação, addon de Blender e muito mais em **[ROADMAP.md](ROADMAP.md)**.
+Animations, VFX/particles, lighting, a Blender add-on and more in **[ROADMAP.md](ROADMAP.md)**.
 
-## 📄 Licença
+## 🤝 Contributing
 
-[MIT](LICENSE).
+Contributions welcome — see **[CONTRIBUTING.md](CONTRIBUTING.md)**.
+
+## 📄 License
+
+[MIT](LICENSE) © murilonerdx
