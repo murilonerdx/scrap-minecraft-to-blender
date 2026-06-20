@@ -34,6 +34,7 @@ public final class LayerCapturer {
 
     private static final int BODY_BONE = 1;          // ModelExtractor bone order: root=0, body=1
     private static final int FULL_BRIGHT = LightTexture.pack(15, 15);
+    private static final float SHELL = 0.025f;       // outward push so accessories don't clip the body
 
     /** Player accessories: replay each render layer and attach to the body bone as a separate object. */
     @SuppressWarnings({"rawtypes", "unchecked"})
@@ -131,7 +132,10 @@ public final class LayerCapturer {
                     Vector3f p = m.transformPosition(new Vector3f(a[0], a[1], a[2]));
                     Vector3f n = m.transformDirection(new Vector3f(a[5], a[6], a[7]));
                     if (n.lengthSquared() > 1.0e-8f) n.normalize();
-                    quad[k] = new Ir.Vertex(p.x, p.y, p.z, n.x, n.y, n.z, a[3], a[4], boneIndex);
+                    // push slightly outward along the normal so worn items sit just OUTSIDE the body
+                    // surface instead of z-fighting / clipping into it
+                    quad[k] = new Ir.Vertex(p.x + n.x * SHELL, p.y + n.y * SHELL, p.z + n.z * SHELL,
+                            n.x, n.y, n.z, a[3], a[4], boneIndex);
                 }
                 prim.addQuad(quad[0], quad[1], quad[2], quad[3]);
             }

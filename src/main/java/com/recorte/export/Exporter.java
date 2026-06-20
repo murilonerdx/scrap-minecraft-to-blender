@@ -89,26 +89,31 @@ public final class Exporter {
     }
 
     public static void exportPlayer(AbstractClientPlayer target) {
-        Minecraft mc = Minecraft.getInstance();
         if (target == null) return;
         try {
-            EntityRenderer<?> renderer = mc.getEntityRenderDispatcher().getRenderer(target);
-            if (!(renderer instanceof PlayerRenderer playerRenderer)) {
+            Ir.Model ir = buildPlayer(target);
+            if (ir == null) {
                 feedback("§cRenderer do jogador não encontrado.");
                 return;
             }
-            PlayerModel<?> model = playerRenderer.getModel();
-
-            Ir.Model ir = new ModelExtractor().extract(model, target, "skin.png");
-            ir.materials.get(0).png = TextureExporter.skinBytes(target);
-            LayerCapturer.captureExtras(playerRenderer, target, model, ir);
-
             Path dir = newDir(target.getGameProfile().getName());
             writeAll(ir, dir, "player");
             report(target.getGameProfile().getName(), ir, dir);
         } catch (Throwable t) {
             fail(t);
         }
+    }
+
+    /** Full player model: rigged body + skin + captured accessories (armour/Curios), or null. */
+    static Ir.Model buildPlayer(AbstractClientPlayer target) throws java.io.IOException {
+        Minecraft mc = Minecraft.getInstance();
+        EntityRenderer<?> renderer = mc.getEntityRenderDispatcher().getRenderer(target);
+        if (!(renderer instanceof PlayerRenderer playerRenderer)) return null;
+        PlayerModel<?> model = playerRenderer.getModel();
+        Ir.Model ir = new ModelExtractor().extract(model, target, "skin.png");
+        ir.materials.get(0).png = TextureExporter.skinBytes(target);
+        LayerCapturer.captureExtras(playerRenderer, target, model, ir);
+        return ir;
     }
 
     public static void exportEntity(Entity entity) {
@@ -258,7 +263,9 @@ public final class Exporter {
                 float ox = -((float) e.getX() - center.getX());
                 float oz = (float) e.getZ() - center.getZ();
                 String name = e.getType().getDescriptionId().replaceAll(".*\\.", "");
-                Ir.Model rigged = riggedEntity(e, renderer);
+                // the local player gets the full model (body + skin + armour/Curios), not a bare body
+                Ir.Model rigged = (e == mc.player)
+                        ? buildPlayer((AbstractClientPlayer) e) : riggedEntity(e, renderer);
                 if (rigged != null) {
                     float oy = (float) (e.getY() - center.getY()) - minY(rigged);
                     mergeRigged(ir, rigged, ox, oy, oz, "entity_" + name, "e" + entities + "_");
