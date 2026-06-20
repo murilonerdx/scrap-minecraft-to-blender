@@ -47,6 +47,27 @@ public final class TextureExporter {
         return dumpTextureId(id);
     }
 
+    /**
+     * Loads a sibling PBR texture from the active resource pack for a sprite &mdash; the LabPBR
+     * {@code _n} (normal) or {@code _s} (specular) map next to the base texture. Returns the raw PNG
+     * bytes, or {@code null} if the pack doesn't ship one (the common case for vanilla).
+     */
+    public static byte[] siblingTexture(net.minecraft.resources.ResourceLocation spriteName, String suffix) {
+        if (spriteName == null) return null;
+        net.minecraft.resources.ResourceLocation rl = new net.minecraft.resources.ResourceLocation(
+                spriteName.getNamespace(), "textures/" + spriteName.getPath() + suffix + ".png");
+        try {
+            java.util.Optional<net.minecraft.server.packs.resources.Resource> res =
+                    Minecraft.getInstance().getResourceManager().getResource(rl);
+            if (res.isEmpty()) return null;
+            try (java.io.InputStream in = res.get().open()) {
+                return in.readAllBytes();
+            }
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
     /** Encoded PNG bytes of an in-memory image (sprite contents, etc.). */
     public static byte[] pngBytes(NativeImage image) throws IOException {
         Path tmp = Files.createTempFile("recorte_img", ".png");

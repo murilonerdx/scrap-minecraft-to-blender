@@ -52,18 +52,25 @@ public final class LayerCapturer {
         }
 
         model.setAllVisible(true);
-        CapturingBuffer buffer = new CapturingBuffer();
+        // Cape/elytra go into their own object so you can rig/animate the cloth separately in Blender;
+        // everything else (armour, held items, Curios) stays grouped as accessories.
+        CapturingBuffer accessories = new CapturingBuffer();
+        CapturingBuffer cape = new CapturingBuffer();
         PoseStack pose = new PoseStack();
         for (Object layerObj : layers) {
             RenderLayer layer = (RenderLayer) layerObj;
+            boolean isCape = layer instanceof net.minecraft.client.renderer.entity.layers.CapeLayer
+                    || layer instanceof net.minecraft.client.renderer.entity.layers.ElytraLayer;
+            CapturingBuffer target = isCape ? cape : accessories;
             try {
-                layer.render(pose, buffer, FULL_BRIGHT, player, 0f, 0f, 1f, 0f, 0f, 0f);
+                layer.render(pose, target, FULL_BRIGHT, player, 0f, 0f, 1f, 0f, 0f, 0f);
             } catch (Throwable t) {
                 Recorte.LOGGER.warn("Layer {} failed during capture (skipped)",
                         layer.getClass().getSimpleName(), t);
             }
         }
-        appendCaptured(buffer, out, Convert.matrixCaptured(), BODY_BONE, "Accessories");
+        appendCaptured(accessories, out, Convert.matrixCaptured(), BODY_BONE, "Accessories");
+        appendCaptured(cape, out, Convert.matrixCaptured(), BODY_BONE, "Cape");
     }
 
     /** Whole-entity capture (mobs). Renders the entity renderer into the buffer; static (no bones). */

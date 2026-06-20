@@ -49,6 +49,11 @@ cinematics**. ✅ marks what already exists. (Versão em português abaixo / Por
   reusable, looping **glTF animations on one rig** (driven through the model's own `setupAnim`), so you
   get ready-made Actions to reuse on the player in Blender. The glTF writer now supports many named
   clips in a single file.
+- **Resource-pack normal maps (LabPBR)** — when the active pack ships `_n` normal maps, scene materials
+  export them as glTF **normalTexture**, so blocks get real bumpy shading in Blender (no-op on vanilla).
+  *(If the bump looks inverted, flip the normal map's green channel — the usual OpenGL/DirectX gotcha.)*
+- **Cape / elytra as a separate object** — the cloak/elytra is captured into its own **"Cape"** Blender
+  object (correct rendered orientation), so you can rig and animate the cloth on its own.
 
 ## 🔜 Big next steps
 - **Real-time link phase C**: true streaming (WebSocket/SSE) of bone transforms so it's frame-accurate,

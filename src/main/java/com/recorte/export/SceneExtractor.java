@@ -139,6 +139,15 @@ public final class SceneExtractor {
             }
         } catch (Throwable ignored) {
         }
+        // LabPBR normal map from the resource pack, if present (no-op on vanilla)
+        try {
+            byte[] normal = TextureExporter.siblingTexture(sprite.contents().name(), "_n");
+            if (normal != null) {
+                material.normalPng = normal;
+                material.normalFile = "tex_" + spriteCounter + "_n.png";
+            }
+        } catch (Throwable ignored) {
+        }
         map.put(sprite, idx);
         spriteCounter++;
         return idx;

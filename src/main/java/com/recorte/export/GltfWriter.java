@@ -217,6 +217,27 @@ public final class GltfWriter {
             textures.add(texture);
             materialToTexture.put(mi, textures.size() - 1);
         }
+        // LabPBR normal maps → glTF normalTexture (only materials that found a sibling _n texture)
+        Map<Integer, Integer> materialToNormal = new HashMap<>();
+        for (int mi = 0; mi < model.materials.size(); mi++) {
+            Ir.Material m = model.materials.get(mi);
+            if (m.normalPng == null) continue;
+            bin.align4();
+            int imgStart = bin.length();
+            bin.bytes(m.normalPng);
+            int imgView = bin.bufferView(imgStart, m.normalPng.length, null);
+
+            JsonObject image = new JsonObject();
+            image.addProperty("bufferView", imgView);
+            image.addProperty("mimeType", "image/png");
+            images.add(image);
+
+            JsonObject texture = new JsonObject();
+            texture.addProperty("source", images.size() - 1);
+            texture.addProperty("sampler", 0);
+            textures.add(texture);
+            materialToNormal.put(mi, textures.size() - 1);
+        }
         if (textures.size() > 0) {
             JsonObject sampler = new JsonObject();
             sampler.addProperty("magFilter", NEAREST);
@@ -246,6 +267,12 @@ public final class GltfWriter {
             pbr.addProperty("metallicFactor", 0);
             pbr.addProperty("roughnessFactor", 1);
             material.add("pbrMetallicRoughness", pbr);
+            Integer nrm = materialToNormal.get(mi);
+            if (nrm != null) {
+                JsonObject normalTexture = new JsonObject();
+                normalTexture.addProperty("index", nrm);
+                material.add("normalTexture", normalTexture);
+            }
             if (m.emissive && tex != null) {
                 JsonObject emissiveTexture = new JsonObject();
                 emissiveTexture.addProperty("index", tex);
