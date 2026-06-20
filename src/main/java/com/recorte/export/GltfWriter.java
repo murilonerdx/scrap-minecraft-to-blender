@@ -36,10 +36,21 @@ public final class GltfWriter {
     private static final int CLAMP_TO_EDGE = 33071;
 
     public static void write(Ir.Model model, Path glbPath) throws IOException {
-        write(model, null, glbPath);
+        writeInternal(model, java.util.List.of(), glbPath);
     }
 
     public static void write(Ir.Model model, Ir.Animation animation, Path glbPath) throws IOException {
+        writeInternal(model, animation == null ? java.util.List.of() : java.util.List.of(animation), glbPath);
+    }
+
+    /** Writes several named animations into one file — a reusable Action library on the rig. */
+    public static void writeLibrary(Ir.Model model, java.util.List<Ir.Animation> animations, Path glbPath)
+            throws IOException {
+        writeInternal(model, animations, glbPath);
+    }
+
+    private static void writeInternal(Ir.Model model, java.util.List<Ir.Animation> animations, Path glbPath)
+            throws IOException {
         Bin bin = new Bin();
 
         JsonObject root = new JsonObject();
@@ -260,9 +271,14 @@ public final class GltfWriter {
         if (model.sun != null) extUsed.add("KHR_lights_punctual");
         if (extUsed.size() > 0) root.add("extensionsUsed", extUsed);
 
-        // --- animation (optional) -----------------------------------------------------------------
-        if (animation != null && !animation.times.isEmpty()) {
-            writeAnimation(root, bin, animation, cameraNode);
+        // --- animations (optional; one or many named clips) ---------------------------------------
+        if (animations != null && !animations.isEmpty()) {
+            JsonArray animArray = new JsonArray();
+            for (Ir.Animation anim : animations) {
+                if (anim == null || anim.times.isEmpty()) continue;
+                animArray.add(buildAnimation(bin, anim, cameraNode));
+            }
+            if (animArray.size() > 0) root.add("animations", animArray);
         }
 
         // --- buffer + bufferViews + accessors -----------------------------------------------------
@@ -354,7 +370,7 @@ public final class GltfWriter {
         return primitive;
     }
 
-    private static void writeAnimation(JsonObject root, Bin bin, Ir.Animation anim, int cameraNode) {
+    private static JsonObject buildAnimation(Bin bin, Ir.Animation anim, int cameraNode) {
         int n = anim.times.size();
         bin.align4();
         int tStart = bin.length();
@@ -413,10 +429,8 @@ public final class GltfWriter {
         JsonObject animation = new JsonObject();
         animation.add("samplers", samplers);
         animation.add("channels", channels);
-        animation.addProperty("name", "recording");
-        JsonArray animations = new JsonArray();
-        animations.add(animation);
-        root.add("animations", animations);
+        animation.addProperty("name", anim.name != null ? anim.name : "recording");
+        return animation;
     }
 
     private static JsonObject perspectiveCamera(float yfovRadians) {

@@ -116,6 +116,117 @@ public final class Exporter {
         return ir;
     }
 
+    /** Exports a reusable animation library (idle/walk/run/sneak Actions) on the local player's rig. */
+    public static void exportAnimLibrary() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null) {
+            feedback("§cEntre num mundo primeiro.");
+            return;
+        }
+        exportAnimLibrary(mc.player);
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    public static void exportAnimLibrary(AbstractClientPlayer target) {
+        Minecraft mc = Minecraft.getInstance();
+        try {
+            EntityRenderer<?> renderer = mc.getEntityRenderDispatcher().getRenderer(target);
+            if (!(renderer instanceof PlayerRenderer playerRenderer)) {
+                feedback("§cRenderer do jogador não encontrado.");
+                return;
+            }
+            PlayerModel rawModel = playerRenderer.getModel();
+            Ir.Model ir = new ModelExtractor().extract(rawModel, target, "skin.png");
+            ir.materials.get(0).png = TextureExporter.skinBytes(target);
+
+            // bone order from ModelExtractor.extract(PlayerModel): root, body, head, R-arm, L-arm, R-leg, L-leg
+            net.minecraft.client.model.HumanoidModel hm = rawModel;
+            net.minecraft.client.model.geom.ModelPart[] parts = {
+                    null, hm.body, hm.head, hm.rightArm, hm.leftArm, hm.rightLeg, hm.leftLeg};
+            int[] parentBone = {-1, 0, 1, 1, 1, 1, 1};
+
+            java.util.List<Ir.Animation> lib = new java.util.ArrayList<>();
+            lib.add(buildCycle("idle", 30, 2.0f, 0f, false, rawModel, target, parts, parentBone));
+            lib.add(buildCycle("walk", 24, 1.0f, 1f, false, rawModel, target, parts, parentBone));
+            lib.add(buildCycle("run", 16, 0.5f, 1f, false, rawModel, target, parts, parentBone));
+            lib.add(buildCycle("sneak", 28, 1.4f, 1f, true, rawModel, target, parts, parentBone));
+
+            Path dir = newDir("animlib_" + target.getGameProfile().getName());
+            Files.createDirectories(dir);
+            for (Ir.Material m : ir.materials) {
+                if (m.png != null && m.textureFile != null) Files.write(dir.resolve(m.textureFile), m.png);
+            }
+            Path glb = dir.resolve("animlib.glb");
+            GltfWriter.writeLibrary(ir, lib, glb);
+            ObjWriter.write(ir, dir.resolve("animlib.obj"), dir.resolve("animlib.mtl"));
+            HttpBridge.setLastGlb(glb);
+            try {   // leave the shared model in a clean idle pose
+                hm.crouching = false;
+                rawModel.setupAnim(target, 0f, 0f, 0f, 0f, 0f);
+            } catch (Throwable ignored) {
+            }
+            Recorte.LOGGER.info("Animation library to {} ({} clips)", dir, lib.size());
+            feedback(String.format("§a■ Biblioteca de animações §f%s§a: %d clips (idle/walk/run/sneak) §7→ §f%s",
+                    target.getGameProfile().getName(), lib.size(), dir));
+        } catch (Throwable t) {
+            fail(t);
+        }
+    }
+
+    /** Drives the player model through one synthetic locomotion cycle and bakes it as a clip. */
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static Ir.Animation buildCycle(String name, int frames, float duration, float limbAmount,
+                                           boolean crouch, net.minecraft.client.model.PlayerModel rawModel,
+                                           AbstractClientPlayer player,
+                                           net.minecraft.client.model.geom.ModelPart[] parts, int[] parentBone) {
+        Ir.Animation anim = new Ir.Animation();
+        anim.name = name;
+        net.minecraft.client.model.HumanoidModel hm = rawModel;
+        float swingPeriod = (float) (2 * Math.PI / 0.6662);   // one full limb stride
+        for (int f = 0; f <= frames; f++) {
+            float progress = (float) f / frames;
+            float limbSwing = progress * swingPeriod;
+            float age = progress * duration * 20f;            // ticks elapsed (idle/arm bob)
+            hm.crouching = crouch;
+            hm.attackTime = 0f;
+            hm.rightArmPose = net.minecraft.client.model.HumanoidModel.ArmPose.EMPTY;
+            hm.leftArmPose = net.minecraft.client.model.HumanoidModel.ArmPose.EMPTY;
+            try {
+                rawModel.setupAnim(player, limbSwing, limbAmount, age, 0f, 0f);
+            } catch (Throwable ignored) {
+            }
+            anim.times.add(progress * duration);
+            keyRigPose(anim, parts, parentBone);
+        }
+        return anim;
+    }
+
+    /** Keys every limb bone (1..n) at its current parent-relative MC pose; the root keeps its bind. */
+    private static void keyRigPose(Ir.Animation anim, net.minecraft.client.model.geom.ModelPart[] parts,
+                                   int[] parentBone) {
+        org.joml.Matrix4f[] absMC = new org.joml.Matrix4f[parts.length];
+        for (int i = 0; i < parts.length; i++) {
+            absMC[i] = parts[i] == null ? new org.joml.Matrix4f() : absMCof(parts[i]);
+        }
+        for (int i = 1; i < parts.length; i++) {
+            if (parts[i] == null) continue;
+            int pb = parentBone[i];
+            org.joml.Matrix4f parentAbs = (pb <= 0) ? new org.joml.Matrix4f() : absMC[pb];
+            org.joml.Matrix4f local = new org.joml.Matrix4f(parentAbs).invert().mul(absMC[i]);
+            org.joml.Vector3f t = local.getTranslation(new org.joml.Vector3f());
+            org.joml.Quaternionf q = local.getNormalizedRotation(new org.joml.Quaternionf());
+            anim.key(i, new float[]{t.x, t.y, t.z}, new float[]{q.x, q.y, q.z, q.w});
+        }
+    }
+
+    private static org.joml.Matrix4f absMCof(net.minecraft.client.model.geom.ModelPart p) {
+        org.joml.Matrix4f m = new org.joml.Matrix4f().translate(p.x, p.y, p.z);
+        if (p.xRot != 0f || p.yRot != 0f || p.zRot != 0f) {
+            m.rotate(new org.joml.Quaternionf().rotationZYX(p.zRot, p.yRot, p.xRot));
+        }
+        return m;
+    }
+
     public static void exportEntity(Entity entity) {
         if (entity instanceof AbstractClientPlayer player) {
             exportPlayer(player);

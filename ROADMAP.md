@@ -45,6 +45,10 @@ cinematics**. ✅ marks what already exists. (Versão em português abaixo / Por
 - **Day/night timelapse** — a cinematic samples the **sun (direction/color/intensity) and sky colour**
   every keyframe; the add-on keyframes the Blender **Sun lamp and World background** over the recording
   (`/sun` + `sun.json`), so the lighting sweeps from day to dusk to night as it did in-game.
+- **Player animation library** — `/recorte export animlib` bakes **idle / walk / run / sneak** as four
+  reusable, looping **glTF animations on one rig** (driven through the model's own `setupAnim`), so you
+  get ready-made Actions to reuse on the player in Blender. The glTF writer now supports many named
+  clips in a single file.
 
 ## 🔜 Big next steps
 - **Real-time link phase C**: true streaming (WebSocket/SSE) of bone transforms so it's frame-accurate,

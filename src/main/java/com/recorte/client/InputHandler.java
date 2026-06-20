@@ -119,6 +119,8 @@ public final class InputHandler {
                         .executes(c -> run(Exporter::exportLookedAtOrSelf))
                         .then(Commands.literal("self")
                                 .executes(c -> run(Exporter::exportLookedAtOrSelf)))
+                        .then(Commands.literal("animlib")
+                                .executes(c -> run(Exporter::exportAnimLibrary)))
                         .then(Commands.literal("player")
                                 .then(Commands.argument("name", StringArgumentType.word())
                                         .executes(c -> run(() -> Exporter.exportPlayerByName(

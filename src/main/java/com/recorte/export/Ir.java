@@ -77,6 +77,7 @@ public final class Ir {
      * rotation at each keyframe. Maps directly onto glTF animation samplers/channels.
      */
     public static final class Animation {
+        public String name = "recording";                            // glTF animation name (Blender Action)
         public final List<Float> times = new ArrayList<>();          // seconds, one per keyframe
         public final Map<Integer, List<float[]>> translations = new java.util.LinkedHashMap<>();  // bone -> [x,y,z]/key
         public final Map<Integer, List<float[]>> rotations = new java.util.LinkedHashMap<>();      // bone -> [x,y,z,w]/key
