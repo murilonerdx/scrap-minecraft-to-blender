@@ -348,6 +348,34 @@ public final class Exporter {
         }
     }
 
+    /** Exports an arbitrary box between two corners — a whole build, framed precisely, not just a radius. */
+    public static void exportRegion(int x1, int y1, int z1, int x2, int y2, int z2) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level == null) {
+            feedback("§cEntre num mundo primeiro.");
+            return;
+        }
+        long sx = Math.abs(x2 - x1) + 1L, sy = Math.abs(y2 - y1) + 1L, sz = Math.abs(z2 - z1) + 1L;
+        if (sx * sy * sz > 4_000_000L) {
+            feedback("§cRegião grande demais (" + (sx * sy * sz) + " blocos, máx ~4M). Reduza os cantos.");
+            return;
+        }
+        try {
+            feedback("§7Capturando região " + sx + "×" + sy + "×" + sz + "... pode travar.");
+            Ir.Model ir = new SceneExtractor().extract(mc.level,
+                    new BlockPos(x1, y1, z1), new BlockPos(x2, y2, z2));
+            BlockPos center = new BlockPos((x1 + x2) / 2, (y1 + y2) / 2, (z1 + z2) / 2);
+            ir.camera = playerCamera(center);
+            ir.sun = worldSun();
+            ir.extraCameras.addAll(presetCameras((int) (Math.max(sx, Math.max(sy, sz)) / 2)));
+            Path dir = newDir("region");
+            writeAll(ir, dir, "region");
+            report("região " + sx + "×" + sy + "×" + sz, ir, dir);
+        } catch (Throwable t) {
+            fail(t);
+        }
+    }
+
     public static void exportSnapshot(int radius) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null) {

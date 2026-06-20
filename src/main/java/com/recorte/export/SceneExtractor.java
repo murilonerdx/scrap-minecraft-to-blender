@@ -35,6 +35,16 @@ public final class SceneExtractor {
     private int spriteCounter;
 
     public Ir.Model extract(Level level, BlockPos center, int radius) {
+        return extract(level, center.offset(-radius, -radius, -radius), center.offset(radius, radius, radius));
+    }
+
+    /** Extracts every block / fluid / block-entity in the inclusive box between two corners. */
+    public Ir.Model extract(Level level, BlockPos corner1, BlockPos corner2) {
+        int minX = Math.min(corner1.getX(), corner2.getX()), maxX = Math.max(corner1.getX(), corner2.getX());
+        int minY = Math.min(corner1.getY(), corner2.getY()), maxY = Math.max(corner1.getY(), corner2.getY());
+        int minZ = Math.min(corner1.getZ(), corner2.getZ()), maxZ = Math.max(corner1.getZ(), corner2.getZ());
+        BlockPos center = new BlockPos((minX + maxX) / 2, (minY + maxY) / 2, (minZ + maxZ) / 2);
+
         Minecraft mc = Minecraft.getInstance();
         BlockColors blockColors = mc.getBlockColors();
         BlockRenderDispatcher blockRenderer = mc.getBlockRenderer();
@@ -45,10 +55,10 @@ public final class SceneExtractor {
         root.localTransform = new Matrix4f();
         out.addBone(root);
 
-        for (int dx = -radius; dx <= radius; dx++) {
-            for (int dy = -radius; dy <= radius; dy++) {
-                for (int dz = -radius; dz <= radius; dz++) {
-                    BlockPos pos = center.offset(dx, dy, dz);
+        for (int x = minX; x <= maxX; x++) {
+            for (int y = minY; y <= maxY; y++) {
+                for (int z = minZ; z <= maxZ; z++) {
+                    BlockPos pos = new BlockPos(x, y, z);
                     BlockState state = level.getBlockState(pos);
                     if (state.isAir()) continue;
                     // fluids (water/lava) render separately from block models — emit their top surface

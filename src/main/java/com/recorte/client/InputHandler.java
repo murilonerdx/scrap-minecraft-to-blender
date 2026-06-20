@@ -11,6 +11,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.ResourceLocationArgument;
+import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.InputEvent;
 import net.minecraftforge.client.event.RegisterClientCommandsEvent;
@@ -121,6 +122,15 @@ public final class InputHandler {
                                 .executes(c -> run(Exporter::exportLookedAtOrSelf)))
                         .then(Commands.literal("animlib")
                                 .executes(c -> run(Exporter::exportAnimLibrary)))
+                        .then(Commands.literal("region")
+                                .then(Commands.argument("from", BlockPosArgument.blockPos())
+                                        .then(Commands.argument("to", BlockPosArgument.blockPos())
+                                                .executes(c -> {
+                                                    net.minecraft.core.BlockPos a = BlockPosArgument.getBlockPos(c, "from");
+                                                    net.minecraft.core.BlockPos b = BlockPosArgument.getBlockPos(c, "to");
+                                                    return run(() -> Exporter.exportRegion(
+                                                            a.getX(), a.getY(), a.getZ(), b.getX(), b.getY(), b.getZ()));
+                                                }))))
                         .then(Commands.literal("player")
                                 .then(Commands.argument("name", StringArgumentType.word())
                                         .executes(c -> run(() -> Exporter.exportPlayerByName(

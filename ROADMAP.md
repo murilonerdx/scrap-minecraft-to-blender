@@ -96,7 +96,8 @@ cinematics**. ✅ marks what already exists. (Versão em português abaixo / Por
   sky via the `/env` endpoint) → next: proper **fog**, and optional **depth-of-field** on your look target.
 
 ## 🧱 More to extract
-- **Larger regions / schematics** (NBT structures, `.litematic`).
+- ✅ **Arbitrary region** — `/recorte export region <from> <to>` exports the exact box between two
+  corners (a whole build), not just a radius around you. Next: NBT structures / `.litematic` import.
 - **Signs (text), paintings, item frames, maps** as textured meshes/planes.
 - ✅ **Animated textures** (water, lava, fire, portal) — the model uses the correct first frame (instead
   of the whole stacked source), and the full **frame sequence** is written next to it (`*_f000.png` …)

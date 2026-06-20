@@ -36,6 +36,7 @@ files appear ready to import into Blender.
 | `/recorte export animlib` | a **library of player animations** (idle/walk/run/sneak) on one rig | ✅ |
 | `/recorte export scene [radius]` | 🎬 the **surroundings** (a diorama of your build/terrain) | – |
 | `/recorte export snapshot [radius]` | 🎬 the **moment**: scene + every nearby **entity** (mobs rigged; item frames, paintings, boats, minecarts, dropped items… captured) | ✅ |
+| `/recorte export region <from> <to>` | a precise **box** between two corners (a whole build), framed and lit | – |
 
 ¹ Vanilla mobs (`HumanoidModel`/`HierarchicalModel`) export **with bones**. **GeckoLib** mobs fall back
 to a static capture (but they still export!).

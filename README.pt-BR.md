@@ -33,6 +33,7 @@ do jogo e os arquivos aparecem prontos pra importar no Blender.
 | `/recorte export animlib` | uma **biblioteca de animações** do player (idle/walk/run/sneak) num rig | ✅ |
 | `/recorte export scene [raio]` | 🎬 **cenário** ao redor (diorama do seu build/terreno) | – |
 | `/recorte export snapshot [raio]` | 🎬 **o momento**: cena + **todas as entidades** por perto (mobs rigados; molduras, quadros, barcos, carrinhos, itens no chão… capturados) | ✅ |
+| `/recorte export region <de> <até>` | uma **caixa** precisa entre dois cantos (uma build inteira), enquadrada e iluminada | – |
 
 ¹ Mobs vanilla (`HumanoidModel`/`HierarchicalModel`) saem **com ossos**. Mobs de **GeckoLib** caem
 para uma captura estática (mas saem!).
