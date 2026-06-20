@@ -24,6 +24,7 @@ public final class Ir {
         public Camera camera;   // optional: the in-game camera, framed to match the export
         public final List<Camera> extraCameras = new ArrayList<>();   // preset angles (orbit/top) for renders
         public Light sun;       // optional: a directional light matching the in-game sun
+        public final List<Light> lights = new ArrayList<>();          // point lights (torches, glowstone…)
 
         public int addBone(Bone b) {
             bones.add(b);
@@ -157,16 +158,34 @@ public final class Ir {
         }
     }
 
-    /** A directional light (the sun), exported via KHR_lights_punctual. */
+    /** A light exported via KHR_lights_punctual: a directional sun, or a positioned point light. */
     public static final class Light {
-        public final float[] direction;      // travel direction (where light goes), normalized, export space
+        public final String type;            // "directional" or "point"
+        public final float[] direction;      // directional: travel direction (normalized, export space)
+        public final float[] position;       // point: x,y,z in export space
         public final float[] color;          // r, g, b in 0..1
         public final float intensity;
 
+        /** Directional (sun). */
         public Light(float[] direction, float[] color, float intensity) {
+            this.type = "directional";
             this.direction = direction;
+            this.position = null;
             this.color = color;
             this.intensity = intensity;
+        }
+
+        private Light(float[] position, float[] color, float intensity, boolean point) {
+            this.type = "point";
+            this.direction = null;
+            this.position = position;
+            this.color = color;
+            this.intensity = intensity;
+        }
+
+        /** A positioned point light (torch, glowstone…). */
+        public static Light point(float[] position, float[] color, float intensity) {
+            return new Light(position, color, intensity, true);
         }
     }
 

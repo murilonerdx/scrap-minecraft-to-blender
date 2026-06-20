@@ -67,6 +67,11 @@ def validate_common(name, js, bin_len):
     check(len([n for n in nodes if "camera" in n]) == 3, "3 camera nodes")
     check("KHR_lights_punctual" in js.get("extensions", {}), "KHR_lights_punctual present")
     check("KHR_lights_punctual" in js.get("extensionsUsed", []), "KHR_lights_punctual in extensionsUsed")
+    llist = js.get("extensions", {}).get("KHR_lights_punctual", {}).get("lights", [])
+    types = [l.get("type") for l in llist]
+    check(types.count("directional") == 1, f"1 directional sun -> {types}")
+    check(types.count("point") == 2, f"2 point lights (lamps) -> {types}")
+    check(len([n for n in nodes if (n.get("name") or "").startswith("Lamp_")]) == 2, "2 Lamp_ light nodes")
     accs, bvs = js.get("accessors", []), js.get("bufferViews", [])
     ok = all(0 <= a.get("bufferView", -1) < len(bvs) for a in accs) \
         and all(bv["byteOffset"] + bv["byteLength"] <= bin_len for bv in bvs)

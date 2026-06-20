@@ -113,6 +113,8 @@ public final class GltfSelfTest {
         m.extraCameras.add(new Ir.Camera(new float[]{5, 2, 0}, new float[]{0, 0.7f, 0, 0.7f}, 0.9f));
         m.extraCameras.add(new Ir.Camera(new float[]{0, 8, 0}, new float[]{-0.7f, 0, 0, 0.7f}, 0.9f));
         m.sun = new Ir.Light(new float[]{-0.3f, -1f, -0.2f}, new float[]{1f, 0.95f, 0.9f}, 4f);
+        m.lights.add(Ir.Light.point(new float[]{1f, 1.5f, 1f}, new float[]{1f, 0.86f, 0.66f}, 50f));
+        m.lights.add(Ir.Light.point(new float[]{-1f, 1.5f, -1f}, new float[]{1f, 0.86f, 0.66f}, 50f));
         return m;
     }
 

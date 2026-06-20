@@ -29,6 +29,8 @@ import java.util.Map;
  */
 public final class SceneExtractor {
 
+    private static final int MAX_POINT_LIGHTS = 64;   // cap so a torch-heavy scene doesn't make 1000 lamps
+
     private final Map<TextureAtlasSprite, Integer> normalMaterials = new HashMap<>();
     private final Map<TextureAtlasSprite, Integer> emissiveMaterials = new HashMap<>();
     private Field spriteImageField;
@@ -68,6 +70,10 @@ public final class SceneExtractor {
                     if (state.hasBlockEntity()) {
                         net.minecraft.world.level.block.entity.BlockEntity be = level.getBlockEntity(pos);
                         if (be != null) captureBlockEntity(out, be, pos, center);
+                    }
+                    // light-emitting blocks (torches, glowstone, lava, lanterns…) → Blender point lights
+                    if (state.getLightEmission() > 0 && out.lights.size() < MAX_POINT_LIGHTS) {
+                        addPointLight(out, state, pos, center);
                     }
                     if (state.getRenderShape() != RenderShape.MODEL) continue;
                     BakedModel model = blockRenderer.getBlockModel(state);
@@ -199,6 +205,17 @@ public final class SceneExtractor {
         } catch (Throwable t) {
             return null;
         }
+    }
+
+    /** Adds a Blender point light at a light-emitting block (torch/glowstone/lava…), warm and scaled by
+     *  the block's light level. */
+    private void addPointLight(Ir.Model out, BlockState state, BlockPos pos, BlockPos center) {
+        int emission = state.getLightEmission();
+        float[] position = {
+                -(pos.getX() + 0.5f - center.getX()),
+                pos.getY() + 0.5f - center.getY(),
+                pos.getZ() + 0.5f - center.getZ()};
+        out.lights.add(Ir.Light.point(position, new float[]{1.0f, 0.86f, 0.66f}, emission * emission * 4f));
     }
 
     private void addBlock(Ir.Model out, Level level, BlockPos pos, BlockPos center, BlockState state,
