@@ -49,27 +49,13 @@ public final class Exporter {
         }
     }
 
-    /** Silent export of the looked-at/self target to a fixed "_live" folder, for the real-time link. */
+    /** Silent live snapshot (world + nearby entities + you) to a fixed "_live" folder, for the link. */
     public static void exportLive() {
         Minecraft mc = Minecraft.getInstance();
+        if (mc.level == null || mc.player == null) return;
         try {
-            Ir.Model ir;
-            net.minecraft.world.entity.Entity looked = mc.crosshairPickEntity;
-            if (looked instanceof LivingEntity living && !(looked instanceof AbstractClientPlayer)) {
-                @SuppressWarnings("rawtypes")
-                EntityRenderer renderer = mc.getEntityRenderDispatcher().getRenderer(looked);
-                ir = riggedEntity(living, renderer);
-                if (ir == null) ir = LayerCapturer.captureEntity(renderer, looked);
-            } else if (mc.player != null) {
-                EntityRenderer<?> r = mc.getEntityRenderDispatcher().getRenderer(mc.player);
-                if (!(r instanceof PlayerRenderer pr)) return;
-                PlayerModel<?> model = pr.getModel();
-                ir = new ModelExtractor().extract(model, mc.player, "skin.png");
-                ir.materials.get(0).png = TextureExporter.skinBytes(mc.player);
-                LayerCapturer.captureExtras(pr, mc.player, model, ir);
-            } else {
-                return;
-            }
+            BlockPos center = mc.player.blockPosition();
+            Ir.Model ir = buildSnapshot(center, 8, null);   // scene + all nearby living entities (incl. you)
             Path dir = mc.gameDirectory.toPath().resolve("recorte_exports").resolve("_live");
             Files.createDirectories(dir);
             for (Ir.Material m : ir.materials) {
@@ -244,45 +230,50 @@ public final class Exporter {
         try {
             BlockPos center = mc.player.blockPosition();
             feedback("§7Capturando snapshot (raio " + r + ")... pode travar alguns segundos.");
-            Ir.Model ir = new SceneExtractor().extract(mc.level, center, r);
-            ir.camera = playerCamera(center);
-            ir.sun = worldSun();
-
-            int entities = 0;
-            AABB box = new AABB(center).inflate(r);
-            for (LivingEntity e : mc.level.getEntitiesOfClass(LivingEntity.class, box)) {
-                try {
-                    @SuppressWarnings("rawtypes")
-                    EntityRenderer renderer = mc.getEntityRenderDispatcher().getRenderer(e);
-                    float ox = -((float) e.getX() - center.getX());
-                    float oz = (float) e.getZ() - center.getZ();
-                    String name = e.getType().getDescriptionId().replaceAll(".*\\.", "");
-
-                    // Rig the mob (bones) so it isn't frozen; fall back to a static capture (GeckoLib).
-                    Ir.Model rigged = riggedEntity(e, renderer);
-                    if (rigged != null) {
-                        float oy = (float) (e.getY() - center.getY()) - minY(rigged);
-                        mergeRigged(ir, rigged, ox, oy, oz, "entity_" + name, "e" + entities + "_");
-                    } else {
-                        Ir.Model cap = LayerCapturer.captureEntity(renderer, e);
-                        float oy = (float) (e.getY() - center.getY());
-                        mergeInto(ir, cap, ox, oy, oz, "entity_" + name, "e" + entities + "_");
-                    }
-                    entities++;
-                } catch (Throwable t) {
-                    Recorte.LOGGER.warn("Snapshot entity {} failed", e.getType(), t);
-                }
-            }
-
+            int[] count = {0};
+            Ir.Model ir = buildSnapshot(center, r, count);
             Path dir = newDir("snapshot_r" + r);
             writeAll(ir, dir, "snapshot");
             Recorte.LOGGER.info("Snapshot to {}: {} materials, {} tris, {} entities",
-                    dir, ir.materials.size(), ir.triangleCount(), entities);
+                    dir, ir.materials.size(), ir.triangleCount(), count[0]);
             feedback(String.format("§aSnapshot§a: cena + %d entidades, %d triângulos §7→ §f%s",
-                    entities, ir.triangleCount(), dir));
+                    count[0], ir.triangleCount(), dir));
         } catch (Throwable t) {
             fail(t);
         }
+    }
+
+    /** Builds a snapshot model: scene + camera + sun + every nearby rigged/captured entity. */
+    static Ir.Model buildSnapshot(BlockPos center, int r, int[] entityCount) {
+        Minecraft mc = Minecraft.getInstance();
+        Ir.Model ir = new SceneExtractor().extract(mc.level, center, r);
+        ir.camera = playerCamera(center);
+        ir.sun = worldSun();
+        int entities = 0;
+        AABB box = new AABB(center).inflate(r);
+        for (LivingEntity e : mc.level.getEntitiesOfClass(LivingEntity.class, box)) {
+            try {
+                @SuppressWarnings("rawtypes")
+                EntityRenderer renderer = mc.getEntityRenderDispatcher().getRenderer(e);
+                float ox = -((float) e.getX() - center.getX());
+                float oz = (float) e.getZ() - center.getZ();
+                String name = e.getType().getDescriptionId().replaceAll(".*\\.", "");
+                Ir.Model rigged = riggedEntity(e, renderer);
+                if (rigged != null) {
+                    float oy = (float) (e.getY() - center.getY()) - minY(rigged);
+                    mergeRigged(ir, rigged, ox, oy, oz, "entity_" + name, "e" + entities + "_");
+                } else {
+                    Ir.Model cap = LayerCapturer.captureEntity(renderer, e);
+                    float oy = (float) (e.getY() - center.getY());
+                    mergeInto(ir, cap, ox, oy, oz, "entity_" + name, "e" + entities + "_");
+                }
+                entities++;
+            } catch (Throwable t) {
+                Recorte.LOGGER.warn("Snapshot entity {} failed", e.getType(), t);
+            }
+        }
+        if (entityCount != null && entityCount.length > 0) entityCount[0] = entities;
+        return ir;
     }
 
     /** Appends {@code src} (one captured object) into {@code target}, offset to a world position. */

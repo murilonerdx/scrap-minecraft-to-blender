@@ -66,8 +66,8 @@ public final class InputHandler {
             } catch (Throwable ignored) {
             }
         }
-        if (HttpBridge.liveMode && time % 20 == 0) {
-            Exporter.exportLive();   // on the render thread, so GPU reads are valid
+        if (HttpBridge.liveMode && time % 40 == 0) {
+            Exporter.exportLive();   // snapshot is heavier — refresh every ~2s, on the render thread
         }
     }
 
@@ -113,7 +113,7 @@ public final class InputHandler {
                                 .executes(c -> run(() -> Exporter.exportSnapshot(16)))
                                 .then(Commands.argument("radius", IntegerArgumentType.integer(1, 48))
                                         .executes(c -> run(() -> Exporter.exportSnapshot(
-                                                IntegerArgumentType.getInteger(c, "radius"))))))
+                                                IntegerArgumentType.getInteger(c, "radius")))))))
                         .then(Commands.literal("record")
                                 .then(Commands.literal("start").executes(c -> run(Recorder::startLookedAtOrSelf)))
                                 .then(Commands.literal("stop").executes(c -> run(Recorder::stop)))
@@ -124,7 +124,7 @@ public final class InputHandler {
                                                         .executes(c -> run(() -> SceneRecorder.start(
                                                                 IntegerArgumentType.getInteger(c, "radius"))))))
                                         .then(Commands.literal("stop").executes(c -> run(SceneRecorder::stop)))))
-                        .then(Commands.literal("live").executes(c -> run(Exporter::toggleLive)))));
+                        .then(Commands.literal("live").executes(c -> run(Exporter::toggleLive))));
     }
 
     private static int run(Runnable task) {

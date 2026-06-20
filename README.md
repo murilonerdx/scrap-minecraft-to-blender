@@ -116,8 +116,8 @@ add-on and import without touching files:
 3. Export in-game (key `O`), then click **Import latest from Minecraft**.
 
 **Live mode:** run `/recorte live` (or the panel's *Live link* button) in-game and click **Start Live
-link** in the add-on — the mod auto-exports the looked-at target ~1×/s and Blender re-imports it
-automatically, so the scene updates as you play.
+link** in the add-on — the mod auto-exports a snapshot (**the world around you + nearby entities**)
+every ~2s and Blender re-imports it automatically, so the whole scene updates as you play.
 
 ---
 
