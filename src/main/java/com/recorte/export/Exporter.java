@@ -217,6 +217,7 @@ public final class Exporter {
             Ir.Model ir = new SceneExtractor().extract(mc.level, center, r);
             ir.camera = playerCamera(center);
             ir.sun = worldSun();
+            ir.extraCameras.addAll(presetCameras(r));
             Path dir = newDir("scene_r" + r);
             writeAll(ir, dir, "scene");
             report("cena (raio " + r + ")", ir, dir);
@@ -254,6 +255,7 @@ public final class Exporter {
         Ir.Model ir = new SceneExtractor().extract(mc.level, center, r);
         ir.camera = playerCamera(center);
         ir.sun = worldSun();
+        ir.extraCameras.addAll(presetCameras(r));
         int entities = 0;
         AABB box = new AABB(center).inflate(r);
         for (LivingEntity e : mc.level.getEntitiesOfClass(LivingEntity.class, box)) {
@@ -562,6 +564,29 @@ public final class Exporter {
             intensity = 0.4f;
         }
         return new Ir.Light(dir, color, intensity);
+    }
+
+    /** Preset render cameras framing the scene centre: four 3/4 orbit views + one top-down. */
+    static java.util.List<Ir.Camera> presetCameras(int radius) {
+        java.util.List<Ir.Camera> cams = new java.util.ArrayList<>();
+        float yfov = (float) Math.toRadians(50);
+        float d = radius * 2.0f, h = radius * 1.2f;
+        for (float deg : new float[]{45, 135, 225, 315}) {
+            double a = Math.toRadians(deg);
+            cams.add(lookAtOrigin((float) (d * Math.cos(a)), h, (float) (d * Math.sin(a)), 0, 1, 0, yfov));
+        }
+        cams.add(lookAtOrigin(0.001f, radius * 2.5f, 0.001f, 0, 0, -1, yfov));   // top-down
+        return cams;
+    }
+
+    /** A camera at (px,py,pz) in export space, framed to look at the origin (scene centre). */
+    private static Ir.Camera lookAtOrigin(float px, float py, float pz, float ux, float uy, float uz, float yfov) {
+        org.joml.Vector3f dir = new org.joml.Vector3f(-px, -py, -pz);
+        if (dir.lengthSquared() < 1e-8f) dir.set(0, -1, 0);
+        dir.normalize();
+        org.joml.Quaternionf q = new org.joml.Quaternionf()
+                .lookAlong(dir.x, dir.y, dir.z, ux, uy, uz).conjugate();
+        return new Ir.Camera(new float[]{px, py, pz}, new float[]{q.x, q.y, q.z, q.w}, yfov);
     }
 
     private static Path newDir(String label) {

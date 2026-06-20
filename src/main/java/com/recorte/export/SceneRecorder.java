@@ -82,6 +82,7 @@ public final class SceneRecorder {
             // animated POV camera (path filled in each frame) — just the lens here
             out.camera = new Ir.Camera(new float[]{0, 0, 0}, new float[]{0, 0, 0, 1},
                     (float) Math.toRadians(mc.options.fov().get()));
+            out.extraCameras.addAll(Exporter.presetCameras(r));   // static cinematic angles too
 
             List<Tracked> tracked = new ArrayList<>();
             AABB box = new AABB(center).inflate(r);

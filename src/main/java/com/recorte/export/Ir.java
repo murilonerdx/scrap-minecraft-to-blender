@@ -22,6 +22,7 @@ public final class Ir {
         public final List<Material> materials = new ArrayList<>();
         public final List<Primitive> primitives = new ArrayList<>();
         public Camera camera;   // optional: the in-game camera, framed to match the export
+        public final List<Camera> extraCameras = new ArrayList<>();   // preset angles (orbit/top) for renders
         public Light sun;       // optional: a directional light matching the in-game sun
 
         public int addBone(Bone b) {

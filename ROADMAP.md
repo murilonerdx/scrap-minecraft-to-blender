@@ -36,6 +36,9 @@ cinematics**. ✅ marks what already exists. (Versão em português abaixo / Por
   (`PlaySoundEvent`: footsteps, hits, music) are recorded as timestamped events, exported as
   `events.json` + `events.csv` and served at `/events`. The add-on drops a **timeline marker** per
   event so you can sync VFX and audio to them.
+- **Multi-camera rig** — `scene`/`snapshot`/cinematic export **preset render cameras** (four 3/4 orbit
+  views + a top-down) alongside the in-game POV camera, so you can switch angles in Blender without
+  re-framing. They're extra nodes, so they never disturb the rig or the animated POV camera.
 
 ## 🔜 Big next steps
 - **Real-time link phase C**: true streaming (WebSocket/SSE) of bone transforms so it's frame-accurate,

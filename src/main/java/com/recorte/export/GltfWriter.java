@@ -111,32 +111,24 @@ public final class GltfWriter {
         }
         root.add("meshes", meshes);
 
-        // optional camera matching the in-game view
+        // cameras: the primary (in-game view, animation-targeted) + any preset angles for renders.
+        // Extra camera nodes are appended here / below the sun, so they never shift the bone or mesh
+        // node indices the skin and animation rely on.
+        JsonArray cameras = new JsonArray();
         int cameraNode = -1;
+        List<Integer> extraCameraNodes = new ArrayList<>();
         if (model.camera != null) {
-            JsonObject perspective = new JsonObject();
-            perspective.addProperty("yfov", model.camera.yfovRadians);
-            perspective.addProperty("znear", 0.05);
-            perspective.addProperty("zfar", 1000.0);
-            JsonObject cam = new JsonObject();
-            cam.addProperty("type", "perspective");
-            cam.add("perspective", perspective);
-            JsonArray cameras = new JsonArray();
-            cameras.add(cam);
-            root.add("cameras", cameras);
-
-            JsonObject camNode = new JsonObject();
-            camNode.addProperty("name", "Camera");
-            camNode.addProperty("camera", 0);
-            JsonArray t = new JsonArray();
-            for (float v : model.camera.position) t.add(v);
-            camNode.add("translation", t);
-            JsonArray r = new JsonArray();
-            for (float v : model.camera.rotation) r.add(v);
-            camNode.add("rotation", r);
-            nodes.add(camNode);
+            cameras.add(perspectiveCamera(model.camera.yfovRadians));
+            nodes.add(cameraNodeObj("Camera", cameras.size() - 1, model.camera.position, model.camera.rotation));
             cameraNode = nodes.size() - 1;
         }
+        for (int ci = 0; ci < model.extraCameras.size(); ci++) {
+            Ir.Camera ec = model.extraCameras.get(ci);
+            cameras.add(perspectiveCamera(ec.yfovRadians));
+            nodes.add(cameraNodeObj("Camera_" + (ci + 1), cameras.size() - 1, ec.position, ec.rotation));
+            extraCameraNodes.add(nodes.size() - 1);
+        }
+        if (cameras.size() > 0) root.add("cameras", cameras);
 
         // optional sun (directional light) via KHR_lights_punctual
         int sunNode = -1;
@@ -182,6 +174,7 @@ public final class GltfWriter {
         }
         for (int idx : meshNodes) sceneNodes.add(idx);
         if (cameraNode >= 0) sceneNodes.add(cameraNode);
+        for (int idx : extraCameraNodes) sceneNodes.add(idx);
         if (sunNode >= 0) sceneNodes.add(sunNode);
         JsonObject scene = new JsonObject();
         scene.add("nodes", sceneNodes);
@@ -424,6 +417,30 @@ public final class GltfWriter {
         JsonArray animations = new JsonArray();
         animations.add(animation);
         root.add("animations", animations);
+    }
+
+    private static JsonObject perspectiveCamera(float yfovRadians) {
+        JsonObject perspective = new JsonObject();
+        perspective.addProperty("yfov", yfovRadians);
+        perspective.addProperty("znear", 0.05);
+        perspective.addProperty("zfar", 1000.0);
+        JsonObject cam = new JsonObject();
+        cam.addProperty("type", "perspective");
+        cam.add("perspective", perspective);
+        return cam;
+    }
+
+    private static JsonObject cameraNodeObj(String name, int cameraIndex, float[] position, float[] rotation) {
+        JsonObject camNode = new JsonObject();
+        camNode.addProperty("name", name);
+        camNode.addProperty("camera", cameraIndex);
+        JsonArray t = new JsonArray();
+        for (float v : position) t.add(v);
+        camNode.add("translation", t);
+        JsonArray r = new JsonArray();
+        for (float v : rotation) r.add(v);
+        camNode.add("rotation", r);
+        return camNode;
     }
 
     private static JsonObject sampler(int input, int output) {
