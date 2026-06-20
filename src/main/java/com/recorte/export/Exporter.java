@@ -232,33 +232,12 @@ public final class Exporter {
             exportPlayer(player);
             return;
         }
-        Minecraft mc = Minecraft.getInstance();
         try {
-            @SuppressWarnings("rawtypes")
-            EntityRenderer renderer = mc.getEntityRenderDispatcher().getRenderer(entity);
-
-            // Prefer a rigged walk (bones) for ModelPart-based mobs; fall back to capturing the real
-            // render path for GeckoLib / anything that yields no walkable geometry.
-            Ir.Model ir = null;
-            if (renderer instanceof LivingEntityRenderer<?, ?> living) {
-                try {
-                    @SuppressWarnings({"rawtypes", "unchecked"})
-                    EntityModel model = living.getModel();
-                    Ir.Model rigged = new ModelExtractor().extractEntity(entity, model, "texture.png");
-                    if (rigged.triangleCount() > 0) {
-                        @SuppressWarnings({"rawtypes", "unchecked"})
-                        ResourceLocation tex = ((EntityRenderer) renderer).getTextureLocation(entity);
-                        rigged.materials.get(0).png = TextureExporter.bytesFor(tex);
-                        ir = rigged;
-                    }
-                } catch (Throwable t) {
-                    Recorte.LOGGER.warn("Rigged entity extract failed, capturing instead", t);
-                }
-            }
+            Ir.Model ir = buildEntityModel(entity);
             if (ir == null) {
-                ir = LayerCapturer.captureEntity(renderer, entity);
+                feedback("§cNão consegui montar essa entidade.");
+                return;
             }
-
             String name = entity.getType().getDescriptionId().replaceAll(".*\\.", "");
             Path dir = newDir(name);
             writeAll(ir, dir, name);
@@ -266,6 +245,38 @@ public final class Exporter {
         } catch (Throwable t) {
             fail(t);
         }
+    }
+
+    /**
+     * Best available IR for an entity: a rigged skeleton when the model is ModelPart-based, otherwise a
+     * faithful render capture (GeckoLib and friends). Returns null if there's no usable renderer.
+     */
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    static Ir.Model buildEntityModel(Entity entity) {
+        Minecraft mc = Minecraft.getInstance();
+        EntityRenderer renderer = mc.getEntityRenderDispatcher().getRenderer(entity);
+        if (renderer == null) return null;
+
+        // Prefer a rigged walk (bones) for ModelPart-based mobs; fall back to capturing the real
+        // render path for GeckoLib / anything that yields no walkable geometry.
+        Ir.Model ir = null;
+        if (renderer instanceof LivingEntityRenderer<?, ?> living) {
+            try {
+                EntityModel model = living.getModel();
+                Ir.Model rigged = new ModelExtractor().extractEntity(entity, model, "texture.png");
+                if (rigged.triangleCount() > 0) {
+                    ResourceLocation tex = ((EntityRenderer) renderer).getTextureLocation(entity);
+                    rigged.materials.get(0).png = TextureExporter.bytesFor(tex);
+                    ir = rigged;
+                }
+            } catch (Throwable t) {
+                Recorte.LOGGER.warn("Rigged entity extract failed, capturing instead", t);
+            }
+        }
+        if (ir == null) {
+            ir = LayerCapturer.captureEntity(renderer, entity);
+        }
+        return ir;
     }
 
     public static void exportEntityType(ResourceLocation id) {
@@ -553,10 +564,42 @@ public final class Exporter {
                     Recorte.LOGGER.warn("Block {} failed", id, t);
                 }
             }
-            Recorte.LOGGER.info("Exported mod {}: {} items, {} blocks to {}", modid, items, blocks, base);
-            feedback(String.format("§aMod §f%s§a: %d itens + %d blocos §7→ §f%s", modid, items, blocks, base));
+            int entities = 0;
+            for (var e : ForgeRegistries.ENTITY_TYPES.getEntries()) {
+                ResourceLocation id = e.getKey().location();
+                if (!id.getNamespace().equals(modid) || mc.level == null) continue;
+                try {
+                    Entity entity = e.getValue().create(mc.level);
+                    if (entity == null) continue;
+                    if (mc.player != null) {
+                        entity.moveTo(mc.player.getX(), mc.player.getY(), mc.player.getZ(), 0f, 0f);
+                    }
+                    Ir.Model ir = buildEntityModel(entity);
+                    if (ir == null || ir.triangleCount() <= 0) continue;
+                    writeAll(ir, base.resolve("entities").resolve(sanitize(id.getPath())), id.getPath());
+                    entities++;
+                } catch (Throwable t) {
+                    Recorte.LOGGER.warn("Entity {} failed", id, t);
+                }
+            }
+            writeModManifest(base, modid, items, blocks, entities);
+            Recorte.LOGGER.info("Exported mod {}: {} items, {} blocks, {} entities to {}",
+                    modid, items, blocks, entities, base);
+            feedback(String.format("§aMod §f%s§a: %d itens + %d blocos + %d entidades §7→ §f%s",
+                    modid, items, blocks, entities, base));
         } catch (Throwable t) {
             fail(t);
+        }
+    }
+
+    /** A small JSON manifest of what a mod batch produced, so the export folder is self-describing. */
+    private static void writeModManifest(Path base, String modid, int items, int blocks, int entities) {
+        String json = String.format(java.util.Locale.ROOT,
+                "{\"mod\":\"%s\",\"items\":%d,\"blocks\":%d,\"entities\":%d,\"exportedAt\":\"%s\"}",
+                esc(modid), items, blocks, entities, LocalDateTime.now().format(STAMP));
+        try {
+            Files.writeString(base.resolve("manifest.json"), json);
+        } catch (Throwable ignored) {
         }
     }
 

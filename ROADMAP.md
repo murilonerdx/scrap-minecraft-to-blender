@@ -60,7 +60,8 @@ cinematics**. ✅ marks what already exists. (Versão em português abaixo / Por
   not ~1×/s.
 - **Particle/VFX capture**: record particle systems (fire, portal, explosions) as animated point clouds.
 - **In-game preview**: a render of the model/scene inside the control panel before exporting.
-- **Batch a mod's entities**: `export mod` currently does items+blocks; add all the mod's mobs.
+- ✅ **Batch a mod's entities**: `export mod` now also exports every one of the mod's entities (rigged
+  or captured) into an `entities/` folder, plus a `manifest.json` summarising the batch.
 
 ## 🦴 Animation
 - **Export animation cycles** (idle/walk/attack) as glTF animation: sample `setupAnim` over time and
