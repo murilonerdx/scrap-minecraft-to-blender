@@ -184,6 +184,7 @@ public final class Exporter {
             feedback("§7Capturando cena (raio " + r + ")... pode travar alguns segundos.");
             Ir.Model ir = new SceneExtractor().extract(mc.level, center, r);
             ir.camera = playerCamera(center);
+            ir.sun = worldSun();
             Path dir = newDir("scene_r" + r);
             writeAll(ir, dir, "scene");
             report("cena (raio " + r + ")", ir, dir);
@@ -204,6 +205,7 @@ public final class Exporter {
             feedback("§7Capturando snapshot (raio " + r + ")... pode travar alguns segundos.");
             Ir.Model ir = new SceneExtractor().extract(mc.level, center, r);
             ir.camera = playerCamera(center);
+            ir.sun = worldSun();
 
             int entities = 0;
             AABB box = new AABB(center).inflate(r);
@@ -425,6 +427,31 @@ public final class Exporter {
                 .lookAlong(-f.x, f.y, f.z, -u.x, u.y, u.z).conjugate();
         float yfov = (float) Math.toRadians(mc.options.fov().get());
         return new Ir.Camera(new float[]{px, py, pz}, new float[]{q.x, q.y, q.z, q.w}, yfov);
+    }
+
+    /** A directional sun light approximating the in-game time of day (export space, +Y up). */
+    private static Ir.Light worldSun() {
+        Minecraft mc = Minecraft.getInstance();
+        float celestial = mc.level.getTimeOfDay(1.0f);       // 0 = noon, 0.5 = midnight
+        double a = celestial * 2.0 * Math.PI;
+        float height = (float) Math.cos(a);                  // 1 noon, -1 midnight
+        org.joml.Vector3f sun = new org.joml.Vector3f(
+                (float) (-0.5 * Math.sin(a)), Math.max(height, 0.05f) + 0.25f, -0.45f).normalize();
+        float[] dir = {-sun.x, -sun.y, -sun.z};              // light travels opposite the sun
+
+        float[] color;
+        float intensity;
+        if (height > 0.25f) {
+            color = new float[]{1.0f, 0.97f, 0.92f};
+            intensity = 4.0f;
+        } else if (height > -0.05f) {
+            color = new float[]{1.0f, 0.66f, 0.40f};
+            intensity = 2.0f;
+        } else {
+            color = new float[]{0.45f, 0.55f, 0.85f};
+            intensity = 0.4f;
+        }
+        return new Ir.Light(dir, color, intensity);
     }
 
     private static Path newDir(String label) {

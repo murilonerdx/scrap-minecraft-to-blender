@@ -131,6 +131,43 @@ public final class GltfWriter {
             nodes.add(camNode);
             cameraNode = nodes.size() - 1;
         }
+
+        // optional sun (directional light) via KHR_lights_punctual
+        int sunNode = -1;
+        if (model.sun != null) {
+            JsonObject light = new JsonObject();
+            light.addProperty("type", "directional");
+            JsonArray col = new JsonArray();
+            for (float v : model.sun.color) col.add(v);
+            light.add("color", col);
+            light.addProperty("intensity", model.sun.intensity);
+            JsonArray lights = new JsonArray();
+            lights.add(light);
+            JsonObject lp = new JsonObject();
+            lp.add("lights", lights);
+            JsonObject rootExt = new JsonObject();
+            rootExt.add("KHR_lights_punctual", lp);
+            root.add("extensions", rootExt);
+
+            org.joml.Vector3f d = new org.joml.Vector3f(
+                    model.sun.direction[0], model.sun.direction[1], model.sun.direction[2]);
+            if (d.lengthSquared() < 1e-8f) d.set(0, -1, 0);
+            float ux = 0, uy = 1, uz = 0;
+            if (Math.abs(d.y) > 0.99f) { uy = 0; uz = 1; }   // avoid degenerate up
+            org.joml.Quaternionf q = new org.joml.Quaternionf().lookAlong(d.x, d.y, d.z, ux, uy, uz).conjugate();
+            JsonObject sunNodeObj = new JsonObject();
+            sunNodeObj.addProperty("name", "Sun");
+            JsonArray r = new JsonArray();
+            r.add(q.x); r.add(q.y); r.add(q.z); r.add(q.w);
+            sunNodeObj.add("rotation", r);
+            JsonObject nodeExt = new JsonObject();
+            JsonObject lref = new JsonObject();
+            lref.addProperty("light", 0);
+            nodeExt.add("KHR_lights_punctual", lref);
+            sunNodeObj.add("extensions", nodeExt);
+            nodes.add(sunNodeObj);
+            sunNode = nodes.size() - 1;
+        }
         root.add("nodes", nodes);
 
         JsonArray sceneNodes = new JsonArray();
@@ -139,6 +176,7 @@ public final class GltfWriter {
         }
         for (int idx : meshNodes) sceneNodes.add(idx);
         if (cameraNode >= 0) sceneNodes.add(cameraNode);
+        if (sunNode >= 0) sceneNodes.add(sunNode);
         JsonObject scene = new JsonObject();
         scene.add("nodes", sceneNodes);
         JsonArray scenes = new JsonArray();
@@ -218,11 +256,10 @@ public final class GltfWriter {
             materials.add(material);
         }
         root.add("materials", materials);
-        if (anyEmissive) {
-            JsonArray used = new JsonArray();
-            used.add("KHR_materials_emissive_strength");
-            root.add("extensionsUsed", used);
-        }
+        JsonArray extUsed = new JsonArray();
+        if (anyEmissive) extUsed.add("KHR_materials_emissive_strength");
+        if (model.sun != null) extUsed.add("KHR_lights_punctual");
+        if (extUsed.size() > 0) root.add("extensionsUsed", extUsed);
 
         // --- animation (optional) -----------------------------------------------------------------
         if (animation != null && !animation.times.isEmpty()) {

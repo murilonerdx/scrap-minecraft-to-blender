@@ -22,6 +22,7 @@ public final class Ir {
         public final List<Material> materials = new ArrayList<>();
         public final List<Primitive> primitives = new ArrayList<>();
         public Camera camera;   // optional: the in-game camera, framed to match the export
+        public Light sun;       // optional: a directional light matching the in-game sun
 
         public int addBone(Bone b) {
             bones.add(b);
@@ -95,6 +96,19 @@ public final class Ir {
             this.position = position;
             this.rotation = rotation;
             this.yfovRadians = yfovRadians;
+        }
+    }
+
+    /** A directional light (the sun), exported via KHR_lights_punctual. */
+    public static final class Light {
+        public final float[] direction;      // travel direction (where light goes), normalized, export space
+        public final float[] color;          // r, g, b in 0..1
+        public final float intensity;
+
+        public Light(float[] direction, float[] color, float intensity) {
+            this.direction = direction;
+            this.color = color;
+            this.intensity = intensity;
         }
     }
 

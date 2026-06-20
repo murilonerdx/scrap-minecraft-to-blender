@@ -44,6 +44,7 @@ to a static capture (but they still export!).
 - 🌿 **Biome tints** (grass/leaves/water) baked as **vertex colors**.
 - 🧱 **Hidden-face culling** in scenes (interiors aren't exported).
 - 📷 **Camera** — `scene`/`snapshot` include a glTF camera framed to your in-game view.
+- ☀️ **Sun** — `scene`/`snapshot` include a directional light angled & colored by the time of day.
 - 👕 Player armor, held item and **Curios/Artifacts accessories** (as a separate `Accessories` object).
 
 ---

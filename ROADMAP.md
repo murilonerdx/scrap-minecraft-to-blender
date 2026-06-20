@@ -14,6 +14,8 @@ cinematics**. ✅ marks what already exists. (Versão em português abaixo / Por
   pulls the newest export from the running game (`blender_addon/recorte_import.py`).
 - **Camera export** — `scene`/`snapshot` include a glTF camera framed to your in-game view (position
   + FOV), so the diorama opens already lined up with your shot.
+- **Sun light** — `scene`/`snapshot` include a directional light (`KHR_lights_punctual`) colored and
+  angled by the in-game time of day (warm at dusk, blue at night). Blender imports it as a Sun lamp.
 
 ## 🔜 In progress
 - **Real-time link phase B**: stream bone transforms over WebSocket so the mob mirrors the game live
@@ -40,8 +42,8 @@ cinematics**. ✅ marks what already exists. (Versão em português abaixo / Por
 - Export **sky/fog/biome color + sun angle** → recreate the in-game look in Blender (sun + world).
 - **Block light / sky light** baked (vertex color or light probes) to match the game's lighting.
 - Skybox, clouds, stars.
-- ✅ **Camera** (done) → next: also export the **sun angle + sky/fog color** so world lighting matches;
-  plus optional **depth-of-field** focused on whatever you're looking at.
+- ✅ **Camera** + ✅ **Sun light** (done) → next: export the **sky/fog color** into a Blender World, and
+  optional **depth-of-field** focused on whatever you're looking at.
 
 ## 🧱 More to extract
 - **Larger regions / schematics** (NBT structures, `.litematic`).
