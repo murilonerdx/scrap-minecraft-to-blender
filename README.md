@@ -103,6 +103,18 @@ Run a dev client: `./gradlew runClient`
 - **Tints** (grass/water): imported as a *Color Attribute* (`COLOR_0`), multiplied over the base color.
 - Scale: 1 unit = 1 block.
 
+## 🔌 Live link — Blender add-on (one-click import)
+
+While the game is running, the mod serves the latest export over `http://127.0.0.1:25599`. Install the
+add-on and import without touching files:
+
+1. Blender → *Edit → Preferences → Add-ons → Install…* → pick `blender_addon/recorte_import.py` → enable it.
+2. In the 3D viewport press **N** → **Recorte** tab.
+3. Export in-game (key `O`), then click **Import latest from Minecraft**.
+
+> This is *phase A* of the real-time link. Phase B will stream bone transforms live (the mob mirrors the
+> game in Blender in real time).
+
 ---
 
 ## 🧠 How it works

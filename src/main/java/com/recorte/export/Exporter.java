@@ -334,8 +334,10 @@ public final class Exporter {
             for (Ir.Material m : model.materials) {
                 if (m.png != null && m.textureFile != null) Files.write(dir.resolve(m.textureFile), m.png);
             }
-            GltfWriter.write(model, anim, dir.resolve(name + ".glb"));
+            Path glb = dir.resolve(name + ".glb");
+            GltfWriter.write(model, anim, glb);
             ObjWriter.write(model, dir.resolve(name + ".obj"), dir.resolve(name + ".mtl"));
+            HttpBridge.setLastGlb(glb);
             Recorte.LOGGER.info("Recorded {} ({} frames) to {}", name, frames, dir);
             feedback(String.format("§a■ Animação gravada §f%s§a: %d frames §7→ §f%s", name, frames, dir));
         } catch (Throwable t) {
@@ -401,8 +403,10 @@ public final class Exporter {
                 Files.write(dir.resolve(m.textureFile), m.png);
             }
         }
-        GltfWriter.write(ir, dir.resolve(base + ".glb"));
+        Path glb = dir.resolve(base + ".glb");
+        GltfWriter.write(ir, glb);
         ObjWriter.write(ir, dir.resolve(base + ".obj"), dir.resolve(base + ".mtl"));
+        HttpBridge.setLastGlb(glb);
     }
 
     private static Path newDir(String label) {

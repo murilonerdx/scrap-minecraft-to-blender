@@ -10,5 +10,6 @@ public final class ClientBootstrap {
     public static void init() {
         IEventBus modBus = FMLJavaModLoadingContext.get().getModEventBus();
         modBus.addListener(KeyBindings::register);
+        com.recorte.export.HttpBridge.start();
     }
 }

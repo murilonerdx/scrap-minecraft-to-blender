@@ -9,6 +9,14 @@ cinematics**. ✅ marks what already exists. (Versão em português abaixo / Por
 - Items, blocks and a **whole mod** in batch.
 - **Scene** (world diorama) and **Snapshot** (scene + rigged mobs) with culling, tint and emission.
 - Skinned multi-object glTF + OBJ, per-sprite textures, vertex colors.
+- **Live animation recording** (key `R`) → keyframed glTF animation.
+- **Blender add-on + HTTP bridge** (real-time link *phase A*): one-click "Import latest from Minecraft"
+  pulls the newest export from the running game (`blender_addon/recorte_import.py`).
+
+## 🔜 In progress
+- **Real-time link phase B**: stream bone transforms over WebSocket so the mob mirrors the game live
+  in Blender.
+- **World movement in recordings**: animate the armature root along the entity's path (not just limbs).
 
 ## 🦴 Animation
 - **Export animation cycles** (idle/walk/attack) as glTF animation: sample `setupAnim` over time and
