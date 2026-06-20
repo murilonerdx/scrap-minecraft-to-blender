@@ -71,7 +71,8 @@ the Timeline** ready to edit.
   the full **frame sequence** is exported (`*_f000.png` … + `animated_textures.json`) to build an
   image-sequence loop in Blender.
 - 💧 **Fluid surfaces** — water and lava (skipped before, since they have no block model) now export
-  their **top surface** at the real height, biome-tinted/emissive, as a separate `Fluids` object.
+  their **top surface and exposed sides** (waterfalls, pool edges) at the real height, biome-tinted/
+  emissive, as a separate `Fluids` object.
 - 👕 Player armor, held items (both hands) and **Curios/Artifacts accessories** (separate `Accessories`
   object); the **cape/elytra** comes in as its own `Cape` object.
 

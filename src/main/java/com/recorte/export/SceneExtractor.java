@@ -101,9 +101,10 @@ public final class SceneExtractor {
      * skip fluids otherwise. Biome-tinted for water, emissive for lava, with the same lighting bake as
      * solid faces. Only the exposed top layer is emitted (the block above isn't the same fluid).
      */
+    private static final Direction[] FLUID_SIDES = {Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST};
+
     private void addFluidSurface(Ir.Model out, Level level, BlockPos pos, BlockPos center,
                                  net.minecraft.world.level.material.FluidState fluid) {
-        if (level.getBlockState(pos.above()).getFluidState().getType() == fluid.getType()) return;
         TextureAtlasSprite sprite = fluidStillSprite(fluid);
         if (sprite == null) return;
 
@@ -120,23 +121,55 @@ public final class SceneExtractor {
             cg = ((color >> 8) & 255) / 255f;
             cb = (color & 255) / 255f;
         }
-        BlockPos lightPos = pos.above();
-        int blockL = level.getBrightness(net.minecraft.world.level.LightLayer.BLOCK, lightPos);
-        int skyL = level.getBrightness(net.minecraft.world.level.LightLayer.SKY, lightPos);
-        float lightLevel = Math.max(blockL, skyL) / 15f;
-        float bright = (0.12f + 0.88f * lightLevel) * level.getShade(net.minecraft.core.Direction.UP, true);
-        cr *= bright;
-        cg *= bright;
-        cb *= bright;
+        int blockL = level.getBrightness(net.minecraft.world.level.LightLayer.BLOCK, pos);
+        int skyL = level.getBrightness(net.minecraft.world.level.LightLayer.SKY, pos);
+        float bright = 0.12f + 0.88f * Math.max(blockL, skyL) / 15f;
 
         int dx = pos.getX() - center.getX();
         int dy = pos.getY() - center.getY();
         int dz = pos.getZ() - center.getZ();
+
+        // top surface — only when exposed (no same fluid directly above)
+        if (level.getBlockState(pos.above()).getFluidState().getType() != fluid.getType()) {
+            float s = bright * level.getShade(Direction.UP, true);
+            prim.addQuad(
+                    fluidVertex(0, h, 0, dx, dy, dz, 0, 0, cr * s, cg * s, cb * s),
+                    fluidVertex(1, h, 0, dx, dy, dz, 1, 0, cr * s, cg * s, cb * s),
+                    fluidVertex(1, h, 1, dx, dy, dz, 1, 1, cr * s, cg * s, cb * s),
+                    fluidVertex(0, h, 1, dx, dy, dz, 0, 1, cr * s, cg * s, cb * s));
+        }
+
+        // exposed vertical sides (waterfalls, pool edges), from y=0 to the fluid height
+        for (Direction dir : FLUID_SIDES) {
+            BlockPos np = pos.relative(dir);
+            BlockState ns = level.getBlockState(np);
+            if (ns.getFluidState().getType() == fluid.getType()) continue;   // submerged side
+            if (ns.isSolidRender(level, np)) continue;                       // occluded by a full block
+            float s = bright * level.getShade(dir, true);
+            emitFluidSide(prim, dir, h, dx, dy, dz, cr * s, cg * s, cb * s);
+        }
+    }
+
+    private static void emitFluidSide(Ir.Primitive prim, Direction dir, float h, int dx, int dy, int dz,
+                                      float r, float g, float b) {
+        float[][] c = sideCorners(dir, h);
+        Vector3f n = new Vector3f(dir.step());
         prim.addQuad(
-                fluidVertex(0, h, 0, dx, dy, dz, 0, 0, cr, cg, cb),
-                fluidVertex(1, h, 0, dx, dy, dz, 1, 0, cr, cg, cb),
-                fluidVertex(1, h, 1, dx, dy, dz, 1, 1, cr, cg, cb),
-                fluidVertex(0, h, 1, dx, dy, dz, 0, 1, cr, cg, cb));
+                new Ir.Vertex(-(c[0][0] + dx), c[0][1] + dy, c[0][2] + dz, -n.x, n.y, n.z, c[0][3], c[0][4], 0, r, g, b, 1f),
+                new Ir.Vertex(-(c[1][0] + dx), c[1][1] + dy, c[1][2] + dz, -n.x, n.y, n.z, c[1][3], c[1][4], 0, r, g, b, 1f),
+                new Ir.Vertex(-(c[2][0] + dx), c[2][1] + dy, c[2][2] + dz, -n.x, n.y, n.z, c[2][3], c[2][4], 0, r, g, b, 1f),
+                new Ir.Vertex(-(c[3][0] + dx), c[3][1] + dy, c[3][2] + dz, -n.x, n.y, n.z, c[3][3], c[3][4], 0, r, g, b, 1f));
+    }
+
+    /** {lx, ly, lz, u, v} for the 4 corners of a fluid side face up to height {@code h}. */
+    private static float[][] sideCorners(Direction dir, float h) {
+        float t = 1f - h;
+        switch (dir) {
+            case NORTH: return new float[][]{{0, 0, 0, 0, 1}, {1, 0, 0, 1, 1}, {1, h, 0, 1, t}, {0, h, 0, 0, t}};
+            case SOUTH: return new float[][]{{1, 0, 1, 0, 1}, {0, 0, 1, 1, 1}, {0, h, 1, 1, t}, {1, h, 1, 0, t}};
+            case WEST:  return new float[][]{{0, 0, 1, 0, 1}, {0, 0, 0, 1, 1}, {0, h, 0, 1, t}, {0, h, 1, 0, t}};
+            default:    return new float[][]{{1, 0, 0, 0, 1}, {1, 0, 1, 1, 1}, {1, h, 1, 1, t}, {1, h, 0, 0, t}};
+        }
     }
 
     private static Ir.Vertex fluidVertex(float lx, float ly, float lz, int dx, int dy, int dz,
