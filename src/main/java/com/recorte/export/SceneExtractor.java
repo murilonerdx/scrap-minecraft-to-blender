@@ -55,8 +55,10 @@ public final class SceneExtractor {
                     net.minecraft.world.level.material.FluidState fluid = state.getFluidState();
                     if (!fluid.isEmpty()) addFluidSurface(out, level, pos, center, fluid);
                     // block entities (chests, signs, banners, beds, bells, shulkers…) via their renderer
-                    net.minecraft.world.level.block.entity.BlockEntity be = level.getBlockEntity(pos);
-                    if (be != null) captureBlockEntity(out, be, pos, center);
+                    if (state.hasBlockEntity()) {
+                        net.minecraft.world.level.block.entity.BlockEntity be = level.getBlockEntity(pos);
+                        if (be != null) captureBlockEntity(out, be, pos, center);
+                    }
                     if (state.getRenderShape() != RenderShape.MODEL) continue;
                     BakedModel model = blockRenderer.getBlockModel(state);
                     addBlock(out, level, pos, center, state, model, blockColors, random);
