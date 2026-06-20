@@ -34,7 +34,6 @@ public final class LayerCapturer {
 
     private static final int BODY_BONE = 1;          // ModelExtractor bone order: root=0, body=1
     private static final int FULL_BRIGHT = LightTexture.pack(15, 15);
-    private static final float PUSH_OUT = 0.15f;     // how far worn accessories are moved OUT from the body axis
 
     /** Player accessories: replay each render layer and attach to the body bone as a separate object. */
     @SuppressWarnings({"rawtypes", "unchecked"})
@@ -52,6 +51,12 @@ public final class LayerCapturer {
         }
 
         model.setAllVisible(true);
+        // Snapshot the BODY geometry (already in the model) before adding accessories — it's the
+        // reference we push accessories clear of.
+        List<float[]> bodyVerts = new java.util.ArrayList<>();
+        for (Ir.Primitive p : out.primitives) {
+            for (Ir.Vertex v : p.vertices) bodyVerts.add(new float[]{v.px, v.py, v.pz});
+        }
         // Cape/elytra go into their own object so you can rig/animate the cloth separately in Blender;
         // everything else (armour, held items, Curios) stays grouped as accessories.
         CapturingBuffer accessories = new CapturingBuffer();
@@ -69,8 +74,8 @@ public final class LayerCapturer {
                         layer.getClass().getSimpleName(), t);
             }
         }
-        appendCaptured(accessories, out, Convert.matrixCaptured(), BODY_BONE, "Accessories", PUSH_OUT);
-        appendCaptured(cape, out, Convert.matrixCaptured(), BODY_BONE, "Cape", PUSH_OUT);
+        appendCaptured(accessories, out, Convert.matrixCaptured(), BODY_BONE, "Accessories", bodyVerts);
+        appendCaptured(cape, out, Convert.matrixCaptured(), BODY_BONE, "Cape", bodyVerts);
     }
 
     /** Whole-entity capture (mobs). Renders the entity renderer into the buffer; static (no bones). */
@@ -90,20 +95,21 @@ public final class LayerCapturer {
         } catch (Throwable t) {
             Recorte.LOGGER.warn("Entity render capture failed for {}", entity.getType(), t);
         }
-        appendCaptured(buffer, out, new Matrix4f(), 0, "Entity", 0f);   // standalone mob: no push
+        appendCaptured(buffer, out, new Matrix4f(), 0, "Entity", null);   // standalone mob: no push
         return out;
     }
 
     /**
      * Converts the recorded quads into IR primitives, one material per distinct texture. When
-     * {@code pushOut > 0} each captured object (grouped by render type ≈ one accessory) is moved as a
-     * whole OUT from the body's vertical axis by that distance, so worn 3D accessories (orbs, packs,
-     * belts) sit OUTSIDE the body instead of intersecting it — pushing per-vertex along normals only
-     * inflates a centred accessory, it never moves it clear. Pass 0 for standalone meshes (mobs, block
+     * {@code bodyVerts} is non-null, each captured object (grouped by render type ≈ one accessory) is
+     * moved as a whole, horizontally, just PAST the body's surface at its own height — so worn 3D
+     * accessories (orbs, packs, belts) sit OUTSIDE the body instead of intersecting it. Pushing
+     * per-vertex along normals only inflates a centred accessory; moving the whole group past the
+     * measured body surface actually clears it. Pass {@code null} for standalone meshes (mobs, block
      * entities).
      */
     static void appendCaptured(CapturingBuffer buffer, Ir.Model out, Matrix4f m, int boneIndex,
-                               String group, float pushOut) {
+                               String group, List<float[]> bodyVerts) {
         Map<Integer, Integer> texIdToMaterial = new HashMap<>();
         int textureCounter = out.materials.size();
         java.util.Set<String> seenQuads = new java.util.HashSet<>();   // drop duplicate passes (enchant glint, etc.)
@@ -133,26 +139,17 @@ public final class LayerCapturer {
             Ir.Primitive prim = out.primitiveForMaterial(materialIndex);
             prim.group = group;
 
-            // Move the whole accessory horizontally OUT from the body's vertical axis (export X=0,Z=0),
-            // by its centroid's outward direction. This actually separates a 3D accessory from the body;
-            // a dead-centre one is pushed forward.
+            // Push the whole accessory just past the body surface at its height (measured, guaranteed).
             float pushX = 0f, pushZ = 0f;
-            if (pushOut > 0f) {
-                float cx = 0f, cz = 0f;
+            if (bodyVerts != null) {
+                List<float[]> pos = new java.util.ArrayList<>(verts.size());
                 for (float[] a : verts) {
                     Vector3f p = m.transformPosition(new Vector3f(a[0], a[1], a[2]));
-                    cx += p.x;
-                    cz += p.z;
+                    pos.add(new float[]{p.x, p.y, p.z});
                 }
-                cx /= verts.size();
-                cz /= verts.size();
-                float rlen = (float) Math.sqrt(cx * cx + cz * cz);
-                if (rlen > 1.0e-3f) {
-                    pushX = cx / rlen * pushOut;
-                    pushZ = cz / rlen * pushOut;
-                } else {
-                    pushZ = pushOut;   // centred accessory: push forward off the chest
-                }
+                float[] push = AccessoryPush.compute(pos, bodyVerts);
+                pushX = push[0];
+                pushZ = push[1];
             }
 
             for (int i = 0; i + 3 < verts.size(); i += 4) {

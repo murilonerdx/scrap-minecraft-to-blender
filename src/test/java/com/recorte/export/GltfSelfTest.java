@@ -24,6 +24,8 @@ public final class GltfSelfTest {
         Path outDir = Paths.get(args.length > 0 ? args[0] : "build/selftest");
         Files.createDirectories(outDir);
 
+        assertAccessoryClears();
+
         Ir.Model model = buildRig();
 
         // 1) single animation (the recording path)
@@ -134,6 +136,39 @@ public final class GltfSelfTest {
             a.cameraKey(new float[]{0, 2, 5f - t}, new float[]{0, 0, 0, 1});   // POV camera channel
         }
         return a;
+    }
+
+    /** The recurring "accessory inside the player" bug: a box dead-centre in the torso must be pushed
+     *  clear of the body, and an accessory already outside must be left untouched. */
+    private static void assertAccessoryClears() {
+        List<float[]> body = boxVerts(-0.25f, 0f, -0.125f, 0.25f, 0.75f, 0.125f);     // torso
+        List<float[]> acc = boxVerts(-0.05f, 0.35f, -0.05f, 0.05f, 0.45f, 0.05f);     // dead-centre inside
+        float[] push = AccessoryPush.compute(acc, body);
+        float aMinX = -0.05f + push[0], aMaxX = 0.05f + push[0];
+        float aMinZ = -0.05f + push[1], aMaxZ = 0.05f + push[1];
+        boolean clear = aMinX > 0.25f || aMaxX < -0.25f || aMinZ > 0.125f || aMaxZ < -0.125f;
+        if (!clear) {
+            throw new IllegalStateException("FAIL: accessory still inside body after push "
+                    + push[0] + "," + push[1]);
+        }
+        float[] none = AccessoryPush.compute(boxVerts(0.4f, 0.35f, -0.05f, 0.5f, 0.45f, 0.05f), body);
+        if (none[0] != 0f || none[1] != 0f) {
+            throw new IllegalStateException("FAIL: an already-clear accessory was moved");
+        }
+        System.out.println("  accessory-push OK: centred accessory cleared (dx=" + push[0] + " dz=" + push[1]
+                + "), already-clear one untouched");
+    }
+
+    private static List<float[]> boxVerts(float x0, float y0, float z0, float x1, float y1, float z1) {
+        List<float[]> v = new ArrayList<>();
+        for (float x : new float[]{x0, x1}) {
+            for (float y : new float[]{y0, y1}) {
+                for (float z : new float[]{z0, z1}) {
+                    v.add(new float[]{x, y, z});
+                }
+            }
+        }
+        return v;
     }
 
     /** A minimal valid 1x1 PNG, so embedded image bytes are real PNGs. */
