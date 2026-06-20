@@ -380,16 +380,23 @@ public final class Exporter {
         ir.extraCameras.addAll(presetCameras(r));
         int entities = 0;
         AABB box = new AABB(center).inflate(r);
-        for (LivingEntity e : mc.level.getEntitiesOfClass(LivingEntity.class, box)) {
+        // ALL entities — living ones get a rig; everything else (item frames, paintings, boats,
+        // minecarts, dropped items, armor stands…) gets a faithful render capture.
+        for (Entity e : mc.level.getEntitiesOfClass(Entity.class, box)) {
             try {
                 @SuppressWarnings("rawtypes")
                 EntityRenderer renderer = mc.getEntityRenderDispatcher().getRenderer(e);
+                if (renderer == null) continue;
                 float ox = -((float) e.getX() - center.getX());
                 float oz = (float) e.getZ() - center.getZ();
                 String name = e.getType().getDescriptionId().replaceAll(".*\\.", "");
                 // the local player gets the full model (body + skin + armour/Curios), not a bare body
-                Ir.Model rigged = (e == mc.player)
-                        ? buildPlayer((AbstractClientPlayer) e) : riggedEntity(e, renderer);
+                Ir.Model rigged = null;
+                if (e instanceof AbstractClientPlayer player) {
+                    rigged = buildPlayer(player);
+                } else if (e instanceof LivingEntity living) {
+                    rigged = riggedEntity(living, renderer);
+                }
                 if (rigged != null) {
                     float oy = (float) (e.getY() - center.getY()) - minY(rigged);
                     mergeRigged(ir, rigged, ox, oy, oz, "entity_" + name, "e" + entities + "_");

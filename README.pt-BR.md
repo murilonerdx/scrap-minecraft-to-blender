@@ -32,7 +32,7 @@ do jogo e os arquivos aparecem prontos pra importar no Blender.
 | `/recorte export mod <modid>` | **todos** os itens + blocos **+ entidades** de um mod (lote) | ✅ |
 | `/recorte export animlib` | uma **biblioteca de animações** do player (idle/walk/run/sneak) num rig | ✅ |
 | `/recorte export scene [raio]` | 🎬 **cenário** ao redor (diorama do seu build/terreno) | – |
-| `/recorte export snapshot [raio]` | 🎬 **o momento**: cena + todos os mobs por perto (mobs **rigados**) | ✅ |
+| `/recorte export snapshot [raio]` | 🎬 **o momento**: cena + **todas as entidades** por perto (mobs rigados; molduras, quadros, barcos, carrinhos, itens no chão… capturados) | ✅ |
 
 ¹ Mobs vanilla (`HumanoidModel`/`HierarchicalModel`) saem **com ossos**. Mobs de **GeckoLib** caem
 para uma captura estática (mas saem!).

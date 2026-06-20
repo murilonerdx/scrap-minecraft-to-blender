@@ -66,6 +66,8 @@ cinematics**. ✅ marks what already exists. (Versão em português abaixo / Por
   or captured) into an `entities/` folder, plus a `manifest.json` summarising the batch.
 - ✅ **Block entities in scenes**: chests, signs, banners, beds, bells, shulker boxes… are rendered via
   their `BlockEntityRenderer` and folded into `scene`/`snapshot` as a `BlockEntities` object.
+- ✅ **All entities in snapshots**: `snapshot`/live now capture **every** entity, not just living ones —
+  item frames, paintings, boats, minecarts, dropped items, armor stands… (mobs rigged, the rest captured).
 
 ## 🦴 Animation
 - **Export animation cycles** (idle/walk/attack) as glTF animation: sample `setupAnim` over time and
