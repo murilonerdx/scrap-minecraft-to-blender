@@ -54,7 +54,13 @@ public final class GltfWriter {
             Ir.Bone b = model.bones.get(i);
             JsonObject node = new JsonObject();
             node.addProperty("name", b.name);
-            node.add("matrix", matrixArray(b.localTransform));
+            // TRS (not a matrix) so the node can be animation-targeted (glTF forbids matrix + animation)
+            org.joml.Vector3f tt = b.localTransform.getTranslation(new org.joml.Vector3f());
+            org.joml.Quaternionf rr = b.localTransform.getNormalizedRotation(new org.joml.Quaternionf());
+            org.joml.Vector3f ss = b.localTransform.getScale(new org.joml.Vector3f());
+            node.add("translation", vec3(tt.x, tt.y, tt.z));
+            node.add("rotation", vec4(rr.x, rr.y, rr.z, rr.w));
+            node.add("scale", vec3(ss.x, ss.y, ss.z));
             JsonArray children = new JsonArray();
             for (int j = 0; j < model.bones.size(); j++) {
                 if (model.bones.get(j).parentIndex == i) children.add(j);
@@ -443,11 +449,20 @@ public final class GltfWriter {
         return bb.array();
     }
 
-    private static JsonArray matrixArray(Matrix4f m) {
-        float[] f = new float[16];
-        m.get(f);
+    private static JsonArray vec3(float x, float y, float z) {
         JsonArray a = new JsonArray();
-        for (float v : f) a.add(v);
+        a.add(x);
+        a.add(y);
+        a.add(z);
+        return a;
+    }
+
+    private static JsonArray vec4(float x, float y, float z, float w) {
+        JsonArray a = new JsonArray();
+        a.add(x);
+        a.add(y);
+        a.add(z);
+        a.add(w);
         return a;
     }
 

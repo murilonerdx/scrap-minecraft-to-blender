@@ -43,6 +43,9 @@ public final class InputHandler {
         if (KeyBindings.record != null && KeyBindings.record.consumeClick()) {
             Minecraft.getInstance().execute(Recorder::toggleLookedAtOrSelf);
         }
+        if (KeyBindings.menu != null && KeyBindings.menu.consumeClick()) {
+            Minecraft.getInstance().setScreen(new RecorteScreen());
+        }
     }
 
     @SubscribeEvent

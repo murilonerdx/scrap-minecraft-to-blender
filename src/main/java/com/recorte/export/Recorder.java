@@ -9,7 +9,9 @@ import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.LivingEntity;
+import org.joml.Matrix4f;
 import org.joml.Quaternionf;
+import org.joml.Vector3f;
 
 /**
  * Records a live animation of an entity: starts on demand, samples each bone's pose every client tick
@@ -119,12 +121,18 @@ public final class Recorder {
         final EntityModel<?> model;
         final Ir.Model ir;
         final Ir.Animation anim = new Ir.Animation();
+        final double startX, startY, startZ;
+        final float startYaw;
         int frames;
 
         Session(LivingEntity entity, EntityModel<?> model, Ir.Model ir) {
             this.entity = entity;
             this.model = model;
             this.ir = ir;
+            this.startX = entity.getX();
+            this.startY = entity.getY();
+            this.startZ = entity.getZ();
+            this.startYaw = entity.yBodyRot;
         }
 
         @SuppressWarnings({"rawtypes", "unchecked"})
@@ -140,7 +148,20 @@ public final class Recorder {
             raw.setupAnim(entity, limbSwing, limbAmount, ageInTicks, 0f, headPitch);
 
             anim.times.add(frames * 0.05f);   // 20 ticks per second
-            for (int i = 0; i < ir.bones.size(); i++) {
+
+            // root bone (0): world movement + body yaw, so the mob travels its path (not in place)
+            double dx = entity.getX() - startX, dy = entity.getY() - startY, dz = entity.getZ() - startZ;
+            float dyaw = (float) Math.toRadians(entity.yBodyRot - startYaw);
+            Matrix4f rootM = new Matrix4f()
+                    .translate((float) -dx, (float) dy, (float) dz)   // negate X to match export space
+                    .rotateY(-dyaw)
+                    .mul(Convert.matrix());
+            Vector3f rt = rootM.getTranslation(new Vector3f());
+            Quaternionf rq = rootM.getNormalizedRotation(new Quaternionf());
+            anim.key(0, new float[]{rt.x, rt.y, rt.z}, new float[]{rq.x, rq.y, rq.z, rq.w});
+
+            // limb bones: each ModelPart's local pose
+            for (int i = 1; i < ir.bones.size(); i++) {
                 if (!(ir.bones.get(i).sourcePart instanceof ModelPart p)) continue;
                 Quaternionf q = new Quaternionf().rotationZYX(p.zRot, p.yRot, p.xRot);
                 anim.key(i, new float[]{p.x, p.y, p.z}, new float[]{q.x, q.y, q.z, q.w});

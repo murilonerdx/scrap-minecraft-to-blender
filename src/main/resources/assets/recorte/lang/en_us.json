@@ -1,5 +1,6 @@
 {
   "key.categories.recorte": "Recorte",
   "key.recorte.export": "Export (looked-at / self)",
-  "key.recorte.record": "Record Animation (toggle)"
+  "key.recorte.record": "Record Animation (toggle)",
+  "key.recorte.menu": "Open Recorte panel"
 }

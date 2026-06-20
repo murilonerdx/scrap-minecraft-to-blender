@@ -13,6 +13,7 @@ public final class KeyBindings {
     public static final String CATEGORY = "key.categories.recorte";
     public static KeyMapping export;
     public static KeyMapping record;
+    public static KeyMapping menu;
 
     public static void register(RegisterKeyMappingsEvent event) {
         export = new KeyMapping(
@@ -30,5 +31,13 @@ public final class KeyBindings {
                 GLFW.GLFW_KEY_R,
                 CATEGORY);
         event.register(record);
+
+        menu = new KeyMapping(
+                "key.recorte.menu",
+                KeyConflictContext.IN_GAME,
+                InputConstants.Type.KEYSYM,
+                GLFW.GLFW_KEY_G,
+                CATEGORY);
+        event.register(menu);
     }
 }
