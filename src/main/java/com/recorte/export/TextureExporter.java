@@ -68,6 +68,36 @@ public final class TextureExporter {
         }
     }
 
+    /**
+     * Repacks a LabPBR specular ({@code _s}) texture into a glTF metallic-roughness texture. LabPBR
+     * packs perceptual smoothness in R and F0/metalness in G; glTF wants roughness in G and metalness
+     * in B. Returns the new PNG bytes, or {@code null} if the input is missing/undecodable.
+     */
+    public static byte[] labPbrToMetallicRoughness(byte[] specularPng) {
+        if (specularPng == null) return null;
+        try (NativeImage src = NativeImage.read(new java.io.ByteArrayInputStream(specularPng))) {
+            int w = src.getWidth(), h = src.getHeight();
+            NativeImage out = new NativeImage(w, h, false);
+            try {
+                for (int y = 0; y < h; y++) {
+                    for (int x = 0; x < w; x++) {
+                        int p = src.getPixelRGBA(x, y);      // 0xAABBGGRR
+                        int smooth = p & 0xFF;               // LabPBR: perceptual smoothness
+                        int f0 = (p >> 8) & 0xFF;            // LabPBR: F0 / metalness
+                        int roughness = 255 - smooth;
+                        int metallic = f0 >= 230 ? 255 : 0;  // 230..255 = predefined metals
+                        out.setPixelRGBA(x, y, (255 << 24) | (metallic << 16) | (roughness << 8));
+                    }
+                }
+                return pngBytes(out);
+            } finally {
+                out.close();
+            }
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
     /** Encoded PNG bytes of an in-memory image (sprite contents, etc.). */
     public static byte[] pngBytes(NativeImage image) throws IOException {
         Path tmp = Files.createTempFile("recorte_img", ".png");

@@ -139,12 +139,19 @@ public final class SceneExtractor {
             }
         } catch (Throwable ignored) {
         }
-        // LabPBR normal map from the resource pack, if present (no-op on vanilla)
+        // LabPBR maps from the resource pack, if present (no-op on vanilla)
         try {
-            byte[] normal = TextureExporter.siblingTexture(sprite.contents().name(), "_n");
+            net.minecraft.resources.ResourceLocation spriteName = sprite.contents().name();
+            byte[] normal = TextureExporter.siblingTexture(spriteName, "_n");
             if (normal != null) {
                 material.normalPng = normal;
                 material.normalFile = "tex_" + spriteCounter + "_n.png";
+            }
+            byte[] mr = TextureExporter.labPbrToMetallicRoughness(
+                    TextureExporter.siblingTexture(spriteName, "_s"));
+            if (mr != null) {
+                material.mrPng = mr;
+                material.mrFile = "tex_" + spriteCounter + "_mr.png";
             }
         } catch (Throwable ignored) {
         }

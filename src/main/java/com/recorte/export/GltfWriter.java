@@ -238,6 +238,27 @@ public final class GltfWriter {
             textures.add(texture);
             materialToNormal.put(mi, textures.size() - 1);
         }
+        // LabPBR specular → glTF metallic-roughness texture
+        Map<Integer, Integer> materialToMR = new HashMap<>();
+        for (int mi = 0; mi < model.materials.size(); mi++) {
+            Ir.Material m = model.materials.get(mi);
+            if (m.mrPng == null) continue;
+            bin.align4();
+            int imgStart = bin.length();
+            bin.bytes(m.mrPng);
+            int imgView = bin.bufferView(imgStart, m.mrPng.length, null);
+
+            JsonObject image = new JsonObject();
+            image.addProperty("bufferView", imgView);
+            image.addProperty("mimeType", "image/png");
+            images.add(image);
+
+            JsonObject texture = new JsonObject();
+            texture.addProperty("source", images.size() - 1);
+            texture.addProperty("sampler", 0);
+            textures.add(texture);
+            materialToMR.put(mi, textures.size() - 1);
+        }
         if (textures.size() > 0) {
             JsonObject sampler = new JsonObject();
             sampler.addProperty("magFilter", NEAREST);
@@ -264,7 +285,15 @@ public final class GltfWriter {
                 baseColorTexture.addProperty("index", tex);
                 pbr.add("baseColorTexture", baseColorTexture);
             }
-            pbr.addProperty("metallicFactor", 0);
+            Integer mr = materialToMR.get(mi);
+            if (mr != null) {
+                JsonObject mrTexture = new JsonObject();
+                mrTexture.addProperty("index", mr);
+                pbr.add("metallicRoughnessTexture", mrTexture);
+                pbr.addProperty("metallicFactor", 1);   // let the texture drive metalness
+            } else {
+                pbr.addProperty("metallicFactor", 0);
+            }
             pbr.addProperty("roughnessFactor", 1);
             material.add("pbrMetallicRoughness", pbr);
             Integer nrm = materialToNormal.get(mi);

@@ -160,6 +160,8 @@ public final class Ir {
         public boolean emissive;               // glows (lava, glowstone, …): emissive in glTF
         public String normalFile;              // optional LabPBR normal map filename
         public byte[] normalPng;               // optional normal map PNG bytes → glTF normalTexture
+        public String mrFile;                  // optional metallic-roughness filename
+        public byte[] mrPng;                   // optional glTF metallic-roughness PNG (from LabPBR _s)
 
         public Material(String name) {
             this.name = name;

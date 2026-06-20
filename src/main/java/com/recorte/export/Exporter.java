@@ -628,6 +628,9 @@ public final class Exporter {
             if (m.normalPng != null && m.normalFile != null) {
                 Files.write(dir.resolve(m.normalFile), m.normalPng);
             }
+            if (m.mrPng != null && m.mrFile != null) {
+                Files.write(dir.resolve(m.mrFile), m.mrPng);
+            }
         }
         Path glb = dir.resolve(base + ".glb");
         GltfWriter.write(ir, glb);
