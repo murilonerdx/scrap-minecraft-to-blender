@@ -161,7 +161,7 @@ def _apply_events(port):
         return 0
     # clear our own previous markers so repeated imports don't pile up
     for m in list(scene.timeline_markers):
-        if m.name.startswith(("break:", "place:")):
+        if m.name.startswith(("break:", "place:", "sound:")):
             scene.timeline_markers.remove(m)
     if not evs:
         return 0

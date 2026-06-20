@@ -25,6 +25,17 @@ cinematics**. ✅ marks what already exists. (Versão em português abaixo / Por
   + FOV), so the diorama opens already lined up with your shot.
 - **Sun light** — `scene`/`snapshot` include a directional light (`KHR_lights_punctual`) colored and
   angled by the in-game time of day (warm at dusk, blue at night). Blender imports it as a Sun lamp.
+- **Baked world lighting** — `scene`/`snapshot` bake **block + sky light** and Minecraft's per-face
+  shading into vertex colours, so the diorama already looks lit like the game (no manual relighting).
+- **Smooth 30 fps recording** — both recorders sample on **render frames** with partial-tick
+  interpolation (positions/yaw via `Mth.lerp`/`rotLerp`), so motion is smooth, not stepped at 20 Hz.
+  The add-on pulls the animation from the NLA onto the active Action and sets the scene to 30 fps, so
+  the **keyframes show up in the Timeline / Dope Sheet ready to edit** (plus a "Show animation keys"
+  button for manual imports).
+- **Event timeline** — during a cinematic, **block breaks/placements** (`BlockEvent`) and **sounds**
+  (`PlaySoundEvent`: footsteps, hits, music) are recorded as timestamped events, exported as
+  `events.json` + `events.csv` and served at `/events`. The add-on drops a **timeline marker** per
+  event so you can sync VFX and audio to them.
 
 ## 🔜 Big next steps
 - **Real-time link phase C**: true streaming (WebSocket/SSE) of bone transforms so it's frame-accurate,
@@ -51,7 +62,7 @@ cinematics**. ✅ marks what already exists. (Versão em português abaixo / Por
 
 ## 💡 Lighting & environment
 - Export **sky/fog/biome color + sun angle** → recreate the in-game look in Blender (sun + world).
-- **Block light / sky light** baked (vertex color or light probes) to match the game's lighting.
+- ✅ **Block light / sky light** baked into vertex colors (+ face shading) to match the game's lighting.
 - Skybox, clouds, stars.
 - ✅ **Camera** + ✅ **Sun light** + ✅ **Sky color** (the add-on sets the Blender World from the live
   sky via the `/env` endpoint) → next: proper **fog**, and optional **depth-of-field** on your look target.

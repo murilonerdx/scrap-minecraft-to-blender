@@ -44,16 +44,22 @@ public final class SceneRecorder {
      * thread &mdash; hence the volatile {@code active} and the synchronized event list.
      */
     public static void recordEvent(String name, BlockPos pos) {
+        if (pos == null) recordEvent(name, Double.NaN, 0, 0);
+        else recordEvent(name, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
+    }
+
+    /** World-position variant (sounds, particles…); pass {@code wx = NaN} for an event with no position. */
+    public static void recordEvent(String name, double wx, double wy, double wz) {
         Session s = active;
         if (s == null) return;
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null) return;
         float t = (float) (mc.level.getGameTime() * 0.05 - (s.startSeconds < 0 ? 0 : s.startSeconds));
         if (t < 0) t = 0f;
-        float[] p = pos == null ? null : new float[]{
-                -(pos.getX() - s.center.getX()),
-                pos.getY() - s.center.getY(),
-                pos.getZ() - s.center.getZ()};
+        float[] p = Double.isNaN(wx) ? null : new float[]{
+                -(float) (wx - s.center.getX()),
+                (float) (wy - s.center.getY()),
+                (float) (wz - s.center.getZ())};
         s.anim.event(t, name, p);
     }
 

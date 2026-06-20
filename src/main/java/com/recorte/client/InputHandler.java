@@ -100,6 +100,18 @@ public final class InputHandler {
         return id != null ? id.toString() : "unknown";
     }
 
+    /** While a cinematic is recording, log every sound played as a timeline marker (footsteps, hits,
+     *  music…) so audio can be re-synced in the render. */
+    @SubscribeEvent
+    public static void onPlaySound(net.minecraftforge.client.event.sound.PlaySoundEvent event) {
+        if (!SceneRecorder.isRecording()) return;
+        net.minecraft.client.resources.sounds.SoundInstance s = event.getSound();
+        if (s == null) return;
+        net.minecraft.resources.ResourceLocation id = s.getLocation();
+        SceneRecorder.recordEvent("sound:" + (id != null ? id.toString() : "unknown"),
+                s.getX(), s.getY(), s.getZ());
+    }
+
     @SubscribeEvent
     public static void onRegisterClientCommands(RegisterClientCommandsEvent event) {
         event.getDispatcher().register(

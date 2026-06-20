@@ -500,6 +500,20 @@ public final class Exporter {
         String json = sb.toString();
         try {
             Files.writeString(dir.resolve("events.json"), json);
+            // CSV too, for audio/video editors (time in seconds, position in scene space)
+            StringBuilder csv = new StringBuilder("time,name,x,y,z\n");
+            synchronized (anim.events) {
+                for (Ir.Event e : anim.events) {
+                    csv.append(String.format(java.util.Locale.ROOT, "%.4f,%s,", e.time,
+                            e.name.replace(",", " ")));
+                    if (e.position != null) {
+                        csv.append(String.format(java.util.Locale.ROOT, "%.3f,%.3f,%.3f",
+                                e.position[0], e.position[1], e.position[2]));
+                    }
+                    csv.append('\n');
+                }
+            }
+            Files.writeString(dir.resolve("events.csv"), csv.toString());
         } catch (Throwable ignored) {
         }
         HttpBridge.setEvents(json);
