@@ -29,11 +29,13 @@ public final class HttpBridge {
     private static volatile int generation = 0;        // bumped on every export, polled by the Blender add-on
     private static volatile String env = "{}";
     private static volatile String events = "{\"fps\":30,\"events\":[]}";   // timeline markers of the latest recording
+    private static volatile String sun = "{}";                             // day/night timelapse track
     private static HttpServer server;
 
     public static void setLastGlb(Path glb) {
         lastGlb = glb;
         events = "{\"fps\":30,\"events\":[]}";   // clear stale markers; a recording sets them after
+        sun = "{}";                              // clear stale sun track too
         generation++;
     }
 
@@ -47,6 +49,11 @@ public final class HttpBridge {
         events = json;
     }
 
+    /** Day/night timelapse track (sun + sky per keyframe) for the add-on to keyframe in Blender. */
+    public static void setSun(String json) {
+        sun = json;
+    }
+
     public static void start() {
         if (server != null) return;
         try {
@@ -58,6 +65,8 @@ public final class HttpBridge {
                     String.valueOf(generation).getBytes()));
             server.createContext("/events", exchange -> respond(exchange, 200, "application/json",
                     events.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+            server.createContext("/sun", exchange -> respond(exchange, 200, "application/json",
+                    sun.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
             server.createContext("/latest", exchange -> {
                 Path glb = lastGlb;
                 if (glb == null || !Files.exists(glb)) {

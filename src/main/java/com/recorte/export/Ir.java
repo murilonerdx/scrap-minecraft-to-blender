@@ -85,6 +85,11 @@ public final class Ir {
         // point-in-time events (block break/place…) → Blender timeline markers; written from the
         // server thread, so keep it synchronized
         public final List<Event> events = java.util.Collections.synchronizedList(new ArrayList<>());
+        // day/night timelapse: the sun + sky sampled per keyframe (parallel to times)
+        public final List<float[]> sunDirections = new ArrayList<>();   // travel direction, export space
+        public final List<float[]> sunColors = new ArrayList<>();       // r,g,b
+        public final List<Float> sunIntensities = new ArrayList<>();
+        public final List<float[]> skyColors = new ArrayList<>();       // world background r,g,b
 
         public void key(int bone, float[] translation, float[] rotation) {
             translations.computeIfAbsent(bone, k -> new ArrayList<>()).add(translation);
@@ -98,6 +103,13 @@ public final class Ir {
 
         public void event(float time, String name, float[] position) {
             events.add(new Event(time, name, position));
+        }
+
+        public void worldKey(float[] sunDir, float[] sunColor, float sunIntensity, float[] skyColor) {
+            sunDirections.add(sunDir);
+            sunColors.add(sunColor);
+            sunIntensities.add(sunIntensity);
+            skyColors.add(skyColor);
         }
     }
 

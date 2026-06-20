@@ -238,6 +238,17 @@ public final class SceneRecorder {
             lastT = t;
             anim.times.add(t);
 
+            // day/night timelapse: sample the sun + sky this frame
+            try {
+                Ir.Light sun = Exporter.worldSun();
+                net.minecraft.world.phys.Vec3 sky = mc.player != null
+                        ? mc.level.getSkyColor(mc.player.position(), partial)
+                        : new net.minecraft.world.phys.Vec3(0.5, 0.6, 0.9);
+                anim.worldKey(sun.direction, sun.color, sun.intensity,
+                        new float[]{(float) sky.x, (float) sky.y, (float) sky.z});
+            } catch (Throwable ignored) {
+            }
+
             // POV camera: the player's eye this frame, in scene space (X negated like the scene)
             net.minecraft.client.Camera cam = mc.gameRenderer.getMainCamera();
             net.minecraft.world.phys.Vec3 cp = cam.getPosition();

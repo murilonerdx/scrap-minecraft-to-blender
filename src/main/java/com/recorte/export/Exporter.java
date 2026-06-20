@@ -403,6 +403,7 @@ public final class Exporter {
             ObjWriter.write(model, dir.resolve("cinematic.obj"), dir.resolve("cinematic.mtl"));
             HttpBridge.setLastGlb(glb);
             writeEvents(anim, dir);
+            writeSunTrack(anim, dir);
             int evs = anim.events.size();
             Recorte.LOGGER.info("Cinematic to {}: {} frames, {} mobs, {} tris, {} events",
                     dir, frames, mobs, model.triangleCount(), evs);
@@ -523,6 +524,45 @@ public final class Exporter {
 
     private static String esc(String s) {
         return s == null ? "" : s.replace("\\", "\\\\").replace("\"", "\\\"");
+    }
+
+    /**
+     * Writes the day/night timelapse track (sun direction/color/intensity + sky color per keyframe)
+     * as a sidecar {@code sun.json} and pushes it to the bridge, so the add-on can keyframe the Blender
+     * Sun lamp and World background over the recording.
+     */
+    private static void writeSunTrack(Ir.Animation anim, Path dir) {
+        if (anim == null || anim.sunDirections.isEmpty()) return;
+        int n = anim.sunDirections.size();
+        StringBuilder sb = new StringBuilder("{\"fps\":30,\"times\":[");
+        for (int i = 0; i < n && i < anim.times.size(); i++) {
+            if (i > 0) sb.append(',');
+            sb.append(String.format(java.util.Locale.ROOT, "%.4f", anim.times.get(i)));
+        }
+        appendVecArray(sb, "],\"dir\":[", anim.sunDirections);
+        appendVecArray(sb, "],\"color\":[", anim.sunColors);
+        sb.append("],\"intensity\":[");
+        for (int i = 0; i < n; i++) {
+            if (i > 0) sb.append(',');
+            sb.append(String.format(java.util.Locale.ROOT, "%.4f", anim.sunIntensities.get(i)));
+        }
+        appendVecArray(sb, "],\"sky\":[", anim.skyColors);
+        sb.append("]}");
+        String json = sb.toString();
+        try {
+            Files.writeString(dir.resolve("sun.json"), json);
+        } catch (Throwable ignored) {
+        }
+        HttpBridge.setSun(json);
+    }
+
+    private static void appendVecArray(StringBuilder sb, String opener, java.util.List<float[]> vecs) {
+        sb.append(opener);
+        for (int i = 0; i < vecs.size(); i++) {
+            float[] v = vecs.get(i);
+            if (i > 0) sb.append(',');
+            sb.append(String.format(java.util.Locale.ROOT, "[%.4f,%.4f,%.4f]", v[0], v[1], v[2]));
+        }
     }
 
     /** The in-game camera, converted into the scene's export space (X negated, relative to {@code center}). */

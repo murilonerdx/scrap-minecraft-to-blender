@@ -42,6 +42,9 @@ cinematics**. ✅ marks what already exists. (Versão em português abaixo / Por
 - **Render passes ready** — on import the add-on gives every object a unique **Object Index** and turns
   on the **Z/depth, mist, normal and object-index** compositor passes, so the scene is set up for
   advanced compositing out of the box.
+- **Day/night timelapse** — a cinematic samples the **sun (direction/color/intensity) and sky colour**
+  every keyframe; the add-on keyframes the Blender **Sun lamp and World background** over the recording
+  (`/sun` + `sun.json`), so the lighting sweeps from day to dusk to night as it did in-game.
 
 ## 🔜 Big next steps
 - **Real-time link phase C**: true streaming (WebSocket/SSE) of bone transforms so it's frame-accurate,

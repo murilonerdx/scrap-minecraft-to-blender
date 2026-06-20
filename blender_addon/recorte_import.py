@@ -81,9 +81,13 @@ class RECORTE_OT_import_latest(bpy.types.Operator):
         except Exception:  # noqa: BLE001
             pass
 
+        n_sun = _apply_sun(port, new_objs)   # day/night timelapse (after the static world is set)
+
         msg = "Imported latest Recorte export (%d objects)" % len(new_objs)
         if n_events:
-            msg += " — %d timeline marker(s) added" % n_events
+            msg += " — %d timeline marker(s)" % n_events
+        if n_sun:
+            msg += " — timelapse sun/sky animated"
         self.report({"INFO"}, msg)
         return {"FINISHED"}
 
@@ -193,6 +197,64 @@ def _apply_events(port):
     return len(evs)
 
 
+def _apply_sun(port, objs):
+    """Day/night timelapse (#1): keyframe the imported Sun lamp (rotation/color/energy) and the World
+    background colour over the recording, from the /sun track. Returns the number of keyframes."""
+    try:
+        import json as _json
+        data = _json.loads(_fetch(port, "sun").decode("utf-8"))
+    except Exception:  # noqa: BLE001
+        return 0
+    times = data.get("times") or []
+    dirs = data.get("dir") or []
+    cols = data.get("color") or []
+    inten = data.get("intensity") or []
+    sky = data.get("sky") or []
+    n = min(len(times), len(dirs))
+    if n < 2:
+        return 0
+
+    import mathutils
+    scene = bpy.context.scene
+    fps = float(data.get("fps") or scene.render.fps or 30)
+
+    sun_obj = None
+    for o in objs:
+        if getattr(o, "type", None) == "LIGHT" and getattr(getattr(o, "data", None), "type", None) == "SUN":
+            sun_obj = o
+            break
+    if sun_obj is not None:
+        sun_obj.rotation_mode = "QUATERNION"
+
+    bg = None
+    world = scene.world
+    if world and world.use_nodes:
+        bg = world.node_tree.nodes.get("Background")
+
+    down = mathutils.Vector((0.0, 0.0, -1.0))
+    step = max(1, n // 300)   # the sun moves slowly; ~300 keys is plenty, keep the file light
+    keys = 0
+    for i in range(0, n, step):
+        frame = int(round(float(times[i]) * fps))
+        if sun_obj is not None:
+            d = mathutils.Vector(dirs[i][:3])
+            if d.length > 1e-6:
+                sun_obj.rotation_quaternion = down.rotation_difference(d.normalized())
+                sun_obj.keyframe_insert("rotation_quaternion", frame=frame)
+            if i < len(cols):
+                sun_obj.data.color = cols[i][:3]
+                sun_obj.data.keyframe_insert("color", frame=frame)
+            if i < len(inten):
+                sun_obj.data.energy = float(inten[i])
+                sun_obj.data.keyframe_insert("energy", frame=frame)
+            keys += 1
+        if bg is not None and i < len(sky):
+            c = sky[i]
+            bg.inputs[0].default_value = (c[0], c[1], c[2], 1.0)
+            bg.inputs[0].keyframe_insert("default_value", frame=frame)
+    return keys
+
+
 class RECORTE_OT_activate_anim(bpy.types.Operator):
     """Pull glTF animations out of the NLA onto the active Action for the selected (or all) objects,
     so the keyframes show up in the Timeline / Dope Sheet ready to edit. Use this after a manual
@@ -260,6 +322,7 @@ class RECORTE_OT_live(bpy.types.Operator):
         _apply_pixel_art(self._objs)
         _activate_animations(self._objs)
         _apply_events(port)
+        _apply_sun(port, self._objs)
 
     def execute(self, context):
         context.scene.recorte_live = True
