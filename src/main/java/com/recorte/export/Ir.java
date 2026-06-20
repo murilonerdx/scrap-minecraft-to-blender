@@ -79,10 +79,17 @@ public final class Ir {
         public final List<Float> times = new ArrayList<>();          // seconds, one per keyframe
         public final Map<Integer, List<float[]>> translations = new java.util.LinkedHashMap<>();  // bone -> [x,y,z]/key
         public final Map<Integer, List<float[]>> rotations = new java.util.LinkedHashMap<>();      // bone -> [x,y,z,w]/key
+        public final List<float[]> cameraTranslations = new ArrayList<>();   // animated camera path (POV)
+        public final List<float[]> cameraRotations = new ArrayList<>();
 
         public void key(int bone, float[] translation, float[] rotation) {
             translations.computeIfAbsent(bone, k -> new ArrayList<>()).add(translation);
             rotations.computeIfAbsent(bone, k -> new ArrayList<>()).add(rotation);
+        }
+
+        public void cameraKey(float[] translation, float[] rotation) {
+            cameraTranslations.add(translation);
+            cameraRotations.add(rotation);
         }
     }
 

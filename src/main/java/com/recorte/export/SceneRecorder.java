@@ -53,8 +53,10 @@ public final class SceneRecorder {
             BlockPos center = mc.player.blockPosition();
             feedback("§7Preparando cinematic (raio " + r + ")... pode travar.");
             Ir.Model out = new SceneExtractor().extract(mc.level, center, r);
-            out.camera = Exporter.playerCamera(center);
             out.sun = Exporter.worldSun();
+            // animated POV camera (path filled in each frame) — just the lens here
+            out.camera = new Ir.Camera(new float[]{0, 0, 0}, new float[]{0, 0, 0, 1},
+                    (float) Math.toRadians(mc.options.fov().get()));
 
             List<Tracked> tracked = new ArrayList<>();
             AABB box = new AABB(center).inflate(r);
@@ -190,6 +192,18 @@ public final class SceneRecorder {
         void sample() {
             float partial = 1.0f;
             anim.times.add(frames * 0.05f);
+
+            // POV camera: the player's eye this frame, in scene space (X negated like the scene)
+            net.minecraft.client.Camera cam = Minecraft.getInstance().gameRenderer.getMainCamera();
+            net.minecraft.world.phys.Vec3 cp = cam.getPosition();
+            org.joml.Vector3f cf = cam.getLookVector();
+            org.joml.Vector3f cu = cam.getUpVector();
+            org.joml.Quaternionf cq = new org.joml.Quaternionf()
+                    .lookAlong(-cf.x, cf.y, cf.z, -cu.x, cu.y, cu.z).conjugate();
+            anim.cameraKey(new float[]{-(float) (cp.x - center.getX()),
+                    (float) (cp.y - center.getY()), (float) (cp.z - center.getZ())},
+                    new float[]{cq.x, cq.y, cq.z, cq.w});
+
             for (Tracked tr : tracked) {
                 LivingEntity e = tr.entity;
                 float limbAmount = Math.min(e.walkAnimation.speed(partial), 1.0f);

@@ -269,7 +269,7 @@ public final class GltfWriter {
 
         // --- animation (optional) -----------------------------------------------------------------
         if (animation != null && !animation.times.isEmpty()) {
-            writeAnimation(root, bin, animation);
+            writeAnimation(root, bin, animation, cameraNode);
         }
 
         // --- buffer + bufferViews + accessors -----------------------------------------------------
@@ -361,7 +361,7 @@ public final class GltfWriter {
         return primitive;
     }
 
-    private static void writeAnimation(JsonObject root, Bin bin, Ir.Animation anim) {
+    private static void writeAnimation(JsonObject root, Bin bin, Ir.Animation anim, int cameraNode) {
         int n = anim.times.size();
         bin.align4();
         int tStart = bin.length();
@@ -397,6 +397,24 @@ public final class GltfWriter {
             int sR = samplers.size();
             samplers.add(sampler(timeAcc, rotAcc));
             channels.add(channel(sR, bone, "rotation"));
+        }
+
+        // animated POV camera (follows the player's eye)
+        if (cameraNode >= 0 && anim.cameraTranslations.size() == n) {
+            bin.align4();
+            int s = bin.length();
+            for (float[] v : anim.cameraTranslations) { bin.f(v[0]); bin.f(v[1]); bin.f(v[2]); }
+            int ct = bin.accessor(bin.bufferView(s, bin.length() - s, null), FLOAT, n, "VEC3", null, null);
+            bin.align4();
+            s = bin.length();
+            for (float[] q : anim.cameraRotations) { bin.f(q[0]); bin.f(q[1]); bin.f(q[2]); bin.f(q[3]); }
+            int cr = bin.accessor(bin.bufferView(s, bin.length() - s, null), FLOAT, n, "VEC4", null, null);
+            int sT = samplers.size();
+            samplers.add(sampler(timeAcc, ct));
+            channels.add(channel(sT, cameraNode, "translation"));
+            int sR2 = samplers.size();
+            samplers.add(sampler(timeAcc, cr));
+            channels.add(channel(sR2, cameraNode, "rotation"));
         }
 
         JsonObject animation = new JsonObject();

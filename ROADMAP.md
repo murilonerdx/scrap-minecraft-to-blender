@@ -14,8 +14,8 @@ cinematics**. ✅ marks what already exists. (Versão em português abaixo / Por
 - **Live animation recording** (key `R`) → keyframed glTF animation, including **world movement** (the
   mob travels its real path, not just limbs in place).
 - **Cinematic scene recording** (`/recorte record scene start|stop`) → the whole moment in one animated
-  Blender scene: the scene geometry + **every nearby rigged mob animating** (limbs + world path) +
-  camera + sun + sky.
+  Blender scene: the scene geometry + **every nearby rigged mob animating** (limbs + world path) + sun +
+  sky + an **animated POV camera** that follows your eye, so you can render exactly what you saw.
 - **Blender add-on + HTTP bridge** (real-time link *phase A*): one-click "Import latest from Minecraft"
   pulls the newest export from the running game (`blender_addon/recorte_import.py`) and sets the World
   background to the live in-game sky color (`/env`).
