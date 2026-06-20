@@ -89,9 +89,9 @@ if anims:
 js, bl = parse_glb(os.path.join(root, "library.glb"))
 validate_common("library.glb", js, bl)
 anims = js.get("animations", [])
-check(len(anims) == 3, f"library has 3 animations ({len(anims)})")
+check(len(anims) == 4, f"library has 4 animations ({len(anims)})")
 libnames = [a.get("name") for a in anims]
-for n in ("idle", "walk", "run"):
+for n in ("idle", "walk", "run", "spin"):
     check(n in libnames, f"library has '{n}' clip")
 for a in anims:
     check(len(a["channels"]) > 0 and len(a["samplers"]) > 0, f"clip '{a.get('name')}' has channels+samplers")

@@ -94,12 +94,29 @@ public final class Ir {
 
         public void key(int bone, float[] translation, float[] rotation) {
             translations.computeIfAbsent(bone, k -> new ArrayList<>()).add(translation);
-            rotations.computeIfAbsent(bone, k -> new ArrayList<>()).add(rotation);
+            List<float[]> rots = rotations.computeIfAbsent(bone, k -> new ArrayList<>());
+            rots.add(continuous(rots, rotation));
         }
 
         public void cameraKey(float[] translation, float[] rotation) {
             cameraTranslations.add(translation);
-            cameraRotations.add(rotation);
+            cameraRotations.add(continuous(cameraRotations, rotation));
+        }
+
+        /**
+         * Flips a quaternion into the same hemisphere as the previous keyframe (negates it when their
+         * dot product is negative). {@code q} and {@code -q} are the same orientation, but glTF/Blender
+         * interpolate quaternions component-wise, so a sign flip between keys makes a limb spin the long
+         * way around &mdash; the cause of jittery, wrong-looking recorded animations. Enforcing one
+         * hemisphere makes every interpolation take the short path.
+         */
+        private static float[] continuous(List<float[]> track, float[] q) {
+            if (!track.isEmpty()) {
+                float[] p = track.get(track.size() - 1);
+                float dot = p[0] * q[0] + p[1] * q[1] + p[2] * q[2] + p[3] * q[3];
+                if (dot < 0f) return new float[]{-q[0], -q[1], -q[2], -q[3]};
+            }
+            return q;
         }
 
         public void event(float time, String name, float[] position) {

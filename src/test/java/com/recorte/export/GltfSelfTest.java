@@ -29,17 +29,48 @@ public final class GltfSelfTest {
         // 1) single animation (the recording path)
         GltfWriter.write(model, walkClip("recording", 0.5f), outDir.resolve("single.glb"));
 
-        // 2) multi-clip animation library (the riskiest refactor)
+        // 2) multi-clip animation library (the riskiest refactor) + a spinning clip that would flip
+        //    quaternion signs without the hemisphere fix (the cause of jittery recorded animations)
         List<Ir.Animation> lib = new ArrayList<>();
         lib.add(walkClip("idle", 0.1f));
         lib.add(walkClip("walk", 0.5f));
         lib.add(walkClip("run", 0.9f));
+        lib.add(spinClip("spin"));
+        for (Ir.Animation a : lib) assertContinuous(a);
         GltfWriter.writeLibrary(model, lib, outDir.resolve("library.glb"));
 
         // 3) static (no animation) — cameras + sun + PBR textures
         GltfWriter.write(model, outDir.resolve("static.glb"));
 
         System.out.println("SELFTEST OK -> single.glb, library.glb, static.glb in " + outDir.toAbsolutePath());
+    }
+
+    /** Two full turns on Y — the raw quaternion sign flips mid-way; the hemisphere fix must remove it. */
+    private static Ir.Animation spinClip(String name) {
+        Ir.Animation a = new Ir.Animation();
+        a.name = name;
+        for (int f = 0; f <= 40; f++) {
+            float t = f / 40f;
+            a.times.add(t);
+            Quaternionf q = new Quaternionf().rotationY((float) (t * 4 * Math.PI));
+            a.key(1, new float[]{0, 1, 0}, new float[]{q.x, q.y, q.z, q.w});
+        }
+        return a;
+    }
+
+    private static void assertContinuous(Ir.Animation a) {
+        for (var e : a.rotations.entrySet()) {
+            List<float[]> rots = e.getValue();
+            for (int i = 1; i < rots.size(); i++) {
+                float[] p = rots.get(i - 1), q = rots.get(i);
+                float dot = p[0] * q[0] + p[1] * q[1] + p[2] * q[2] + p[3] * q[3];
+                if (dot < 0f) {
+                    throw new IllegalStateException("FAIL: quaternion discontinuity in clip '" + a.name
+                            + "' bone " + e.getKey() + " key " + i + " (dot=" + dot + ") — would jitter in Blender");
+                }
+            }
+        }
+        System.out.println("  continuity OK: clip '" + a.name + "' has no quaternion sign flips");
     }
 
     private static Ir.Model buildRig() {
