@@ -81,7 +81,9 @@ cinematics**. ✅ marks what already exists. (Versão em português abaixo / Por
   mesh with position + color → Geometry/Particle Nodes in Blender.
 - **Capture an effect over time** → animated VFX (particle trails).
 - **Beacon beam, end gateway, dragon breath, explosions.**
-- **Fluid surfaces** (water/lava) with normals/flow and animated texture.
+- ✅ **Fluid surfaces** (water/lava) — the exposed top surface is emitted with the fluid's still sprite,
+  biome-tinted (water) or emissive (lava), at the real fluid height; reuses the animated-texture frames.
+  Next: flowing sides + flow direction.
 
 ## 💡 Lighting & environment
 - Export **sky/fog/biome color + sun angle** → recreate the in-game look in Blender (sun + world).

@@ -70,6 +70,8 @@ the Timeline** ready to edit.
 - 🌊 **Animated textures** — water/lava/fire/portal use the correct frame (not the stacked source) and
   the full **frame sequence** is exported (`*_f000.png` … + `animated_textures.json`) to build an
   image-sequence loop in Blender.
+- 💧 **Fluid surfaces** — water and lava (skipped before, since they have no block model) now export
+  their **top surface** at the real height, biome-tinted/emissive, as a separate `Fluids` object.
 - 👕 Player armor, held items (both hands) and **Curios/Artifacts accessories** (separate `Accessories`
   object); the **cape/elytra** comes in as its own `Cape` object.
 

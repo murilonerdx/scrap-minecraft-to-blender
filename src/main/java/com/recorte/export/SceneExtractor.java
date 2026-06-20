@@ -51,6 +51,9 @@ public final class SceneExtractor {
                     BlockPos pos = center.offset(dx, dy, dz);
                     BlockState state = level.getBlockState(pos);
                     if (state.isAir()) continue;
+                    // fluids (water/lava) render separately from block models — emit their top surface
+                    net.minecraft.world.level.material.FluidState fluid = state.getFluidState();
+                    if (!fluid.isEmpty()) addFluidSurface(out, level, pos, center, fluid);
                     // block entities (chests, signs, banners, beds, bells, shulkers…) via their renderer
                     net.minecraft.world.level.block.entity.BlockEntity be = level.getBlockEntity(pos);
                     if (be != null) captureBlockEntity(out, be, pos, center);
@@ -89,6 +92,67 @@ public final class SceneExtractor {
         int dz = pos.getZ() - center.getZ();
         Matrix4f m = new Matrix4f().translate(-dx, dy, dz).scale(-1f, 1f, 1f);
         LayerCapturer.appendCaptured(buffer, out, m, 0, "BlockEntities", 0f);
+    }
+
+    /**
+     * Emits the top surface of a fluid (water/lava) as a quad with the fluid's still sprite — scenes
+     * skip fluids otherwise. Biome-tinted for water, emissive for lava, with the same lighting bake as
+     * solid faces. Only the exposed top layer is emitted (the block above isn't the same fluid).
+     */
+    private void addFluidSurface(Ir.Model out, Level level, BlockPos pos, BlockPos center,
+                                 net.minecraft.world.level.material.FluidState fluid) {
+        if (level.getBlockState(pos.above()).getFluidState().getType() == fluid.getType()) return;
+        TextureAtlasSprite sprite = fluidStillSprite(fluid);
+        if (sprite == null) return;
+
+        boolean lava = fluid.is(net.minecraft.tags.FluidTags.LAVA);
+        int materialIndex = materialForSprite(out, sprite, lava);
+        Ir.Primitive prim = out.primitiveForMaterial(materialIndex);
+        prim.group = "Fluids";
+
+        float h = fluid.getHeight(level, pos);
+        float cr = 1f, cg = 1f, cb = 1f;
+        if (!lava) {
+            int color = net.minecraft.client.renderer.BiomeColors.getAverageWaterColor(level, pos);
+            cr = ((color >> 16) & 255) / 255f;
+            cg = ((color >> 8) & 255) / 255f;
+            cb = (color & 255) / 255f;
+        }
+        BlockPos lightPos = pos.above();
+        int blockL = level.getBrightness(net.minecraft.world.level.LightLayer.BLOCK, lightPos);
+        int skyL = level.getBrightness(net.minecraft.world.level.LightLayer.SKY, lightPos);
+        float lightLevel = Math.max(blockL, skyL) / 15f;
+        float bright = (0.12f + 0.88f * lightLevel) * level.getShade(net.minecraft.core.Direction.UP, true);
+        cr *= bright;
+        cg *= bright;
+        cb *= bright;
+
+        int dx = pos.getX() - center.getX();
+        int dy = pos.getY() - center.getY();
+        int dz = pos.getZ() - center.getZ();
+        prim.addQuad(
+                fluidVertex(0, h, 0, dx, dy, dz, 0, 0, cr, cg, cb),
+                fluidVertex(1, h, 0, dx, dy, dz, 1, 0, cr, cg, cb),
+                fluidVertex(1, h, 1, dx, dy, dz, 1, 1, cr, cg, cb),
+                fluidVertex(0, h, 1, dx, dy, dz, 0, 1, cr, cg, cb));
+    }
+
+    private static Ir.Vertex fluidVertex(float lx, float ly, float lz, int dx, int dy, int dz,
+                                         float u, float v, float r, float g, float b) {
+        return new Ir.Vertex(-(lx + dx), ly + dy, lz + dz, 0f, 1f, 0f, u, v, 0, r, g, b, 1f);
+    }
+
+    private TextureAtlasSprite fluidStillSprite(net.minecraft.world.level.material.FluidState fluid) {
+        try {
+            net.minecraftforge.client.extensions.common.IClientFluidTypeExtensions ext =
+                    net.minecraftforge.client.extensions.common.IClientFluidTypeExtensions.of(fluid);
+            net.minecraft.resources.ResourceLocation tex = ext.getStillTexture();
+            if (tex == null) return null;
+            return Minecraft.getInstance().getModelManager()
+                    .getAtlas(net.minecraft.world.inventory.InventoryMenu.BLOCK_ATLAS).getSprite(tex);
+        } catch (Throwable t) {
+            return null;
+        }
     }
 
     private void addBlock(Ir.Model out, Level level, BlockPos pos, BlockPos center, BlockState state,

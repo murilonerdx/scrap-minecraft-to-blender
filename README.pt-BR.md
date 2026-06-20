@@ -66,6 +66,8 @@ na Timeline** prontas pra editar.
 - 🌊 **Texturas animadas** — água/lava/fogo/portal usam o frame correto (não a fonte empilhada) e a
   **sequência de frames** inteira é exportada (`*_f000.png` … + `animated_textures.json`) pra montar um
   loop de image-sequence no Blender.
+- 💧 **Superfícies de fluido** — água e lava (antes puladas, por não terem modelo de bloco) agora
+  exportam a **superfície de cima** na altura real, com tint de bioma/emissão, num objeto `Fluids`.
 - 👕 Armadura, itens nas duas mãos e **acessórios Curios/Artifacts** (objeto `Accessories` separado); a
   **capa/elytra** vem como objeto `Cape` próprio.
 
