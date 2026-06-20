@@ -11,7 +11,8 @@ cinematics**. ✅ marks what already exists. (Versão em português abaixo / Por
 - Skinned multi-object glTF + OBJ, per-sprite textures, vertex colors.
 - **Live animation recording** (key `R`) → keyframed glTF animation.
 - **Blender add-on + HTTP bridge** (real-time link *phase A*): one-click "Import latest from Minecraft"
-  pulls the newest export from the running game (`blender_addon/recorte_import.py`).
+  pulls the newest export from the running game (`blender_addon/recorte_import.py`) and sets the World
+  background to the live in-game sky color (`/env`).
 - **Camera export** — `scene`/`snapshot` include a glTF camera framed to your in-game view (position
   + FOV), so the diorama opens already lined up with your shot.
 - **Sun light** — `scene`/`snapshot` include a directional light (`KHR_lights_punctual`) colored and
@@ -42,8 +43,8 @@ cinematics**. ✅ marks what already exists. (Versão em português abaixo / Por
 - Export **sky/fog/biome color + sun angle** → recreate the in-game look in Blender (sun + world).
 - **Block light / sky light** baked (vertex color or light probes) to match the game's lighting.
 - Skybox, clouds, stars.
-- ✅ **Camera** + ✅ **Sun light** (done) → next: export the **sky/fog color** into a Blender World, and
-  optional **depth-of-field** focused on whatever you're looking at.
+- ✅ **Camera** + ✅ **Sun light** + ✅ **Sky color** (the add-on sets the Blender World from the live
+  sky via the `/env` endpoint) → next: proper **fog**, and optional **depth-of-field** on your look target.
 
 ## 🧱 More to extract
 - **Larger regions / schematics** (NBT structures, `.litematic`).

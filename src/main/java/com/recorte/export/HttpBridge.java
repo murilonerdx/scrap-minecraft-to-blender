@@ -25,10 +25,16 @@ public final class HttpBridge {
 
     public static final int PORT = 25599;
     private static volatile Path lastGlb;
+    private static volatile String env = "{}";
     private static HttpServer server;
 
     public static void setLastGlb(Path glb) {
         lastGlb = glb;
+    }
+
+    /** Latest environment (sky color, time of day) as JSON, refreshed on the client tick. */
+    public static void setEnv(String json) {
+        env = json;
     }
 
     public static void start() {
@@ -36,6 +42,8 @@ public final class HttpBridge {
         try {
             server = HttpServer.create(new InetSocketAddress("127.0.0.1", PORT), 0);
             server.createContext("/ping", exchange -> respond(exchange, 200, "text/plain", "recorte".getBytes()));
+            server.createContext("/env", exchange -> respond(exchange, 200, "application/json",
+                    env.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
             server.createContext("/latest", exchange -> {
                 Path glb = lastGlb;
                 if (glb == null || !Files.exists(glb)) {

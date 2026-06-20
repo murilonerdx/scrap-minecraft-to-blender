@@ -4,6 +4,7 @@ import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.recorte.Recorte;
 import com.recorte.export.Exporter;
+import com.recorte.export.HttpBridge;
 import com.recorte.export.Recorder;
 import net.minecraft.client.Minecraft;
 import net.minecraft.commands.Commands;
@@ -46,8 +47,17 @@ public final class InputHandler {
 
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase == TickEvent.Phase.END) {
-            Recorder.tick();
+        if (event.phase != TickEvent.Phase.END) return;
+        Recorder.tick();
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level != null && mc.player != null && mc.level.getGameTime() % 10 == 0) {
+            try {
+                net.minecraft.world.phys.Vec3 sky = mc.level.getSkyColor(mc.player.position(), 1.0f);
+                float t = mc.level.getTimeOfDay(1.0f);
+                HttpBridge.setEnv(String.format(java.util.Locale.ROOT,
+                        "{\"sky\":[%.4f,%.4f,%.4f],\"timeOfDay\":%.4f}", sky.x, sky.y, sky.z, t));
+            } catch (Throwable ignored) {
+            }
         }
     }
 

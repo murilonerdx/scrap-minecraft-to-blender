@@ -56,6 +56,23 @@ class RECORTE_OT_import_latest(bpy.types.Operator):
                     if node.type == "TEX_IMAGE":
                         node.interpolation = "Closest"
 
+        # Match the in-game sky as the world background.
+        try:
+            import json as _json
+            env = _json.loads(_fetch(port, "env").decode("utf-8"))
+            sky = env.get("sky")
+            if sky and len(sky) == 3:
+                world = context.scene.world
+                if world is None:
+                    world = bpy.data.worlds.new("Recorte World")
+                    context.scene.world = world
+                world.use_nodes = True
+                bg = world.node_tree.nodes.get("Background")
+                if bg is not None:
+                    bg.inputs[0].default_value = (sky[0], sky[1], sky[2], 1.0)
+        except Exception:  # noqa: BLE001
+            pass
+
         self.report({"INFO"}, "Imported latest Recorte export (%d objects)" % len(new_objs))
         return {"FINISHED"}
 
