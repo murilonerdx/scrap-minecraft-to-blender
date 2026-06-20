@@ -32,10 +32,29 @@ public final class SceneRecorder {
     private SceneRecorder() {}
 
     private static final int MAX_FRAMES = 30 * 120;   // ~2 minutes at 30 fps
-    private static Session active;
+    private static volatile Session active;            // volatile: block events arrive on the server thread
 
     public static boolean isRecording() {
         return active != null;
+    }
+
+    /**
+     * Records a point-in-time event (block break/place) into the active cinematic, if any, as a
+     * timeline marker. Called from Forge {@code BlockEvent}s, which fire on the integrated-server
+     * thread &mdash; hence the volatile {@code active} and the synchronized event list.
+     */
+    public static void recordEvent(String name, BlockPos pos) {
+        Session s = active;
+        if (s == null) return;
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level == null) return;
+        float t = (float) (mc.level.getGameTime() * 0.05 - (s.startSeconds < 0 ? 0 : s.startSeconds));
+        if (t < 0) t = 0f;
+        float[] p = pos == null ? null : new float[]{
+                -(pos.getX() - s.center.getX()),
+                pos.getY() - s.center.getY(),
+                pos.getZ() - s.center.getZ()};
+        s.anim.event(t, name, p);
     }
 
     public static void start(int radius) {

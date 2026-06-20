@@ -15,6 +15,7 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.InputEvent;
 import net.minecraftforge.client.event.RegisterClientCommandsEvent;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.level.BlockEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.registries.ForgeRegistries;
@@ -78,6 +79,25 @@ public final class InputHandler {
         if (HttpBridge.liveMode && time % 40 == 0) {
             Exporter.exportLive();   // snapshot is heavier — refresh every ~2s, on the render thread
         }
+    }
+
+    /** While a cinematic is recording, log block breaks as timeline markers (single-player: the
+     *  integrated server posts these on the shared Forge bus). */
+    @SubscribeEvent
+    public static void onBlockBreak(BlockEvent.BreakEvent event) {
+        if (!SceneRecorder.isRecording()) return;
+        SceneRecorder.recordEvent("break:" + blockKey(event.getState()), event.getPos());
+    }
+
+    @SubscribeEvent
+    public static void onBlockPlace(BlockEvent.EntityPlaceEvent event) {
+        if (!SceneRecorder.isRecording()) return;
+        SceneRecorder.recordEvent("place:" + blockKey(event.getPlacedBlock()), event.getPos());
+    }
+
+    private static String blockKey(net.minecraft.world.level.block.state.BlockState state) {
+        net.minecraft.resources.ResourceLocation id = ForgeRegistries.BLOCKS.getKey(state.getBlock());
+        return id != null ? id.toString() : "unknown";
     }
 
     @SubscribeEvent

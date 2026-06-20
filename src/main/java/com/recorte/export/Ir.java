@@ -81,6 +81,9 @@ public final class Ir {
         public final Map<Integer, List<float[]>> rotations = new java.util.LinkedHashMap<>();      // bone -> [x,y,z,w]/key
         public final List<float[]> cameraTranslations = new ArrayList<>();   // animated camera path (POV)
         public final List<float[]> cameraRotations = new ArrayList<>();
+        // point-in-time events (block break/place…) → Blender timeline markers; written from the
+        // server thread, so keep it synchronized
+        public final List<Event> events = java.util.Collections.synchronizedList(new ArrayList<>());
 
         public void key(int bone, float[] translation, float[] rotation) {
             translations.computeIfAbsent(bone, k -> new ArrayList<>()).add(translation);
@@ -90,6 +93,23 @@ public final class Ir {
         public void cameraKey(float[] translation, float[] rotation) {
             cameraTranslations.add(translation);
             cameraRotations.add(rotation);
+        }
+
+        public void event(float time, String name, float[] position) {
+            events.add(new Event(time, name, position));
+        }
+    }
+
+    /** A point-in-time event on the recorded timeline (block break/place) → a Blender timeline marker. */
+    public static final class Event {
+        public final float time;        // seconds from the start of the recording
+        public final String name;       // e.g. "break:minecraft:stone"
+        public final float[] position;  // export-space x,y,z (may be null)
+
+        public Event(float time, String name, float[] position) {
+            this.time = time;
+            this.name = name;
+            this.position = position;
         }
     }
 

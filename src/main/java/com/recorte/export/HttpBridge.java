@@ -28,16 +28,23 @@ public final class HttpBridge {
     private static volatile Path lastGlb;
     private static volatile int generation = 0;        // bumped on every export, polled by the Blender add-on
     private static volatile String env = "{}";
+    private static volatile String events = "{\"fps\":30,\"events\":[]}";   // timeline markers of the latest recording
     private static HttpServer server;
 
     public static void setLastGlb(Path glb) {
         lastGlb = glb;
+        events = "{\"fps\":30,\"events\":[]}";   // clear stale markers; a recording sets them after
         generation++;
     }
 
     /** Latest environment (sky color, time of day) as JSON, refreshed on the client tick. */
     public static void setEnv(String json) {
         env = json;
+    }
+
+    /** Timeline events (block break/place) of the latest recording, for the add-on to drop markers. */
+    public static void setEvents(String json) {
+        events = json;
     }
 
     public static void start() {
@@ -49,6 +56,8 @@ public final class HttpBridge {
                     env.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
             server.createContext("/gen", exchange -> respond(exchange, 200, "text/plain",
                     String.valueOf(generation).getBytes()));
+            server.createContext("/events", exchange -> respond(exchange, 200, "application/json",
+                    events.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
             server.createContext("/latest", exchange -> {
                 Path glb = lastGlb;
                 if (glb == null || !Files.exists(glb)) {

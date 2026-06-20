@@ -381,6 +381,7 @@ public final class Exporter {
             GltfWriter.write(model, anim, glb);
             ObjWriter.write(model, dir.resolve(name + ".obj"), dir.resolve(name + ".mtl"));
             HttpBridge.setLastGlb(glb);
+            writeEvents(anim, dir);
             Recorte.LOGGER.info("Recorded {} ({} frames) to {}", name, frames, dir);
             feedback(String.format("§a■ Animação gravada §f%s§a: %d frames §7→ §f%s", name, frames, dir));
         } catch (Throwable t) {
@@ -399,9 +400,12 @@ public final class Exporter {
             GltfWriter.write(model, anim, glb);
             ObjWriter.write(model, dir.resolve("cinematic.obj"), dir.resolve("cinematic.mtl"));
             HttpBridge.setLastGlb(glb);
-            Recorte.LOGGER.info("Cinematic to {}: {} frames, {} mobs, {} tris", dir, frames, mobs, model.triangleCount());
-            feedback(String.format("§a■ Cinematic gravado§a: %d frames, %d mobs, %d triângulos §7→ §f%s",
-                    frames, mobs, model.triangleCount(), dir));
+            writeEvents(anim, dir);
+            int evs = anim.events.size();
+            Recorte.LOGGER.info("Cinematic to {}: {} frames, {} mobs, {} tris, {} events",
+                    dir, frames, mobs, model.triangleCount(), evs);
+            feedback(String.format("§a■ Cinematic gravado§a: %d frames, %d mobs, %d triângulos, %d eventos §7→ §f%s",
+                    frames, mobs, model.triangleCount(), evs, dir));
         } catch (Throwable t) {
             fail(t);
         }
@@ -469,6 +473,40 @@ public final class Exporter {
         GltfWriter.write(ir, glb);
         ObjWriter.write(ir, dir.resolve(base + ".obj"), dir.resolve(base + ".mtl"));
         HttpBridge.setLastGlb(glb);
+    }
+
+    /**
+     * Writes recorded timeline events (block break/place) as a sidecar {@code events.json} and pushes
+     * them to the HTTP bridge so the Blender add-on can drop timeline markers (to time VFX/sound).
+     * Call <em>after</em> {@link HttpBridge#setLastGlb} (which clears stale markers).
+     */
+    private static void writeEvents(Ir.Animation anim, Path dir) {
+        if (anim == null || anim.events.isEmpty()) return;
+        StringBuilder sb = new StringBuilder("{\"fps\":30,\"events\":[");
+        synchronized (anim.events) {
+            for (int i = 0; i < anim.events.size(); i++) {
+                Ir.Event e = anim.events.get(i);
+                if (i > 0) sb.append(',');
+                sb.append(String.format(java.util.Locale.ROOT, "{\"time\":%.4f,\"name\":\"%s\"",
+                        e.time, esc(e.name)));
+                if (e.position != null) {
+                    sb.append(String.format(java.util.Locale.ROOT, ",\"pos\":[%.3f,%.3f,%.3f]",
+                            e.position[0], e.position[1], e.position[2]));
+                }
+                sb.append('}');
+            }
+        }
+        sb.append("]}");
+        String json = sb.toString();
+        try {
+            Files.writeString(dir.resolve("events.json"), json);
+        } catch (Throwable ignored) {
+        }
+        HttpBridge.setEvents(json);
+    }
+
+    private static String esc(String s) {
+        return s == null ? "" : s.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 
     /** The in-game camera, converted into the scene's export space (X negated, relative to {@code center}). */

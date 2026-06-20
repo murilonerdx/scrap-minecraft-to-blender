@@ -61,6 +61,7 @@ class RECORTE_OT_import_latest(bpy.types.Operator):
                         node.interpolation = "Closest"
 
         _activate_animations(new_objs)
+        n_events = _apply_events(port)
 
         # Match the in-game sky as the world background.
         try:
@@ -79,7 +80,10 @@ class RECORTE_OT_import_latest(bpy.types.Operator):
         except Exception:  # noqa: BLE001
             pass
 
-        self.report({"INFO"}, "Imported latest Recorte export (%d objects)" % len(new_objs))
+        msg = "Imported latest Recorte export (%d objects)" % len(new_objs)
+        if n_events:
+            msg += " — %d timeline marker(s) added" % n_events
+        self.report({"INFO"}, msg)
         return {"FINISHED"}
 
 
@@ -141,6 +145,31 @@ def _activate_animations(objs):
             scene.frame_start = 0
             scene.frame_end = end
     return n_act
+
+
+def _apply_events(port):
+    """Fetch the latest recording's timeline events (block breaks/placements) and drop Blender
+    timeline markers at the matching frames, so VFX/sound can be timed to them. Returns the count."""
+    try:
+        import json as _json
+        data = _json.loads(_fetch(port, "events").decode("utf-8"))
+    except Exception:  # noqa: BLE001
+        return 0
+    evs = data.get("events") or []
+    scene = bpy.context.scene
+    if scene is None:
+        return 0
+    # clear our own previous markers so repeated imports don't pile up
+    for m in list(scene.timeline_markers):
+        if m.name.startswith(("break:", "place:")):
+            scene.timeline_markers.remove(m)
+    if not evs:
+        return 0
+    fps = float(data.get("fps") or scene.render.fps or 30)
+    for e in evs:
+        frame = int(round(float(e.get("time", 0.0)) * fps))
+        scene.timeline_markers.new(str(e.get("name", "event")), frame=frame)
+    return len(evs)
 
 
 class RECORTE_OT_activate_anim(bpy.types.Operator):
@@ -209,6 +238,7 @@ class RECORTE_OT_live(bpy.types.Operator):
         self._objs = [o for o in bpy.data.objects if o not in before]
         _apply_pixel_art(self._objs)
         _activate_animations(self._objs)
+        _apply_events(port)
 
     def execute(self, context):
         context.scene.recorte_live = True
