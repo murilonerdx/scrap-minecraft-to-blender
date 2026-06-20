@@ -349,6 +349,25 @@ public final class Exporter {
         }
     }
 
+    public static void exportSceneRecording(Ir.Model model, Ir.Animation anim, int frames, int mobs) {
+        try {
+            Path dir = newDir("cinematic");
+            Files.createDirectories(dir);
+            for (Ir.Material m : model.materials) {
+                if (m.png != null && m.textureFile != null) Files.write(dir.resolve(m.textureFile), m.png);
+            }
+            Path glb = dir.resolve("cinematic.glb");
+            GltfWriter.write(model, anim, glb);
+            ObjWriter.write(model, dir.resolve("cinematic.obj"), dir.resolve("cinematic.mtl"));
+            HttpBridge.setLastGlb(glb);
+            Recorte.LOGGER.info("Cinematic to {}: {} frames, {} mobs, {} tris", dir, frames, mobs, model.triangleCount());
+            feedback(String.format("§a■ Cinematic gravado§a: %d frames, %d mobs, %d triângulos §7→ §f%s",
+                    frames, mobs, model.triangleCount(), dir));
+        } catch (Throwable t) {
+            fail(t);
+        }
+    }
+
     public static void exportMod(String modid) {
         Minecraft mc = Minecraft.getInstance();
         try {
@@ -414,7 +433,7 @@ public final class Exporter {
     }
 
     /** The in-game camera, converted into the scene's export space (X negated, relative to {@code center}). */
-    private static Ir.Camera playerCamera(BlockPos center) {
+    static Ir.Camera playerCamera(BlockPos center) {
         Minecraft mc = Minecraft.getInstance();
         net.minecraft.client.Camera cam = mc.gameRenderer.getMainCamera();
         net.minecraft.world.phys.Vec3 p = cam.getPosition();
@@ -430,7 +449,7 @@ public final class Exporter {
     }
 
     /** A directional sun light approximating the in-game time of day (export space, +Y up). */
-    private static Ir.Light worldSun() {
+    static Ir.Light worldSun() {
         Minecraft mc = Minecraft.getInstance();
         float celestial = mc.level.getTimeOfDay(1.0f);       // 0 = noon, 0.5 = midnight
         double a = celestial * 2.0 * Math.PI;

@@ -6,6 +6,7 @@ import com.recorte.Recorte;
 import com.recorte.export.Exporter;
 import com.recorte.export.HttpBridge;
 import com.recorte.export.Recorder;
+import com.recorte.export.SceneRecorder;
 import net.minecraft.client.Minecraft;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
@@ -52,6 +53,7 @@ public final class InputHandler {
     public static void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
         Recorder.tick();
+        SceneRecorder.tick();
         Minecraft mc = Minecraft.getInstance();
         if (mc.level != null && mc.player != null && mc.level.getGameTime() % 10 == 0) {
             try {
@@ -109,7 +111,14 @@ public final class InputHandler {
                                                 IntegerArgumentType.getInteger(c, "radius"))))))
                         .then(Commands.literal("record")
                                 .then(Commands.literal("start").executes(c -> run(Recorder::startLookedAtOrSelf)))
-                                .then(Commands.literal("stop").executes(c -> run(Recorder::stop))))));
+                                .then(Commands.literal("stop").executes(c -> run(Recorder::stop)))
+                                .then(Commands.literal("scene")
+                                        .then(Commands.literal("start")
+                                                .executes(c -> run(() -> SceneRecorder.start(16)))
+                                                .then(Commands.argument("radius", IntegerArgumentType.integer(2, 24))
+                                                        .executes(c -> run(() -> SceneRecorder.start(
+                                                                IntegerArgumentType.getInteger(c, "radius"))))))
+                                        .then(Commands.literal("stop").executes(c -> run(SceneRecorder::stop)))))));
     }
 
     private static int run(Runnable task) {

@@ -1,0 +1,227 @@
+package com.recorte.export;
+
+import com.recorte.Recorte;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.model.EntityModel;
+import net.minecraft.client.model.geom.ModelPart;
+import net.minecraft.client.renderer.entity.EntityRenderer;
+import net.minecraft.client.renderer.entity.LivingEntityRenderer;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.phys.AABB;
+import org.joml.Matrix4f;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Cinematic recording: captures the whole moment — the scene + every nearby rigged mob animating over
+ * time (limbs <em>and</em> world path) + camera + sun + sky — and exports it as ONE animated Blender
+ * scene. Start it, let the world act, stop it.
+ *
+ * <p>Each mob is merged into a single combined model at the origin; its world placement, body yaw and
+ * limb poses are written entirely as animation, so scrubbing the timeline plays the whole moment back.
+ */
+public final class SceneRecorder {
+    private SceneRecorder() {}
+
+    private static final int MAX_FRAMES = 20 * 120;   // ~2 minutes
+    private static Session active;
+
+    public static boolean isRecording() {
+        return active != null;
+    }
+
+    public static void start(int radius) {
+        if (active != null) {
+            feedback("§eJá gravando cena. Use §f/recorte record scene stop");
+            return;
+        }
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level == null || mc.player == null) {
+            feedback("§cEntre num mundo primeiro.");
+            return;
+        }
+        try {
+            int r = Math.max(2, Math.min(radius, 24));
+            BlockPos center = mc.player.blockPosition();
+            feedback("§7Preparando cinematic (raio " + r + ")... pode travar.");
+            Ir.Model out = new SceneExtractor().extract(mc.level, center, r);
+            out.camera = Exporter.playerCamera(center);
+            out.sun = Exporter.worldSun();
+
+            List<Tracked> tracked = new ArrayList<>();
+            AABB box = new AABB(center).inflate(r);
+            for (LivingEntity e : mc.level.getEntitiesOfClass(LivingEntity.class, box)) {
+                try {
+                    EntityRenderer<?> renderer = mc.getEntityRenderDispatcher().getRenderer(e);
+                    if (!(renderer instanceof LivingEntityRenderer<?, ?> living)) continue;
+                    @SuppressWarnings({"rawtypes", "unchecked"})
+                    EntityModel model = living.getModel();
+                    Ir.Model em = new ModelExtractor().extractEntity(e, model, "texture.png");
+                    if (em.triangleCount() <= 0) continue;   // GeckoLib etc.: not riggable, skip
+                    try {
+                        @SuppressWarnings({"rawtypes", "unchecked"})
+                        ResourceLocation tex = ((EntityRenderer) renderer).getTextureLocation(e);
+                        em.materials.get(0).png = TextureExporter.bytesFor(tex);
+                    } catch (Throwable ignored) {
+                    }
+                    int boneOffset = out.bones.size();
+                    List<ModelPart> parts = mergeEntity(out, em, "entity_" + name(e), "e" + tracked.size() + "_");
+                    tracked.add(new Tracked(e, model, boneOffset, parts));
+                } catch (Throwable t) {
+                    Recorte.LOGGER.warn("Cinematic: entity {} skipped", e.getType(), t);
+                }
+            }
+            active = new Session(out, center, tracked);
+            feedback("§a● Gravando CINEMATIC §f(" + tracked.size() + " mobs)§a... §f/recorte record scene stop");
+        } catch (Throwable t) {
+            active = null;
+            Recorte.LOGGER.error("Cinematic start failed", t);
+            feedback("§cFalha ao iniciar: " + t.getMessage());
+        }
+    }
+
+    public static void tick() {
+        if (active == null) return;
+        try {
+            active.sample();
+        } catch (Throwable t) {
+            Recorte.LOGGER.warn("Cinematic sample failed", t);
+        }
+        if (active.frames >= MAX_FRAMES) {
+            feedback("§eLimite de gravação — finalizando.");
+            stop();
+        }
+    }
+
+    public static void stop() {
+        if (active == null) {
+            feedback("§eNenhuma gravação de cena em andamento.");
+            return;
+        }
+        Session s = active;
+        active = null;
+        if (s.frames < 2) {
+            feedback("§eGravação muito curta.");
+            return;
+        }
+        Exporter.exportSceneRecording(s.out, s.anim, s.frames, s.tracked.size());
+    }
+
+    /** Appends a rigged entity at the origin (its placement/movement is written as animation later). */
+    private static List<ModelPart> mergeEntity(Ir.Model target, Ir.Model src, String group, String texPrefix) {
+        int boneOffset = target.bones.size();
+        List<ModelPart> parts = new ArrayList<>();
+        for (Ir.Bone sb : src.bones) {
+            int parent = sb.parentIndex < 0 ? -1 : sb.parentIndex + boneOffset;
+            Ir.Bone nb = new Ir.Bone(group + "_" + sb.name, parent, new Matrix4f(sb.globalBind));
+            nb.localTransform = new Matrix4f(sb.localTransform);
+            target.bones.add(nb);
+            parts.add(sb.sourcePart instanceof ModelPart p ? p : null);
+        }
+        Map<Integer, Integer> matMap = new HashMap<>();
+        for (int i = 0; i < src.materials.size(); i++) {
+            Ir.Material sm = src.materials.get(i);
+            Ir.Material tm = new Ir.Material(group + "_" + sm.name);
+            tm.png = sm.png;
+            tm.textureFile = sm.textureFile != null ? texPrefix + sm.textureFile : null;
+            tm.emissive = sm.emissive;
+            target.materials.add(tm);
+            matMap.put(i, target.materials.size() - 1);
+        }
+        for (Ir.Primitive sp : src.primitives) {
+            Ir.Primitive tp = target.primitiveForMaterial(matMap.get(sp.materialIndex));
+            tp.group = group;
+            int base = tp.vertices.size();
+            for (Ir.Vertex v : sp.vertices) {
+                tp.vertices.add(new Ir.Vertex(v.px, v.py, v.pz, v.nx, v.ny, v.nz, v.u, v.v,
+                        v.joint + boneOffset, v.r, v.g, v.b, v.a));
+            }
+            for (int idx : sp.indices) tp.indices.add(base + idx);
+        }
+        return parts;
+    }
+
+    private static String name(LivingEntity e) {
+        return e.getType().getDescriptionId().replaceAll(".*\\.", "");
+    }
+
+    private static void feedback(String message) {
+        if (Minecraft.getInstance().player != null) {
+            Minecraft.getInstance().player.displayClientMessage(Component.literal(message), true);
+        }
+    }
+
+    private static final class Tracked {
+        final LivingEntity entity;
+        final EntityModel<?> model;
+        final int boneOffset;
+        final List<ModelPart> parts;   // per local bone, the source ModelPart (null for the root)
+
+        Tracked(LivingEntity entity, EntityModel<?> model, int boneOffset, List<ModelPart> parts) {
+            this.entity = entity;
+            this.model = model;
+            this.boneOffset = boneOffset;
+            this.parts = parts;
+        }
+    }
+
+    private static final class Session {
+        final Ir.Model out;
+        final BlockPos center;
+        final List<Tracked> tracked;
+        final Ir.Animation anim = new Ir.Animation();
+        int frames;
+
+        Session(Ir.Model out, BlockPos center, List<Tracked> tracked) {
+            this.out = out;
+            this.center = center;
+            this.tracked = tracked;
+        }
+
+        @SuppressWarnings({"rawtypes", "unchecked"})
+        void sample() {
+            float partial = 1.0f;
+            anim.times.add(frames * 0.05f);
+            for (Tracked tr : tracked) {
+                LivingEntity e = tr.entity;
+                float limbAmount = Math.min(e.walkAnimation.speed(partial), 1.0f);
+                float limbSwing = e.walkAnimation.position(partial);
+                float age = e.tickCount + partial;
+                EntityModel raw = tr.model;
+                try {
+                    raw.prepareMobModel(e, limbSwing, limbAmount, partial);
+                    raw.setupAnim(e, limbSwing, limbAmount, age, 0f, e.getViewXRot(partial));
+                } catch (Throwable ignored) {
+                }
+
+                // root: absolute world placement + body yaw, relative to the scene centre
+                Matrix4f rootM = new Matrix4f()
+                        .translate((float) -(e.getX() - center.getX()),
+                                (float) (e.getY() - center.getY()),
+                                (float) (e.getZ() - center.getZ()))
+                        .rotateY((float) Math.toRadians(-e.yBodyRot))
+                        .mul(Convert.matrix());
+                Vector3f t = rootM.getTranslation(new Vector3f());
+                Quaternionf q = rootM.getNormalizedRotation(new Quaternionf());
+                anim.key(tr.boneOffset, new float[]{t.x, t.y, t.z}, new float[]{q.x, q.y, q.z, q.w});
+
+                // limbs
+                for (int i = 1; i < tr.parts.size(); i++) {
+                    ModelPart p = tr.parts.get(i);
+                    if (p == null) continue;
+                    Quaternionf lq = new Quaternionf().rotationZYX(p.zRot, p.yRot, p.xRot);
+                    anim.key(tr.boneOffset + i, new float[]{p.x, p.y, p.z}, new float[]{lq.x, lq.y, lq.z, lq.w});
+                }
+            }
+            frames++;
+        }
+    }
+}

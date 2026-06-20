@@ -13,6 +13,9 @@ cinematics**. ✅ marks what already exists. (Versão em português abaixo / Por
   id fields. No commands needed.
 - **Live animation recording** (key `R`) → keyframed glTF animation, including **world movement** (the
   mob travels its real path, not just limbs in place).
+- **Cinematic scene recording** (`/recorte record scene start|stop`) → the whole moment in one animated
+  Blender scene: the scene geometry + **every nearby rigged mob animating** (limbs + world path) +
+  camera + sun + sky.
 - **Blender add-on + HTTP bridge** (real-time link *phase A*): one-click "Import latest from Minecraft"
   pulls the newest export from the running game (`blender_addon/recorte_import.py`) and sets the World
   background to the live in-game sky color (`/env`).
@@ -21,11 +24,11 @@ cinematics**. ✅ marks what already exists. (Versão em português abaixo / Por
 - **Sun light** — `scene`/`snapshot` include a directional light (`KHR_lights_punctual`) colored and
   angled by the in-game time of day (warm at dusk, blue at night). Blender imports it as a Sun lamp.
 
-## 🔜 In progress / big next steps
+## 🔜 Big next steps
 - **Real-time link phase B**: stream bone transforms over WebSocket so the mob mirrors the game live
-  in Blender.
-- **Cinematic scene recording**: record *all* nearby mobs animating over time + the scene + camera +
-  sun + sky → one complete animated Blender scene of a game moment.
+  in Blender (no export round-trip).
+- **Particle/VFX capture**: record particle systems (fire, portal, explosions) as animated point clouds.
+- **In-game preview**: a render of the model/scene inside the control panel before exporting.
 
 ## 🦴 Animation
 - **Export animation cycles** (idle/walk/attack) as glTF animation: sample `setupAnim` over time and
