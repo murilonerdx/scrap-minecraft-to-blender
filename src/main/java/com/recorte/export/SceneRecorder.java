@@ -9,6 +9,7 @@ import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.AABB;
 import org.joml.Matrix4f;
@@ -86,29 +87,43 @@ public final class SceneRecorder {
 
             List<Tracked> tracked = new ArrayList<>();
             AABB box = new AABB(center).inflate(r);
-            for (LivingEntity e : mc.level.getEntitiesOfClass(LivingEntity.class, box)) {
+            for (Entity e : mc.level.getEntitiesOfClass(Entity.class, box)) {
                 try {
                     EntityRenderer<?> renderer = mc.getEntityRenderDispatcher().getRenderer(e);
-                    if (!(renderer instanceof LivingEntityRenderer<?, ?> living)) continue;
-                    @SuppressWarnings({"rawtypes", "unchecked"})
-                    EntityModel model = living.getModel();
-                    Ir.Model em = new ModelExtractor().extractEntity(e, model, "texture.png");
-                    if (em.triangleCount() <= 0) continue;   // GeckoLib etc.: not riggable, skip
-                    try {
+                    if (renderer == null) continue;
+                    String group = "entity_" + name(e), prefix = "e" + tracked.size() + "_";
+
+                    // living + riggable → bones (limbs animate); everything else → static capture
+                    if (e instanceof LivingEntity && renderer instanceof LivingEntityRenderer<?, ?> living) {
                         @SuppressWarnings({"rawtypes", "unchecked"})
-                        ResourceLocation tex = ((EntityRenderer) renderer).getTextureLocation(e);
-                        em.materials.get(0).png = TextureExporter.bytesFor(tex);
-                    } catch (Throwable ignored) {
+                        EntityModel model = living.getModel();
+                        Ir.Model em = new ModelExtractor().extractEntity(e, model, "texture.png");
+                        if (em.triangleCount() > 0) {
+                            try {
+                                @SuppressWarnings({"rawtypes", "unchecked"})
+                                ResourceLocation tex = ((EntityRenderer) renderer).getTextureLocation(e);
+                                em.materials.get(0).png = TextureExporter.bytesFor(tex);
+                            } catch (Throwable ignored) {
+                            }
+                            int boneOffset = out.bones.size();
+                            List<ModelPart> parts = mergeEntity(out, em, group, prefix);
+                            tracked.add(new Tracked(e, model, boneOffset, parts, false));
+                            continue;
+                        }
                     }
+                    // non-living (boats, minecarts, item frames, dropped items…) or GeckoLib: capture a
+                    // static mesh and animate its world position over time
+                    Ir.Model cap = LayerCapturer.captureEntity(renderer, e);
+                    if (cap.triangleCount() <= 0) continue;
                     int boneOffset = out.bones.size();
-                    List<ModelPart> parts = mergeEntity(out, em, "entity_" + name(e), "e" + tracked.size() + "_");
-                    tracked.add(new Tracked(e, model, boneOffset, parts));
+                    mergeEntity(out, cap, group, prefix);
+                    tracked.add(new Tracked(e, null, boneOffset, new ArrayList<>(), true));
                 } catch (Throwable t) {
                     Recorte.LOGGER.warn("Cinematic: entity {} skipped", e.getType(), t);
                 }
             }
             active = new Session(out, center, tracked);
-            feedback("§a● Gravando CINEMATIC §f(" + tracked.size() + " mobs)§a... §f/recorte record scene stop");
+            feedback("§a● Gravando CINEMATIC §f(" + tracked.size() + " entidades)§a... §f/recorte record scene stop");
         } catch (Throwable t) {
             active = null;
             Recorte.LOGGER.error("Cinematic start failed", t);
@@ -179,7 +194,7 @@ public final class SceneRecorder {
         return parts;
     }
 
-    private static String name(LivingEntity e) {
+    private static String name(Entity e) {
         return e.getType().getDescriptionId().replaceAll(".*\\.", "");
     }
 
@@ -190,16 +205,18 @@ public final class SceneRecorder {
     }
 
     private static final class Tracked {
-        final LivingEntity entity;
-        final EntityModel<?> model;
+        final Entity entity;
+        final EntityModel<?> model;    // null for captured (non-living) entities
         final int boneOffset;
         final List<ModelPart> parts;   // per local bone, the source ModelPart (null for the root)
+        final boolean captured;        // true: static mesh, animate world position only (boats, item frames…)
 
-        Tracked(LivingEntity entity, EntityModel<?> model, int boneOffset, List<ModelPart> parts) {
+        Tracked(Entity entity, EntityModel<?> model, int boneOffset, List<ModelPart> parts, boolean captured) {
             this.entity = entity;
             this.model = model;
             this.boneOffset = boneOffset;
             this.parts = parts;
+            this.captured = captured;
         }
     }
 
@@ -257,23 +274,35 @@ public final class SceneRecorder {
                     new float[]{cq.x, cq.y, cq.z, cq.w});
 
             for (Tracked tr : tracked) {
-                LivingEntity e = tr.entity;
-                float limbAmount = Math.min(e.walkAnimation.speed(partial), 1.0f);
-                float limbSwing = e.walkAnimation.position(partial);
-                float age = e.tickCount + partial;
+                Entity e = tr.entity;
+                double ex = net.minecraft.util.Mth.lerp(partial, e.xOld, e.getX());
+                double ey = net.minecraft.util.Mth.lerp(partial, e.yOld, e.getY());
+                double ez = net.minecraft.util.Mth.lerp(partial, e.zOld, e.getZ());
+
+                if (tr.captured) {
+                    // non-living (boat/minecart/item frame/dropped item): animate world position only,
+                    // the orientation is baked into the captured mesh
+                    anim.key(tr.boneOffset, new float[]{
+                            (float) -(ex - center.getX()),
+                            (float) (ey - center.getY()),
+                            (float) (ez - center.getZ())}, new float[]{0f, 0f, 0f, 1f});
+                    continue;
+                }
+
+                LivingEntity le = (LivingEntity) e;
+                float limbAmount = Math.min(le.walkAnimation.speed(partial), 1.0f);
+                float limbSwing = le.walkAnimation.position(partial);
+                float age = le.tickCount + partial;
                 EntityModel raw = tr.model;
                 try {
-                    raw.prepareMobModel(e, limbSwing, limbAmount, partial);
-                    raw.setupAnim(e, limbSwing, limbAmount, age, 0f, e.getViewXRot(partial));
+                    raw.prepareMobModel(le, limbSwing, limbAmount, partial);
+                    raw.setupAnim(le, limbSwing, limbAmount, age, 0f, le.getViewXRot(partial));
                 } catch (Throwable ignored) {
                 }
 
                 // root: absolute world placement + body yaw (interpolated between ticks), so the
                 // travel path is smooth instead of stepping 20×/s
-                double ex = net.minecraft.util.Mth.lerp(partial, e.xOld, e.getX());
-                double ey = net.minecraft.util.Mth.lerp(partial, e.yOld, e.getY());
-                double ez = net.minecraft.util.Mth.lerp(partial, e.zOld, e.getZ());
-                float bodyYaw = net.minecraft.util.Mth.rotLerp(partial, e.yBodyRotO, e.yBodyRot);
+                float bodyYaw = net.minecraft.util.Mth.rotLerp(partial, le.yBodyRotO, le.yBodyRot);
                 Matrix4f rootM = new Matrix4f()
                         .translate((float) -(ex - center.getX()),
                                 (float) (ey - center.getY()),

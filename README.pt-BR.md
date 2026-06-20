@@ -42,7 +42,7 @@ para uma captura estática (mas saem!).
 | Comando / tecla | O que faz |
 |---|---|
 | `R` (tecla) ou `/recorte record start` … `stop` | grava **um mob/player**: membros **e** o caminho no mundo → animação glTF com keyframes |
-| `/recorte record scene start [raio]` … `stop` | 🎬 **cinematic**: o momento inteiro — cena + cada mob animando + **câmera POV animada** + sol + céu |
+| `/recorte record scene start [raio]` … `stop` | 🎬 **cinematic**: o momento inteiro — cena + cada entidade animando (mobs rigados; barcos/carrinhos/itens pelo caminho) + **câmera POV animada** + sol + céu |
 | `/recorte live` | link em tempo real: o mod auto-exporta ~1×/s e o addon do Blender re-importa enquanto você joga |
 
 As gravações são amostradas **por frame renderizado com interpolação (~30 fps)**, então o movimento
