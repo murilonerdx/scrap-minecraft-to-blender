@@ -185,7 +185,12 @@ public final class InputHandler {
                                                 .executes(c -> run(() -> CameraRig.add(
                                                         StringArgumentType.getString(c, "name"))))))
                                 .then(Commands.literal("clear").executes(c -> run(CameraRig::clear)))
-                                .then(Commands.literal("list").executes(c -> run(CameraRig::list)))));
+                                .then(Commands.literal("list").executes(c -> run(CameraRig::list)))
+                                .then(Commands.literal("path")
+                                        .executes(c -> run(() -> Exporter.exportCameraPath(8)))
+                                        .then(Commands.argument("seconds", IntegerArgumentType.integer(1, 120))
+                                                .executes(c -> run(() -> Exporter.exportCameraPath(
+                                                        IntegerArgumentType.getInteger(c, "seconds"))))))));
     }
 
     private static int run(Runnable task) {

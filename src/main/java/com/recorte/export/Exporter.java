@@ -349,6 +349,74 @@ public final class Exporter {
         }
     }
 
+    /**
+     * Exports a smooth camera flythrough between the placed cameras (waypoints): the scene + entities
+     * with an animated POV camera that sweeps through your {@code /recorte cam add} points over
+     * {@code seconds} (Catmull-Rom position, slerped rotation, 30 fps).
+     */
+    public static void exportCameraPath(int seconds) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level == null || mc.player == null) {
+            feedback("§cEntre num mundo primeiro.");
+            return;
+        }
+        int n = CameraRig.count();
+        if (n < 2) {
+            feedback("§cColoque ao menos 2 câmeras com §f/recorte cam add <nome>§c antes do path.");
+            return;
+        }
+        int dur = Math.max(1, Math.min(seconds, 120));
+        try {
+            BlockPos center = mc.player.blockPosition();
+            feedback("§7Montando flythrough (" + n + " pontos, " + dur + "s)...");
+            int[] cnt = {0};
+            Ir.Model ir = buildSnapshot(center, 16, cnt);
+            java.util.List<Ir.Camera> wps = CameraRig.toExportCameras(center);
+            ir.camera = new Ir.Camera(wps.get(0).position.clone(), wps.get(0).rotation.clone(), wps.get(0).yfovRadians);
+
+            Ir.Animation anim = new Ir.Animation();
+            int frames = dur * 30;
+            for (int f = 0; f <= frames; f++) {
+                float u = (float) f / frames * (n - 1);
+                int i = Math.min((int) u, n - 2);
+                float lt = u - i;
+                float[] pos = catmull(
+                        wps.get(Math.max(0, i - 1)).position, wps.get(i).position,
+                        wps.get(i + 1).position, wps.get(Math.min(n - 1, i + 2)).position, lt);
+                float[] ra = wps.get(i).rotation, rb = wps.get(i + 1).rotation;
+                org.joml.Quaternionf q = new org.joml.Quaternionf(ra[0], ra[1], ra[2], ra[3])
+                        .slerp(new org.joml.Quaternionf(rb[0], rb[1], rb[2], rb[3]), lt);
+                anim.times.add(f / 30f);
+                anim.cameraKey(pos, new float[]{q.x, q.y, q.z, q.w});
+            }
+
+            Path dir = newDir("campath");
+            Files.createDirectories(dir);
+            for (Ir.Material m : ir.materials) {
+                if (m.png != null && m.textureFile != null) Files.write(dir.resolve(m.textureFile), m.png);
+            }
+            Path glb = dir.resolve("campath.glb");
+            GltfWriter.write(ir, anim, glb);
+            ObjWriter.write(ir, dir.resolve("campath.obj"), dir.resolve("campath.mtl"));
+            HttpBridge.setLastGlb(glb);
+            report("camera path (" + n + " pts, " + dur + "s)", ir, dir);
+        } catch (Throwable t) {
+            fail(t);
+        }
+    }
+
+    /** Catmull-Rom interpolation of one point between p1 and p2 (p0/p3 are the neighbours). */
+    private static float[] catmull(float[] p0, float[] p1, float[] p2, float[] p3, float t) {
+        float t2 = t * t, t3 = t2 * t;
+        float[] r = new float[3];
+        for (int k = 0; k < 3; k++) {
+            r[k] = 0.5f * (2 * p1[k] + (-p0[k] + p2[k]) * t
+                    + (2 * p0[k] - 5 * p1[k] + 4 * p2[k] - p3[k]) * t2
+                    + (-p0[k] + 3 * p1[k] - 3 * p2[k] + p3[k]) * t3);
+        }
+        return r;
+    }
+
     /** Exports an arbitrary box between two corners — a whole build, framed precisely, not just a radius. */
     public static void exportRegion(int x1, int y1, int z1, int x2, int y2, int z2) {
         Minecraft mc = Minecraft.getInstance();
