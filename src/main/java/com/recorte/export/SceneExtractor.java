@@ -33,7 +33,6 @@ public final class SceneExtractor {
 
     private final Map<TextureAtlasSprite, Integer> normalMaterials = new HashMap<>();
     private final Map<TextureAtlasSprite, Integer> emissiveMaterials = new HashMap<>();
-    private Field spriteImageField;
     private int spriteCounter;
 
     public Ir.Model extract(Level level, BlockPos center, int radius) {
@@ -401,9 +400,9 @@ public final class SceneExtractor {
 
     private NativeImage spriteImage(TextureAtlasSprite sprite) {
         Object contents = sprite.contents();
-        if (spriteImageField == null) {
-            spriteImageField = ReflectUtil.fieldOfType(contents.getClass(), NativeImage.class);
-        }
-        return (NativeImage) ReflectUtil.get(spriteImageField, contents);
+        // resolve per actual contents class (modded sprites can use a different SpriteContents type);
+        // ReflectUtil caches the lookup by class
+        Field f = ReflectUtil.fieldOfType(contents.getClass(), NativeImage.class);
+        return (NativeImage) ReflectUtil.get(f, contents);
     }
 }

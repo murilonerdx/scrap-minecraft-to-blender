@@ -44,14 +44,21 @@ public final class ObjWriter {
             }
 
             obj.append("usemtl ").append(mat.name).append('\n');
-            for (int i = 0; i + 2 < prim.indices.size(); i += 3) {
-                int a = prim.indices.get(i) + vOffset;
-                int b = prim.indices.get(i + 1) + vOffset;
-                int c = prim.indices.get(i + 2) + vOffset;
-                obj.append("f ")
-                        .append(a).append('/').append(a).append('/').append(a).append(' ')
-                        .append(b).append('/').append(b).append('/').append(b).append(' ')
-                        .append(c).append('/').append(c).append('/').append(c).append('\n');
+            if (prim.mode == Ir.Primitive.POINTS) {
+                // particle/VFX clouds are points, not triangles — write OBJ point elements, not faces
+                for (int i = 0; i < prim.vertices.size(); i++) {
+                    obj.append("p ").append(vOffset + i).append('\n');
+                }
+            } else {
+                for (int i = 0; i + 2 < prim.indices.size(); i += 3) {
+                    int a = prim.indices.get(i) + vOffset;
+                    int b = prim.indices.get(i + 1) + vOffset;
+                    int c = prim.indices.get(i + 2) + vOffset;
+                    obj.append("f ")
+                            .append(a).append('/').append(a).append('/').append(a).append(' ')
+                            .append(b).append('/').append(b).append('/').append(b).append(' ')
+                            .append(c).append('/').append(c).append('/').append(c).append('\n');
+                }
             }
             vOffset += prim.vertices.size();
         }

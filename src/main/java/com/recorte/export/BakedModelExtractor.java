@@ -28,7 +28,6 @@ public final class BakedModelExtractor {
     private final Matrix4f convert = new Matrix4f().rotateZ((float) Math.PI).translate(-0.5f, -0.5f, -0.5f);
 
     private final Map<TextureAtlasSprite, Integer> spriteToMaterial = new HashMap<>();
-    private Field spriteImageField;   // SpriteContents.originalImage : NativeImage
     private int spriteCounter;
 
     public Ir.Model extract(BakedModel model, BlockState state, String name) {
@@ -97,9 +96,9 @@ public final class BakedModelExtractor {
 
     private NativeImage spriteImage(TextureAtlasSprite sprite) {
         Object contents = sprite.contents();
-        if (spriteImageField == null) {
-            spriteImageField = ReflectUtil.fieldOfType(contents.getClass(), NativeImage.class);
-        }
-        return (NativeImage) ReflectUtil.get(spriteImageField, contents);
+        // resolve per actual contents class (modded sprites can use a different SpriteContents type);
+        // ReflectUtil caches the lookup by class, so this stays cheap
+        Field f = ReflectUtil.fieldOfType(contents.getClass(), NativeImage.class);
+        return (NativeImage) ReflectUtil.get(f, contents);
     }
 }

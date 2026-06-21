@@ -59,7 +59,10 @@ public final class GltfSelfTest {
         GltfWriter.write(model, outDir.resolve("static.glb"));
 
         // 4) particle / VFX point cloud (studio #8) — a POINTS-mode primitive with per-point colour
-        GltfWriter.write(buildPointCloud(), outDir.resolve("points.glb"));
+        Ir.Model pointCloud = buildPointCloud();
+        GltfWriter.write(pointCloud, outDir.resolve("points.glb"));
+        // …and as OBJ: POINTS must become OBJ point elements (p), not triangle faces (f)
+        ObjWriter.write(pointCloud, outDir.resolve("points.obj"), outDir.resolve("points.mtl"));
 
         // 5) takes (studio #13) + NLA name de-dup (studio #14) — two clips intentionally share a name;
         //    the writer must make them distinct Actions so they stack cleanly as NLA strips

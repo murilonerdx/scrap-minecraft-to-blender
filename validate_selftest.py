@@ -164,6 +164,14 @@ if pprims:
     check(idx_count == pos_count == 16, f"16 points (idx {idx_count} == pos {pos_count})")
 check(any(mm.get("name") == "Particles" for mm in js.get("materials", [])), "a 'Particles' material present")
 
+# points.obj: POINTS export as OBJ point elements (p), never triangle faces (f)
+obj_path = os.path.join(root, "points.obj")
+if os.path.exists(obj_path):
+    with open(obj_path, "r", encoding="utf-8") as f:
+        obj = f.read()
+    check("\np " in obj, "points.obj has OBJ point elements (p)")
+    check("\nf " not in obj, "points.obj has NO triangle faces (f) for a point cloud")
+
 # --- takes.glb: several recordings of one rig as clips (studio #13) + NLA name de-dup (studio #14) ---
 js, bl = parse_glb(os.path.join(root, "takes.glb"))
 validate_common("takes.glb", js, bl)

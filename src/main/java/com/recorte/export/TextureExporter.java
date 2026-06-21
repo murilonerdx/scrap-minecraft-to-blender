@@ -30,10 +30,10 @@ public final class TextureExporter {
         try (NativeImage img = new NativeImage(w, h, false)) {
             img.downloadTexture(0, false);
             img.writeToFile(tmp);
+            return Files.readAllBytes(tmp);
+        } finally {
+            Files.deleteIfExists(tmp);   // always clean up, even if the write/read above threw
         }
-        byte[] bytes = Files.readAllBytes(tmp);
-        Files.deleteIfExists(tmp);
-        return bytes;
     }
 
     /** Encoded PNG bytes of a player's skin. */
@@ -126,9 +126,11 @@ public final class TextureExporter {
     /** Encoded PNG bytes of an in-memory image (sprite contents, etc.). */
     public static byte[] pngBytes(NativeImage image) throws IOException {
         Path tmp = Files.createTempFile("recorte_img", ".png");
-        image.writeToFile(tmp);
-        byte[] bytes = Files.readAllBytes(tmp);
-        Files.deleteIfExists(tmp);
-        return bytes;
+        try {
+            image.writeToFile(tmp);
+            return Files.readAllBytes(tmp);
+        } finally {
+            Files.deleteIfExists(tmp);   // always clean up, even on error
+        }
     }
 }
