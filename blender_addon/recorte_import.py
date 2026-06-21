@@ -85,6 +85,7 @@ class RECORTE_OT_import_latest(bpy.types.Operator):
         n_sun = _apply_sun(port, new_objs)   # day/night timelapse (after the static world is set)
         n_anim = _apply_animated_textures(port)
         _apply_dof(new_objs)
+        n_spk = _apply_speakers(new_objs)    # sound emitters → positioned Blender Speakers
 
         msg = "Imported latest Recorte export (%d objects)" % len(new_objs)
         if n_events:
@@ -93,6 +94,8 @@ class RECORTE_OT_import_latest(bpy.types.Operator):
             msg += " — timelapse sun/sky animated"
         if n_anim:
             msg += " — %d animated texture(s)" % n_anim
+        if n_spk:
+            msg += " — %d speaker(s)" % n_spk
         self.report({"INFO"}, msg)
         return {"FINISHED"}
 
@@ -276,6 +279,35 @@ def _apply_dof(objs):
             fstop = obj.get("dof_fstop")
             if fstop:
                 obj.data.dof.aperture_fstop = float(fstop)
+            n += 1
+        except Exception:  # noqa: BLE001
+            pass
+    return n
+
+
+def _apply_speakers(objs):
+    """Turn imported `Speaker_` empty nodes into Blender **Speaker** objects (positioned spatial-audio
+    emitters for the VSE). The source .ogg isn't exported, so each Speaker is created without a sound for
+    you to assign; its sound id, time and gain ride along as custom properties. Returns the count."""
+    n = 0
+    for obj in list(objs):
+        if not obj.name.startswith("Speaker_"):
+            continue
+        try:
+            spk_data = bpy.data.speakers.new(obj.name)
+            spk_obj = bpy.data.objects.new(obj.name, spk_data)
+            spk_obj.location = obj.location
+            for k in ("sound", "time", "gain"):
+                if k in obj.keys():
+                    spk_obj[k] = obj[k]
+            try:
+                spk_data.volume = float(obj.get("gain", 1.0))
+            except Exception:  # noqa: BLE001
+                pass
+            cols = list(obj.users_collection) or [bpy.context.scene.collection]
+            for c in cols:
+                c.objects.link(spk_obj)
+            bpy.data.objects.remove(obj, do_unlink=True)   # replace the placeholder empty
             n += 1
         except Exception:  # noqa: BLE001
             pass

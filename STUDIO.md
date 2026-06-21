@@ -17,7 +17,7 @@ each verified by `gradlew gltfSelfTest` before it ships. ✅ = done.
 | 9 | **Beams & lasers** ✅ | an active **beacon's beam** is captured by `scene`/`snapshot` as a tall **emissive cross** of billboard quads (bright core + faint outer glow) in a `Beams` object, coloured by the stained glass above it — real glowing light shafts in Blender. (Next: end-gateway beams.) |
 | 10 | **Weather plane** ✅ | when it's raining/snowing, `scene`/`snapshot` fill the scene volume with a **precipitation point cloud** (`Weather` object) — rain (blue-grey) or snow (white, by biome), density from the rain strength; instance a streak/flake per point in Geometry Nodes and animate it falling. |
 | 11 | **Sky dome + clouds** ✅ | `scene`/`snapshot` enclose the scene in a vertex-coloured **sky dome** (gradient from the live sky colour at the zenith to a hazy horizon, normals inward) plus a procedural **`Clouds`** layer (soft self-lit, at the dimension's cloud height) — a visible, renderable sky, not just a World background. |
-| 12 | **Sound emitters → Speakers** | sounds become positioned Blender **Speaker** objects for spatial audio in the VSE. |
+| 12 | **Sound emitters → Speakers** ✅ | every sound played during a **cinematic** recording is exported as a positioned `Speaker_<sound>` node (deduped per spot, earliest time, with sound id/time/gain in extras); the add-on turns each into a Blender **Speaker** object for spatial audio in the VSE. |
 | 13 | **Takes** | record several takes; each becomes its own clip to compare/keep. |
 | 14 | **NLA stacking** | stack the animation library + recorded clips as NLA strips for non-linear editing. |
 | 15 | **Time remap / slow-mo** | record at high sample rate + export a time curve for slow motion. |

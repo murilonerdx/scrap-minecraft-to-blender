@@ -683,6 +683,9 @@ public final class Exporter {
         try {
             Path dir = newDir("cinematic");
             Files.createDirectories(dir);
+            synchronized (anim.events) {                       // recorded sounds → positioned Speakers
+                model.speakers.addAll(Speakers.fromEvents(new java.util.ArrayList<>(anim.events)));
+            }
             for (Ir.Material m : model.materials) {
                 if (m.png != null && m.textureFile != null) Files.write(dir.resolve(m.textureFile), m.png);
             }

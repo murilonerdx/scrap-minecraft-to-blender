@@ -95,6 +95,9 @@ the Timeline** ready to edit.
 - 🌌 **Sky dome + clouds** — `scene`/`snapshot` wrap the scene in a vertex-coloured **`Sky`** dome
   (gradient from the live sky colour down to a hazy horizon) plus a procedural soft **`Clouds`** layer at
   the dimension's cloud height, so you get a visible, renderable sky — not just a World background.
+- 🔊 **Sound → Speakers** — every sound played during a cinematic recording exports as a positioned
+  `Speaker` node (deduped per spot, with the sound id + time); the add-on builds a Blender **Speaker**
+  object at each, ready for spatial audio in the Video Sequence Editor.
 
 ---
 

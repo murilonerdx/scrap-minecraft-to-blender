@@ -25,6 +25,7 @@ public final class Ir {
         public final List<Camera> extraCameras = new ArrayList<>();   // preset angles (orbit/top) for renders
         public Light sun;       // optional: a directional light matching the in-game sun
         public final List<Light> lights = new ArrayList<>();          // point lights (torches, glowstone…)
+        public final List<Speaker> speakers = new ArrayList<>();      // positioned sound emitters → Blender Speakers
 
         public int addBone(Bone b) {
             bones.add(b);
@@ -189,6 +190,21 @@ public final class Ir {
         /** A positioned point light (torch, glowstone…). */
         public static Light point(float[] position, float[] color, float intensity) {
             return new Light(position, color, intensity, true);
+        }
+    }
+
+    /** A positioned sound emitter (a recorded sound, jukebox, note block…) → a Blender Speaker object. */
+    public static final class Speaker {
+        public final String sound;       // sound event id, e.g. "minecraft:block.note_block.harp"
+        public final float[] position;   // export-space x,y,z
+        public final float time;         // seconds into the recording the sound fired (0 for static scenes)
+        public final float gain;         // volume hint (1 = normal)
+
+        public Speaker(String sound, float[] position, float time, float gain) {
+            this.sound = sound;
+            this.position = position;
+            this.time = time;
+            this.gain = gain;
         }
     }
 

@@ -84,6 +84,10 @@ def validate_common(name, js, bin_len):
     check(types.count("directional") == 1, f"1 directional sun -> {types}")
     check(types.count("point") == 2, f"2 point lights (lamps) -> {types}")
     check(len([n for n in nodes if (n.get("name") or "").startswith("Lamp_")]) == 2, "2 Lamp_ light nodes")
+    spk = [n for n in nodes if (n.get("name") or "").startswith("Speaker_")]
+    check(len(spk) == 1, f"1 Speaker_ node (sound emitter) -> {len(spk)}")
+    check(spk and "sound" in (spk[0].get("extras") or {}) and "time" in spk[0]["extras"],
+          "Speaker node carries sound+time extras")
     accs, bvs = js.get("accessors", []), js.get("bufferViews", [])
     ok = all(0 <= a.get("bufferView", -1) < len(bvs) for a in accs) \
         and all(bv["byteOffset"] + bv["byteLength"] <= bin_len for bv in bvs)

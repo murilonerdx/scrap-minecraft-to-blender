@@ -28,6 +28,7 @@ public final class GltfSelfTest {
         assertCameraShake();
         assertWeatherField();
         assertSkyGeometry();
+        assertSpeakers();
 
         Ir.Model model = buildRig();
 
@@ -149,6 +150,7 @@ public final class GltfSelfTest {
         m.sun = new Ir.Light(new float[]{-0.3f, -1f, -0.2f}, new float[]{1f, 0.95f, 0.9f}, 4f);
         m.lights.add(Ir.Light.point(new float[]{1f, 1.5f, 1f}, new float[]{1f, 0.86f, 0.66f}, 50f));
         m.lights.add(Ir.Light.point(new float[]{-1f, 1.5f, -1f}, new float[]{1f, 0.86f, 0.66f}, 50f));
+        m.speakers.add(new Ir.Speaker("minecraft:block.note_block.harp", new float[]{2, 1, 3}, 0.5f, 1f));
         return m;
     }
 
@@ -299,6 +301,26 @@ public final class GltfSelfTest {
         }
         System.out.println("  sky-geometry OK: " + dome.vertices.size() + " dome verts on-sphere w/ gradient, "
                 + cells + " self-lit cloud cells in bounds");
+    }
+
+    /** Speakers (studio #12): repeated sounds at one spot collapse to a single emitter, keeping the
+     *  earliest time; distinct sounds/positions stay separate. */
+    private static void assertSpeakers() {
+        List<Ir.Event> events = new ArrayList<>();
+        events.add(new Ir.Event(1.0f, "sound:minecraft:block.note_block.harp", new float[]{0, 1, 0}));
+        events.add(new Ir.Event(0.5f, "sound:minecraft:block.note_block.harp", new float[]{0.2f, 1f, 0.1f})); // same spot, earlier
+        events.add(new Ir.Event(2.0f, "sound:minecraft:entity.zombie.ambient", new float[]{10, 2, 10}));      // different sound
+        events.add(new Ir.Event(3.0f, "break:minecraft:stone", new float[]{1, 1, 1}));                        // not a sound
+        events.add(new Ir.Event(4.0f, "sound:minecraft:weather.rain", null));                                 // no position
+        List<Ir.Speaker> sp = Speakers.fromEvents(events);
+        if (sp.size() != 2) {
+            throw new IllegalStateException("FAIL: expected 2 speakers (deduped), got " + sp.size());
+        }
+        Ir.Speaker harp = sp.stream().filter(s -> s.sound.contains("harp")).findFirst().orElse(null);
+        if (harp == null || Math.abs(harp.time - 0.5f) > 1e-6f) {
+            throw new IllegalStateException("FAIL: harp speaker should keep the earliest time 0.5");
+        }
+        System.out.println("  speakers OK: 5 events -> 2 deduped speakers, earliest time kept");
     }
 
     private static float avgChannel(List<float[]> pts, int ch) {

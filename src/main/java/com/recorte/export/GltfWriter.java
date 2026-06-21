@@ -189,6 +189,22 @@ public final class GltfWriter {
             rootExt.add("KHR_lights_punctual", lp);
             root.add("extensions", rootExt);
         }
+
+        // sound emitters → named, positioned nodes carrying the sound id/time/gain in extras; the add-on
+        // turns these into Blender Speaker objects for spatial audio in the VSE.
+        List<Integer> speakerNodes = new ArrayList<>();
+        for (Ir.Speaker sp : model.speakers) {
+            JsonObject node = new JsonObject();
+            node.addProperty("name", "Speaker_" + shortName(sp.sound));
+            if (sp.position != null) node.add("translation", vec3(sp.position[0], sp.position[1], sp.position[2]));
+            JsonObject extras = new JsonObject();
+            extras.addProperty("sound", sp.sound);
+            extras.addProperty("time", sp.time);
+            extras.addProperty("gain", sp.gain);
+            node.add("extras", extras);
+            nodes.add(node);
+            speakerNodes.add(nodes.size() - 1);
+        }
         root.add("nodes", nodes);
 
         JsonArray sceneNodes = new JsonArray();
@@ -199,6 +215,7 @@ public final class GltfWriter {
         if (cameraNode >= 0) sceneNodes.add(cameraNode);
         for (int idx : extraCameraNodes) sceneNodes.add(idx);
         for (int idx : lightNodes) sceneNodes.add(idx);
+        for (int idx : speakerNodes) sceneNodes.add(idx);
         JsonObject scene = new JsonObject();
         scene.add("nodes", sceneNodes);
         JsonArray scenes = new JsonArray();
@@ -375,6 +392,13 @@ public final class GltfWriter {
 
         byte[] json = new Gson().toJson(root).getBytes(StandardCharsets.UTF_8);
         Files.write(glbPath, assembleGlb(json, binData));
+    }
+
+    /** Short, node-name-safe label for a sound id: drops the namespace, keeps the path. */
+    private static String shortName(String sound) {
+        if (sound == null) return "sound";
+        String s = sound.contains(":") ? sound.substring(sound.indexOf(':') + 1) : sound;
+        return s.replaceAll("[^A-Za-z0-9_.]", "_");
     }
 
     /** Writes one primitive's vertex data into the bin and returns its glTF primitive object. */

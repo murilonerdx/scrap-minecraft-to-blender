@@ -94,6 +94,9 @@ na Timeline** prontas pra editar.
   vértice (gradiente da cor real do céu no zênite até um horizonte enevoado) mais uma camada procedural
   de **`Clouds`** (auto-iluminada) na altura de nuvem da dimensão — um céu visível e renderizável, não só
   o fundo do World.
+- 🔊 **Som → Speakers** — todo som tocado durante uma gravação de cinematic é exportado como um nó
+  `Speaker` posicionado (deduplicado por lugar, com o id do som + tempo); o addon cria um objeto
+  **Speaker** do Blender em cada um, pronto pra áudio espacial no Video Sequence Editor.
 
 ---
 
