@@ -31,6 +31,7 @@ public final class GltfSelfTest {
         assertSpeakers();
         assertNlaUniqueNames();
         assertRetargetMap();
+        assertShots();
 
         Ir.Model model = buildRig();
 
@@ -352,6 +353,25 @@ public final class GltfSelfTest {
             throw new IllegalStateException("FAIL: NLA names not unique: " + out);
         }
         System.out.println("  nla-names OK: collisions de-duplicated, order preserved -> " + out);
+    }
+
+    /** Shot markers (studio #17): only "shot:" events are extracted, prefix stripped, sorted by time. */
+    private static void assertShots() {
+        List<Ir.Event> events = new ArrayList<>();
+        events.add(new Ir.Event(5.0f, "shot:Outro", null));
+        events.add(new Ir.Event(1.0f, "shot:Intro", null));
+        events.add(new Ir.Event(2.0f, "break:minecraft:stone", new float[]{0, 0, 0}));   // not a shot
+        events.add(new Ir.Event(3.0f, "shot:Action", null));
+        List<Shots.Shot> shots = Shots.fromEvents(events);
+        if (shots.size() != 3) {
+            throw new IllegalStateException("FAIL: expected 3 shots, got " + shots.size());
+        }
+        if (!shots.get(0).name.equals("Intro") || !shots.get(1).name.equals("Action")
+                || !shots.get(2).name.equals("Outro")) {
+            throw new IllegalStateException("FAIL: shots not in time order / prefix not stripped: "
+                    + shots.get(0).name + "," + shots.get(1).name + "," + shots.get(2).name);
+        }
+        System.out.println("  shots OK: 4 events -> 3 named shots, prefix stripped, time-ordered");
     }
 
     /** Retarget map (studio #16): Minecraft bone names map to humanoid labels (case/separator-insensitive). */

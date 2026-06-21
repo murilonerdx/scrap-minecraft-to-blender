@@ -912,6 +912,19 @@ public final class Exporter {
                 }
             }
             Files.writeString(dir.resolve("events.csv"), csv.toString());
+            // #17: a clean shot list (named cut points) for editors / a shot board
+            java.util.List<Shots.Shot> shots;
+            synchronized (anim.events) {
+                shots = Shots.fromEvents(new java.util.ArrayList<>(anim.events));
+            }
+            if (!shots.isEmpty()) {
+                StringBuilder sc = new StringBuilder("shot,time,frame\n");
+                for (Shots.Shot s : shots) {
+                    sc.append(String.format(java.util.Locale.ROOT, "%s,%.4f,%d\n",
+                            s.name.replace(",", " "), s.time, Math.round(s.time * 30f)));
+                }
+                Files.writeString(dir.resolve("shots.csv"), sc.toString());
+            }
         } catch (Throwable ignored) {
         }
         HttpBridge.setEvents(json);

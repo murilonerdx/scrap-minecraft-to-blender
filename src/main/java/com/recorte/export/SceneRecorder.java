@@ -49,6 +49,17 @@ public final class SceneRecorder {
         else recordEvent(name, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
     }
 
+    /** Studio #17 — tags a named shot (cut point) at the current time of the active cinematic; it becomes
+     *  a named Blender timeline marker. No-op (with feedback) when not recording a cinematic. */
+    public static void recordShot(String name) {
+        if (active == null) {
+            feedback("§eMarcadores de shot só durante um cinematic. §f/recorte record scene start");
+            return;
+        }
+        recordEvent(Shots.PREFIX + name, Double.NaN, 0, 0);
+        feedback("§a🎬 Shot §f" + name + "§a marcado.");
+    }
+
     /** World-position variant (sounds, particles…); pass {@code wx = NaN} for an event with no position. */
     public static void recordEvent(String name, double wx, double wy, double wz) {
         Session s = active;

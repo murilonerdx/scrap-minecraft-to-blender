@@ -43,6 +43,8 @@ cinematics**. ✅ marks what already exists. (Versão em português abaixo / Por
 - ✅ **Sound → Speakers** — recorded sound events are also exported as positioned `Speaker_<sound>`
   nodes (deduped per spot, sound id/time/gain in extras); the add-on builds a Blender **Speaker** object
   at each for spatial audio in the VSE.
+- ✅ **Named shot markers** — `/recorte shot <name>` during a cinematic tags a cut point; it exports on
+  the event timeline (the add-on drops a clean `🎬 <name>` marker) plus a `shots.csv` (name/time/frame).
 - **Multi-camera rig** — `scene`/`snapshot`/cinematic export **preset render cameras** (four 3/4 orbit
   views + a top-down) alongside the in-game POV camera, so you can switch angles in Blender without
   re-framing. They're extra nodes, so they never disturb the rig or the animated POV camera.

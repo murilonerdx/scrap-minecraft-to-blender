@@ -223,6 +223,10 @@ public final class InputHandler {
                                 .then(Commands.literal("export").executes(c -> run(TakeRecorder::export)))
                                 .then(Commands.literal("clear").executes(c -> run(TakeRecorder::clear)))
                                 .then(Commands.literal("list").executes(c -> run(TakeRecorder::list))))
+                        .then(Commands.literal("shot")
+                                .then(Commands.argument("name", StringArgumentType.greedyString())
+                                        .executes(c -> run(() -> SceneRecorder.recordShot(
+                                                StringArgumentType.getString(c, "name"))))))
                         .then(Commands.literal("slowmo")
                                 .then(Commands.argument("factor", IntegerArgumentType.integer(1, 16))
                                         .executes(c -> run(() -> {

@@ -233,8 +233,9 @@ def _setup_render_passes(objs):
 
 
 def _apply_events(port):
-    """Fetch the latest recording's timeline events (block breaks/placements) and drop Blender
-    timeline markers at the matching frames, so VFX/sound can be timed to them. Returns the count."""
+    """Fetch the latest recording's timeline events (block breaks/placements, sounds and named **shots**)
+    and drop Blender timeline markers at the matching frames, so VFX/sound and cuts can be timed to them.
+    Named shots (#17) become clean markers like '🎬 Intro'. Returns the count."""
     try:
         import json as _json
         data = _json.loads(_fetch(port, "events").decode("utf-8"))
@@ -246,14 +247,17 @@ def _apply_events(port):
         return 0
     # clear our own previous markers so repeated imports don't pile up
     for m in list(scene.timeline_markers):
-        if m.name.startswith(("break:", "place:", "sound:")):
+        if m.name.startswith(("break:", "place:", "sound:", "🎬 ")):
             scene.timeline_markers.remove(m)
     if not evs:
         return 0
     fps = float(data.get("fps") or scene.render.fps or 30)
     for e in evs:
         frame = int(round(float(e.get("time", 0.0)) * fps))
-        scene.timeline_markers.new(str(e.get("name", "event")), frame=frame)
+        name = str(e.get("name", "event"))
+        if name.startswith("shot:"):          # named cut point -> a clean, prominent marker
+            name = "🎬 " + name[len("shot:"):]
+        scene.timeline_markers.new(name, frame=frame)
     return len(evs)
 
 
