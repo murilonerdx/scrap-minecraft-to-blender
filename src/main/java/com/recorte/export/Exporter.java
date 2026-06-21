@@ -528,6 +528,10 @@ public final class Exporter {
 
     /** Exports accumulated onion-skin ghosts in one glTF, fading oldest → newest. */
     public static void exportGhosts(java.util.List<GhostRig.Ghost> ghosts) {
+        if (ghosts == null || ghosts.isEmpty()) {
+            feedback("§eNenhum fantasma capturado. §f/recorte ghost add");
+            return;
+        }
         try {
             GhostRig.Ghost g0 = ghosts.get(0);
             BlockPos center = new BlockPos((int) Math.floor(g0.x), (int) Math.floor(g0.y), (int) Math.floor(g0.z));
@@ -538,7 +542,7 @@ public final class Exporter {
             int n = ghosts.size();
             for (int i = 0; i < n; i++) {
                 GhostRig.Ghost g = ghosts.get(i);
-                float alpha = 0.25f + 0.75f * (i / (float) (n - 1));   // oldest faint → newest solid
+                float alpha = n == 1 ? 1f : 0.25f + 0.75f * (i / (float) (n - 1));   // oldest faint → newest solid
                 mergeGhost(out, g.model,
                         -((float) g.x - center.getX()), (float) (g.y - center.getY()), (float) g.z - center.getZ(),
                         "ghost_" + i, "g" + i + "_", alpha);
