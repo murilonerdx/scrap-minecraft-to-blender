@@ -77,6 +77,10 @@ public final class HttpBridge {
                     events.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
             server.createContext("/sun", exchange -> respond(exchange, 200, "application/json",
                     sun.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+            // #20 studio scene template: the live studio settings (fps, resolution, DOF) so the add-on
+            // can set up a render-ready Blender scene on import
+            server.createContext("/studio", exchange -> respond(exchange, 200, "application/json",
+                    StudioConfig.CURRENT.toJson().getBytes(java.nio.charset.StandardCharsets.UTF_8)));
             server.createContext("/anim_textures", exchange -> respond(exchange, 200, "application/json",
                     animTextures.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
             server.createContext("/anim_frame", exchange -> {

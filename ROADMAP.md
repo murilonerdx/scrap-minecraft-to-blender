@@ -146,6 +146,9 @@ cinematics**. ✅ marks what already exists. (Versão em português abaixo / Por
 ## 🧰 Workflow & comfort
 - **Blender add-on** that imports the export automatically: builds materials (nearest, emission, alpha),
   parents to the armature, fixes scale — one click.
+- ✅ **Studio scene template** — with *Studio scene* enabled, the add-on makes the import **render-ready**:
+  active camera, fps + resolution (from the game's `/studio` settings), faithful Standard colour
+  management, a sky-dome-safe camera clip, and EEVEE glow/AO (a *Setup studio scene* button re-applies).
 - **In-game GUI** with a **preview** to choose what to export and the options (radius, interiors,
   detail), instead of typing commands.
 - **Presets** (low/high detail, with/without interiors, with/without entities).

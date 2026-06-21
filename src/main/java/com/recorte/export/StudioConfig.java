@@ -18,6 +18,8 @@ public final class StudioConfig {
     public float shake = 0f;       // camera shake amount (see CameraShake)
     public int fps = 30;           // recording sample rate
     public boolean dof = true;     // depth of field on the POV/placed cameras
+    public int width = 1920;       // render resolution (studio scene template, #20)
+    public int height = 1080;
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
@@ -27,6 +29,8 @@ public final class StudioConfig {
         c.radius = CURRENT.radius;
         c.fps = CURRENT.fps;
         c.dof = CURRENT.dof;
+        c.width = CURRENT.width;
+        c.height = CURRENT.height;
         c.slowmo = SlowMo.factor();
         c.shake = CameraShake.amount;
         return c;
@@ -51,7 +55,8 @@ public final class StudioConfig {
     }
 
     public String describe() {
-        return String.format(java.util.Locale.ROOT, "radius %d · slowmo %.0f× · shake %.0f · fps %d · dof %s",
-                radius, slowmo, shake, fps, dof ? "on" : "off");
+        return String.format(java.util.Locale.ROOT,
+                "radius %d · slowmo %.0f× · shake %.0f · fps %d · dof %s · %dx%d",
+                radius, slowmo, shake, fps, dof ? "on" : "off", width, height);
     }
 }

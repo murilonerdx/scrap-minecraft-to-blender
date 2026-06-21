@@ -182,7 +182,9 @@ for block/sound events, keyframes the **day/night timelapse** (Sun lamp + World 
 on the compositor **render passes**. A **Show animation keys** button re-activates animations on any
 manually-imported file. **Multi-clip files** (animation library, takes) come in as a **stacked NLA**
 (one strip per clip) for non-linear blending — a **Stack clips as NLA** button re-applies it to manual
-imports.
+imports. With **Studio scene** on, it also makes the scene **render-ready** — active camera,
+fps/resolution, faithful color management, sky-dome-safe clipping and EEVEE glow (a **Setup studio
+scene** button re-applies it).
 
 **Live mode:** run `/recorte live` (or the panel's *Live link* button) in-game and click **Start Live
 link** in the add-on — the mod auto-exports a snapshot (**the world around you + nearby entities**)

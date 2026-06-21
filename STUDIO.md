@@ -4,6 +4,9 @@ Turning Recorte from an exporter into a **Minecraft → Blender animation studio
 rigs, record takes, capture VFX, and import a render-ready scene. Implemented one per loop iteration,
 each verified by `gradlew gltfSelfTest` before it ships. ✅ = done.
 
+> **🎉 All 20 features shipped.** The studio is complete: from lighting & cameras through VFX, audio,
+> non-linear takes and retargeting, to a one-click render-ready Blender scene.
+
 | # | Feature | What it gives you |
 |---|---------|-------------------|
 | 1 | **Point-light rig** ✅ | torches/lanterns/glowstone/sea-lanterns in a scene export as Blender **point lights**, colored by the block — the scene is lit by real lamps, not just emission. |
@@ -25,6 +28,6 @@ each verified by `gradlew gltfSelfTest` before it ships. ✅ = done.
 | 17 | **Named shot markers** ✅ | `/recorte shot <name>` during a cinematic tags a cut point at the current time; it exports on the event timeline and the add-on drops a clean named marker (`🎬 Intro`), plus a `shots.csv` (name/time/frame) for your editor / shot board. |
 | 18 | **Export presets** ✅ | `/recorte preset save\|load\|list <name>` stores studio settings (default radius, slow-mo, camera shake, fps, DOF) as named JSON files under `recorte_exports/presets/`; loading one re-applies the look (slow-mo + shake take effect immediately, the radius becomes the default). |
 | 19 | **In-game preview** ✅ | the control panel (key `G`) draws a live **top-down thumbnail** of the scene/snapshot footprint — surface map colours, height-shaded, with red entity dots and the player at centre + an `r<radius> · <n> ent · rain` readout — updating as you change the radius, so you see what you'll capture before you export. |
-| 20 | **Studio scene template** | the add-on sets up a render-ready Blender scene (camera, color management, output) on import. |
+| 20 | **Studio scene template** ✅ | on import the add-on makes the scene **render-ready** in one step — active camera, fps + render resolution (from the game's `/studio` settings), faithful Standard colour management, a sky-dome-safe camera clip, and EEVEE glow/AO so beams/particles/lava bloom; a **Studio scene** toggle + a **Setup studio scene** button control it. |
 
 *Every feature compiles, passes the headless glTF self-test, and updates the docs in the same commit.*

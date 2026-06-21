@@ -86,6 +86,9 @@ class RECORTE_OT_import_latest(bpy.types.Operator):
         n_anim = _apply_animated_textures(port)
         _apply_dof(new_objs)
         n_spk = _apply_speakers(new_objs)    # sound emitters → positioned Blender Speakers
+        studio = False
+        if context.scene.recorte_studio_template:   # #20: render-ready scene on import
+            studio = _setup_studio_scene(context, new_objs, port)
 
         msg = "Imported latest Recorte export (%d objects)" % len(new_objs)
         if n_events:
@@ -96,6 +99,8 @@ class RECORTE_OT_import_latest(bpy.types.Operator):
             msg += " — %d animated texture(s)" % n_anim
         if n_spk:
             msg += " — %d speaker(s)" % n_spk
+        if studio:
+            msg += " — render-ready studio scene"
         self.report({"INFO"}, msg)
         return {"FINISHED"}
 
@@ -341,6 +346,65 @@ def _apply_dof(objs):
     return n
 
 
+def _setup_studio_scene(context, objs, port):
+    """Studio scene template (#20): make the imported scene **render-ready** in one step — active camera,
+    fps + render resolution (from the game's /studio settings when reachable), faithful colour management
+    for Minecraft's flat colours, a large camera clip end for the sky dome, and EEVEE glow so emissive
+    beams/particles/lava bloom. Everything is defensive (Blender API varies by version). Returns True."""
+    scene = context.scene
+    if scene is None:
+        return False
+    fps, w, h = 30, 1920, 1080
+    try:
+        import json as _json
+        cfg = _json.loads(_fetch(port, "studio").decode("utf-8"))
+        fps = int(cfg.get("fps") or 30)
+        w = int(cfg.get("width") or 1920)
+        h = int(cfg.get("height") or 1080)
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        scene.render.fps = fps
+        scene.render.resolution_x = w
+        scene.render.resolution_y = h
+        scene.render.resolution_percentage = 100
+        scene.render.image_settings.file_format = "PNG"
+    except Exception:  # noqa: BLE001
+        pass
+    # faithful colour management for Minecraft's flat pixel-art colours
+    try:
+        scene.view_settings.view_transform = "Standard"
+        scene.view_settings.look = "None"
+    except Exception:  # noqa: BLE001
+        pass
+    # active camera = the imported POV camera (or any imported camera); clip far enough for the sky dome
+    try:
+        cams = [o for o in objs if getattr(o, "type", None) == "CAMERA"]
+        pov = next((o for o in cams if o.name.startswith("Camera")), None) or (cams[0] if cams else None)
+        if pov is not None:
+            scene.camera = pov
+            try:
+                pov.data.clip_end = max(pov.data.clip_end, 4000.0)
+            except Exception:  # noqa: BLE001
+                pass
+    except Exception:  # noqa: BLE001
+        pass
+    # EEVEE so it previews fast; glow + AO make beams/particles/lava read right
+    try:
+        scene.render.engine = "BLENDER_EEVEE"
+    except Exception:  # noqa: BLE001
+        try:
+            scene.render.engine = "BLENDER_EEVEE_NEXT"
+        except Exception:  # noqa: BLE001
+            pass
+    for attr in ("use_bloom", "use_gtao"):
+        try:
+            setattr(scene.eevee, attr, True)
+        except Exception:  # noqa: BLE001
+            pass
+    return True
+
+
 def _apply_speakers(objs):
     """Turn imported `Speaker_` empty nodes into Blender **Speaker** objects (positioned spatial-audio
     emitters for the VSE). The source .ogg isn't exported, so each Speaker is created without a sound for
@@ -459,6 +523,25 @@ class RECORTE_OT_activate_anim(bpy.types.Operator):
         return {"FINISHED"}
 
 
+class RECORTE_OT_studio_scene(bpy.types.Operator):
+    """Make the current scene render-ready (studio template #20): active camera, fps + resolution,
+    faithful colour management, sky-dome-safe camera clipping and EEVEE glow. 'Import latest' does this
+    automatically when 'Studio scene' is enabled."""
+    bl_idname = "recorte.studio_scene"
+    bl_label = "Setup studio scene"
+    bl_options = {"REGISTER", "UNDO"}
+
+    def execute(self, context):
+        port = context.scene.recorte_port
+        objs = list(context.selected_objects) or list(bpy.data.objects)
+        if _setup_studio_scene(context, objs, port):
+            self.report({"INFO"}, "Studio scene set up — camera, fps/resolution, colour management and "
+                                  "EEVEE glow ready to render.")
+        else:
+            self.report({"WARNING"}, "No active scene to set up.")
+        return {"FINISHED"}
+
+
 class RECORTE_OT_stack_nla(bpy.types.Operator):
     """Lay every animation clip of the selected (or all) objects out as its own NLA strip/track, so a
     multi-clip file (animation library, takes) becomes a non-linear stack you can blend and reorder in
@@ -558,6 +641,8 @@ class RECORTE_PT_panel(bpy.types.Panel):
         layout.operator("recorte.ping", icon="PLUGIN")
         layout.operator("recorte.activate_anim", icon="ACTION")
         layout.operator("recorte.stack_nla", icon="NLA")
+        layout.prop(context.scene, "recorte_studio_template")
+        layout.operator("recorte.studio_scene", icon="SCENE")
         layout.separator()
         layout.label(text="Real-time link:")
         if context.scene.recorte_live:
@@ -568,13 +653,16 @@ class RECORTE_PT_panel(bpy.types.Panel):
 
 
 classes = (RECORTE_OT_import_latest, RECORTE_OT_ping, RECORTE_OT_activate_anim,
-           RECORTE_OT_stack_nla, RECORTE_OT_live, RECORTE_PT_panel)
+           RECORTE_OT_stack_nla, RECORTE_OT_studio_scene, RECORTE_OT_live, RECORTE_PT_panel)
 
 
 def register():
     bpy.types.Scene.recorte_port = bpy.props.IntProperty(
         name="Port", default=DEFAULT_PORT, min=1, max=65535)
     bpy.types.Scene.recorte_live = bpy.props.BoolProperty(name="Live link", default=False)
+    bpy.types.Scene.recorte_studio_template = bpy.props.BoolProperty(
+        name="Studio scene", description="Set up a render-ready scene (camera, fps, colour, glow) on import",
+        default=True)
     for c in classes:
         bpy.utils.register_class(c)
 
@@ -584,6 +672,7 @@ def unregister():
         bpy.utils.unregister_class(c)
     del bpy.types.Scene.recorte_port
     del bpy.types.Scene.recorte_live
+    del bpy.types.Scene.recorte_studio_template
 
 
 if __name__ == "__main__":

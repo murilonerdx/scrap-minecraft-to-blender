@@ -172,8 +172,10 @@ O **Import latest** faz mais que importar: filtro pixel-art (Closest), puxa as a
 (Sun + fundo do mundo) e liga os **render passes**. O botão **Show animation keys** reativa animações de
 arquivos importados na mão. **Arquivos multi-clip** (biblioteca de animações, takes) entram como um
 **stack de NLA** (uma strip por clip) pra blending não-linear — o botão **Stack clips as NLA** reaplica
-isso a importações manuais. **Live:** rode `/recorte live` e clique **Start Live link** — o mod
-auto-exporta a cena ao redor a cada ~2s e o Blender re-importa sozinho.
+isso a importações manuais. Com **Studio scene** ligado, ele ainda deixa a cena **pronta pra render** —
+câmera ativa, fps/resolução, color management fiel, clipping seguro pro domo de céu e glow do EEVEE (o
+botão **Setup studio scene** reaplica). **Live:** rode `/recorte live` e clique **Start Live link** — o
+mod auto-exporta a cena ao redor a cada ~2s e o Blender re-importa sozinho.
 
 ---
 
