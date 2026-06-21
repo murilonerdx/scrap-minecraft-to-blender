@@ -16,7 +16,7 @@ each verified by `gradlew gltfSelfTest` before it ships. ✅ = done.
 | 8 | **Particle / VFX point cloud** ✅ | `scene`/`snapshot` capture every live particle (fire/smoke/portal/redstone…) as a glTF **POINTS** cloud (`Particles` object) — each point carries its colour as `COLOR_0`, ready to feed **Geometry Nodes** (instance a billboard/volume on each point) for render-quality VFX. |
 | 9 | **Beams & lasers** ✅ | an active **beacon's beam** is captured by `scene`/`snapshot` as a tall **emissive cross** of billboard quads (bright core + faint outer glow) in a `Beams` object, coloured by the stained glass above it — real glowing light shafts in Blender. (Next: end-gateway beams.) |
 | 10 | **Weather plane** ✅ | when it's raining/snowing, `scene`/`snapshot` fill the scene volume with a **precipitation point cloud** (`Weather` object) — rain (blue-grey) or snow (white, by biome), density from the rain strength; instance a streak/flake per point in Geometry Nodes and animate it falling. |
-| 11 | **Sky dome + clouds** | the in-game sky/clouds as a Blender world dome. |
+| 11 | **Sky dome + clouds** ✅ | `scene`/`snapshot` enclose the scene in a vertex-coloured **sky dome** (gradient from the live sky colour at the zenith to a hazy horizon, normals inward) plus a procedural **`Clouds`** layer (soft self-lit, at the dimension's cloud height) — a visible, renderable sky, not just a World background. |
 | 12 | **Sound emitters → Speakers** | sounds become positioned Blender **Speaker** objects for spatial audio in the VSE. |
 | 13 | **Takes** | record several takes; each becomes its own clip to compare/keep. |
 | 14 | **NLA stacking** | stack the animation library + recorded clips as NLA strips for non-linear editing. |

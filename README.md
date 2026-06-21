@@ -92,6 +92,9 @@ the Timeline** ready to edit.
 - 🌧️ **Weather** — when it's raining/snowing, the scene volume fills with a **precipitation point cloud**
   (`Weather` object): rain (blue-grey) or snow (white) by biome, density from the storm strength —
   instance a streak/flake per point with Geometry Nodes and animate it falling.
+- 🌌 **Sky dome + clouds** — `scene`/`snapshot` wrap the scene in a vertex-coloured **`Sky`** dome
+  (gradient from the live sky colour down to a hazy horizon) plus a procedural soft **`Clouds`** layer at
+  the dimension's cloud height, so you get a visible, renderable sky — not just a World background.
 
 ---
 

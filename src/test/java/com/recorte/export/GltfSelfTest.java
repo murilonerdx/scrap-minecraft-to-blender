@@ -27,6 +27,7 @@ public final class GltfSelfTest {
         assertAccessoryClears();
         assertCameraShake();
         assertWeatherField();
+        assertSkyGeometry();
 
         Ir.Model model = buildRig();
 
@@ -252,6 +253,52 @@ public final class GltfSelfTest {
         }
         System.out.println("  weather-field OK: " + rain.size() + " in-bounds rain pts, scales w/ intensity, "
                 + "snow whiter than rain");
+    }
+
+    /** Sky geometry (studio #11): dome vertices sit on the sphere with a top→bottom gradient; clouds
+     *  are a flat self-lit layer at a single height within bounds. */
+    private static void assertSkyGeometry() {
+        Ir.Model m = new Ir.Model();
+        Ir.Bone root = new Ir.Bone("scene", -1, new Matrix4f());
+        root.localTransform = new Matrix4f();
+        m.addBone(root);
+
+        float radius = 100f;
+        float[] zenith = {0.2f, 0.4f, 0.9f}, horizon = {0.7f, 0.8f, 1.0f};
+        SkyGeometry.addDome(m, radius, zenith, horizon, 12, 18, 0);
+        Ir.Primitive dome = m.primitives.get(0);
+        float top = -1e9f, bot = 1e9f;
+        Ir.Vertex topV = null, botV = null;
+        for (Ir.Vertex v : dome.vertices) {
+            float len = (float) Math.sqrt(v.px * v.px + v.py * v.py + v.pz * v.pz);
+            if (Math.abs(len - radius) > 0.5f) {
+                throw new IllegalStateException("FAIL: dome vertex off the sphere (len=" + len + " r=" + radius + ")");
+            }
+            if (v.py > top) { top = v.py; topV = v; }
+            if (v.py < bot) { bot = v.py; botV = v; }
+        }
+        // top of the dome should be the zenith colour, bottom the horizon colour
+        if (Math.abs(topV.b - zenith[2]) > 0.02f || Math.abs(botV.b - horizon[2]) > 0.02f) {
+            throw new IllegalStateException("FAIL: dome gradient wrong (top.b=" + topV.b + " bot.b=" + botV.b + ")");
+        }
+
+        float cloudY = 60f, extent = 100f;
+        int cells = SkyGeometry.addClouds(m, extent, cloudY, 12f, new float[]{1f, 1f, 1f}, 42L, 0);
+        if (cells <= 0) {
+            throw new IllegalStateException("FAIL: clouds produced no cells");
+        }
+        Ir.Primitive clouds = m.primitives.get(1);
+        for (Ir.Vertex v : clouds.vertices) {
+            if (Math.abs(v.py - cloudY) > 1e-3f || Math.abs(v.px) > extent + 12f || Math.abs(v.pz) > extent + 12f) {
+                throw new IllegalStateException("FAIL: cloud vertex out of layer: "
+                        + v.px + "," + v.py + "," + v.pz);
+            }
+        }
+        if (m.materials.get(m.materialIndex("Clouds")).emissiveColor == null) {
+            throw new IllegalStateException("FAIL: clouds should be self-lit (emissiveColor)");
+        }
+        System.out.println("  sky-geometry OK: " + dome.vertices.size() + " dome verts on-sphere w/ gradient, "
+                + cells + " self-lit cloud cells in bounds");
     }
 
     private static float avgChannel(List<float[]> pts, int ch) {

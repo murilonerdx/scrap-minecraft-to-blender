@@ -97,7 +97,9 @@ cinematics**. ✅ marks what already exists. (Versão em português abaixo / Por
 - ✅ **Block light / sky light** baked into vertex colors (+ face shading) to match the game's lighting.
 - ✅ **Weather** — rain/snow exports as a **precipitation point cloud** (`Weather` object) filling the
   scene volume, rain vs snow by biome, density by storm strength → instance + animate in Geometry Nodes.
-- Skybox, clouds, stars.
+- ✅ **Sky dome + clouds** — a vertex-coloured gradient `Sky` dome (live sky colour → hazy horizon) +
+  a procedural self-lit `Clouds` layer at the cloud height enclose the scene as renderable geometry.
+  Next: stars at night, real clouds.png pattern.
 - ✅ **Camera** + ✅ **Sun light** + ✅ **Sky color** (the add-on sets the Blender World from the live
   sky via the `/env` endpoint) → next: proper **fog**, and optional **depth-of-field** on your look target.
 

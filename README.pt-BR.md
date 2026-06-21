@@ -90,6 +90,10 @@ na Timeline** prontas pra editar.
 - 🌧️ **Clima** — quando está chovendo/nevando, o volume da cena se enche de uma **nuvem de pontos de
   precipitação** (objeto `Weather`): chuva (azul-acinzentada) ou neve (branca) pelo bioma, densidade pela
   força da tempestade — instancie um risco/floco por ponto com Geometry Nodes e anime a queda.
+- 🌌 **Domo de céu + nuvens** — `scene`/`snapshot` envolvem a cena num **domo `Sky`** colorido por
+  vértice (gradiente da cor real do céu no zênite até um horizonte enevoado) mais uma camada procedural
+  de **`Clouds`** (auto-iluminada) na altura de nuvem da dimensão — um céu visível e renderizável, não só
+  o fundo do World.
 
 ---
 
