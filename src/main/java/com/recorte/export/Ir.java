@@ -210,15 +210,24 @@ public final class Ir {
         }
     }
 
-    /** Geometry for one material: a triangle soup with an interleaved-free vertex list. */
+    /** Geometry for one material: a triangle soup (or a point cloud) with an interleaved-free vertex list. */
     public static final class Primitive {
+        public static final int TRIANGLES = 4, POINTS = 0;   // glTF primitive modes
+
         public final int materialIndex;
         public final List<Vertex> vertices = new ArrayList<>();
         public final List<Integer> indices = new ArrayList<>();
         public String group = "Player";   // exported as a separate Blender object per group
+        public int mode = TRIANGLES;       // POINTS for particle/VFX clouds
 
         public Primitive(int materialIndex) {
             this.materialIndex = materialIndex;
+        }
+
+        /** Adds a single point (its own index) — for POINTS-mode primitives. */
+        public void addPoint(Vertex v) {
+            indices.add(vertices.size());
+            vertices.add(v);
         }
 
         /** Adds a quad (4 vertices, in winding order) as two triangles. */

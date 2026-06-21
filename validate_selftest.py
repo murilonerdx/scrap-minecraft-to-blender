@@ -113,5 +113,23 @@ for n in ("idle", "walk", "run", "spin"):
 for a in anims:
     check(len(a["channels"]) > 0 and len(a["samplers"]) > 0, f"clip '{a.get('name')}' has channels+samplers")
 
+# --- points.glb: particle / VFX point cloud (studio #8) ---------------------------------------------
+js, bl = parse_glb(os.path.join(root, "points.glb"))
+print("\n=== points.glb ===")
+pmeshes = js.get("meshes", [])
+pprims = [p for m in pmeshes for p in m["primitives"]]
+check(len(pprims) >= 1, f"point cloud has a primitive ({len(pprims)})")
+if pprims:
+    pp = pprims[0]
+    check(pp.get("mode") == 0, f"primitive is POINTS (mode 0) -> {pp.get('mode')}")
+    check("POSITION" in pp["attributes"], "point cloud has POSITION")
+    check("COLOR_0" in pp["attributes"], "point cloud has per-point COLOR_0")
+    # the point count: indices accessor 'count' must match the positions
+    accs = js.get("accessors", [])
+    idx_count = accs[pp["indices"]]["count"] if "indices" in pp else 0
+    pos_count = accs[pp["attributes"]["POSITION"]]["count"]
+    check(idx_count == pos_count == 16, f"16 points (idx {idx_count} == pos {pos_count})")
+check(any(mm.get("name") == "Particles" for mm in js.get("materials", [])), "a 'Particles' material present")
+
 print("\n" + ("ALL SELF-TEST CHECKS PASSED" if not fails else f"{len(fails)} CHECK(S) FAILED"))
 sys.exit(1 if fails else 0)

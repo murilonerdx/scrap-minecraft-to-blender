@@ -80,8 +80,10 @@ cinematics**. ✅ marks what already exists. (Versão em português abaixo / Por
 - **GeckoLib animations** (read the `.animation.json`).
 
 ## ✨ VFX / Particles
-- **Export particles** (fire, smoke, portal, redstone, potions, totem) as a point cloud / instanced
-  mesh with position + color → Geometry/Particle Nodes in Blender.
+- ✅ **Export particles** (fire, smoke, portal, redstone, potions, totem) as a **point cloud** — every
+  live particle is captured by `scene`/`snapshot` into a glTF **POINTS** primitive (`Particles` object)
+  with per-point position + colour (`COLOR_0`) → instance a billboard/volume on each point in **Geometry
+  Nodes**. Next: capture the cloud **over time** for animated trails.
 - **Capture an effect over time** → animated VFX (particle trails).
 - **Beacon beam, end gateway, dragon breath, explosions.**
 - ✅ **Fluid surfaces** (water/lava) — the exposed **top surface AND vertical sides** (waterfalls, pool

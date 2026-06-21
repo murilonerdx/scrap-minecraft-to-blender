@@ -45,7 +45,34 @@ public final class GltfSelfTest {
         // 3) static (no animation) — cameras + sun + PBR textures
         GltfWriter.write(model, outDir.resolve("static.glb"));
 
-        System.out.println("SELFTEST OK -> single.glb, library.glb, static.glb in " + outDir.toAbsolutePath());
+        // 4) particle / VFX point cloud (studio #8) — a POINTS-mode primitive with per-point colour
+        GltfWriter.write(buildPointCloud(), outDir.resolve("points.glb"));
+
+        System.out.println("SELFTEST OK -> single.glb, library.glb, static.glb, points.glb in "
+                + outDir.toAbsolutePath());
+    }
+
+    /** A minimal particle point cloud: one root bone + a POINTS primitive whose points carry colours.
+     *  Verifies the writer emits glTF primitive {@code mode:0} and a COLOR_0 attribute (read into Blender
+     *  as loose vertices for Geometry Nodes). */
+    private static Ir.Model buildPointCloud() {
+        Ir.Model m = new Ir.Model();
+        Ir.Bone root = new Ir.Bone("scene", -1, new Matrix4f());
+        root.localTransform = new Matrix4f();
+        m.addBone(root);
+        int mat = m.materialIndex("Particles");
+        Ir.Primitive p = m.primitiveForMaterial(mat);
+        p.group = "Particles";
+        p.mode = Ir.Primitive.POINTS;
+        for (int i = 0; i < 16; i++) {
+            float a = i / 16f;
+            p.addPoint(new Ir.Vertex(a, a * 2f, -a, 0f, 1f, 0f, 0f, 0f, 0, 1f, a, 1f - a, 1f));
+        }
+        if (p.indices.size() != 16) {
+            throw new IllegalStateException("FAIL: point cloud should have 16 point indices, got " + p.indices.size());
+        }
+        System.out.println("  point-cloud OK: 16-point POINTS primitive built (mode=" + p.mode + ")");
+        return m;
     }
 
     /** Two full turns on Y — the raw quaternion sign flips mid-way; the hemisphere fix must remove it. */

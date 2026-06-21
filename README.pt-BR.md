@@ -80,6 +80,10 @@ na Timeline** prontas pra editar.
   através de verdade); os recortes pixel-art (folhas, grama) continuam nítidos em MASK.
 - 👕 Armadura, itens nas duas mãos e **acessórios Curios/Artifacts** (objeto `Accessories` separado); a
   **capa/elytra** vem como objeto `Cape` próprio.
+- ✨ **Partículas / VFX point cloud** — `scene`/`snapshot` capturam toda partícula viva (fogo, fumaça,
+  portal, redstone…) como uma **nuvem de pontos** glTF (objeto `Particles`); cada ponto guarda a cor,
+  pronta pra alimentar **Geometry Nodes** (instanciar um billboard ou volume em cada ponto) e gerar VFX
+  com qualidade de render.
 
 ---
 

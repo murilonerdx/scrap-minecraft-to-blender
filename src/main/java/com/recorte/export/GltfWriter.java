@@ -442,6 +442,7 @@ public final class GltfWriter {
         primitive.add("attributes", attributes);
         primitive.addProperty("indices", idxAcc);
         primitive.addProperty("material", prim.materialIndex);
+        if (prim.mode != Ir.Primitive.TRIANGLES) primitive.addProperty("mode", prim.mode);  // POINTS for VFX clouds
         return primitive;
     }
 

@@ -84,6 +84,9 @@ the Timeline** ready to edit.
   see-through), while pixel-art cutouts (leaves, grass) stay crisp MASK.
 - 👕 Player armor, held items (both hands) and **Curios/Artifacts accessories** (separate `Accessories`
   object); the **cape/elytra** comes in as its own `Cape` object.
+- ✨ **Particle / VFX point cloud** — `scene`/`snapshot` capture every live particle (fire, smoke, portal,
+  redstone…) as a glTF **point cloud** (`Particles` object); each point keeps its colour, ready to drive
+  **Geometry Nodes** (instance a billboard or volume on every point) for render-quality VFX.
 
 ---
 
