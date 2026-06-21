@@ -61,6 +61,7 @@ public final class TakeRecorder {
                     ir.materials.get(0).png = TextureExporter.bytesFor(tex);
                 } catch (Throwable ignored) {
                 }
+                Exporter.groundToFloor(ir);   // feet on the floor; the root's world path is keyed relative
                 session = new Session(target, model, ir);
             } catch (Throwable t) {
                 Recorte.LOGGER.error("Failed to start takes", t);

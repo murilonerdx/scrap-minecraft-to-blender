@@ -34,6 +34,7 @@ public final class GltfSelfTest {
         assertShots();
         assertPresets();
         assertPreviewGrid();
+        assertRigGrounding();
 
         Ir.Model model = buildRig();
 
@@ -355,6 +356,43 @@ public final class GltfSelfTest {
             throw new IllegalStateException("FAIL: NLA names not unique: " + out);
         }
         System.out.println("  nla-names OK: collisions de-duplicated, order preserved -> " + out);
+    }
+
+    /** Rig grounding (the "player sunk into the floor" bug): a rig whose feet sit ~1.5 below the origin
+     *  is lifted so its lowest vertex is y=0, with bones and vertices shifted by the same amount. */
+    private static void assertRigGrounding() {
+        Ir.Model m = new Ir.Model();
+        // root with a +1 bind height, one limb child; feet vertex 1.5 below the origin (the MC Y flip)
+        Ir.Bone root = new Ir.Bone("root", -1, new Matrix4f().translate(0, 1, 0));
+        root.localTransform = new Matrix4f().translate(0, 1, 0);
+        m.addBone(root);
+        Ir.Bone leg = new Ir.Bone("leg", 0, new Matrix4f().translate(0, -1.5f, 0));
+        leg.localTransform = new Matrix4f().translate(0, -1.5f, 0);
+        m.addBone(leg);
+        Ir.Primitive p = m.primitiveForMaterial(m.materialIndex("body"));
+        p.addQuad(
+                new Ir.Vertex(-0.2f, -1.5f, 0, 0, 0, 1, 0, 0, 1),   // feet at y=-1.5
+                new Ir.Vertex(0.2f, -1.5f, 0, 0, 0, 1, 1, 0, 1),
+                new Ir.Vertex(0.2f, 0.3f, 0, 0, 0, 1, 1, 1, 1),
+                new Ir.Vertex(-0.2f, 0.3f, 0, 0, 0, 1, 0, 1, 1));
+
+        float before = RigGround.minY(m);
+        RigGround.toFloor(m);
+        float after = RigGround.minY(m);
+        if (Math.abs(before - (-1.5f)) > 1e-4f || Math.abs(after) > 1e-4f) {
+            throw new IllegalStateException("FAIL: grounding minY before=" + before + " after=" + after);
+        }
+        // the root's bind + local must have lifted by exactly +1.5
+        float rootY = m.bones.get(0).globalBind.getTranslation(new org.joml.Vector3f()).y;
+        if (Math.abs(rootY - 2.5f) > 1e-4f) {   // was 1.0, lifted by 1.5
+            throw new IllegalStateException("FAIL: root bind not lifted (y=" + rootY + ", want 2.5)");
+        }
+        // a child bone's LOCAL transform stays relative (unchanged), so the skin doesn't distort
+        float legLocalY = m.bones.get(1).localTransform.getTranslation(new org.joml.Vector3f()).y;
+        if (Math.abs(legLocalY - (-1.5f)) > 1e-4f) {
+            throw new IllegalStateException("FAIL: child local transform changed (y=" + legLocalY + ")");
+        }
+        System.out.println("  rig-grounding OK: feet -1.5 -> 0, root bind lifted, child local unchanged");
     }
 
     /** Preview grid (studio #19): the footprint maps onto an N×N grid; centre/corners land in the right

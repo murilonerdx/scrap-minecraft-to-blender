@@ -138,6 +138,7 @@ public final class Exporter {
         Ir.Model ir = new ModelExtractor().extract(model, target, "skin.png");
         ir.materials.get(0).png = TextureExporter.skinBytes(target);
         LayerCapturer.captureExtras(playerRenderer, target, model, ir);
+        groundToFloor(ir);   // feet on the floor (snapshot re-grounds via minY, so it stays correct)
         return ir;
     }
 
@@ -263,6 +264,7 @@ public final class Exporter {
                 feedback("§cNão consegui montar essa entidade.");
                 return;
             }
+            groundToFloor(ir);   // feet on the floor, not sunk into it
             String name = entity.getType().getDescriptionId().replaceAll(".*\\.", "");
             Path dir = newDir(name);
             writeAll(ir, dir, name);
@@ -642,11 +644,13 @@ public final class Exporter {
     }
 
     private static float minY(Ir.Model m) {
-        float min = Float.MAX_VALUE;
-        for (Ir.Primitive p : m.primitives) {
-            for (Ir.Vertex v : p.vertices) if (v.py < min) min = v.py;
-        }
-        return min == Float.MAX_VALUE ? 0f : min;
+        return RigGround.minY(m);
+    }
+
+    /** Lifts a rig so its feet sit on the floor (y=0); see {@link RigGround#toFloor}. The snapshot grounds
+     *  via {@link #minY} + per-entity {@code oy} instead, so grounding the rig leaves it correct (minY→0). */
+    static void groundToFloor(Ir.Model m) {
+        RigGround.toFloor(m);
     }
 
     /** Appends a rigged {@code src} into {@code target}, keeping its bones, offset to a world position. */

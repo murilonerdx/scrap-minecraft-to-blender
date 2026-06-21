@@ -65,6 +65,7 @@ public final class Recorder {
                 ir.materials.get(0).png = TextureExporter.bytesFor(tex);
             } catch (Throwable ignored) {
             }
+            Exporter.groundToFloor(ir);   // feet on the floor; the root's world path is keyed relative
             active = new Session(entity, model, ir);
             feedback("§a● Gravando §f" + name(entity) + "§a... faça a ação e use §f/recorte record stop");
         } catch (Throwable t) {
