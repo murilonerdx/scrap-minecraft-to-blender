@@ -436,9 +436,10 @@ public final class GltfSelfTest {
         c.dof = false;
         c.width = 2560;
         c.height = 1440;
+        c.atmosphere = true;
         StudioConfig back = StudioConfig.fromJson(c.toJson());
         if (back.radius != 24 || back.slowmo != 4f || back.shake != 3f || back.fps != 60 || back.dof
-                || back.width != 2560 || back.height != 1440) {
+                || back.width != 2560 || back.height != 1440 || !back.atmosphere) {
             throw new IllegalStateException("FAIL: preset JSON round-trip lost data: " + back.describe());
         }
         // apply() must push slow-mo + shake to the live holders and become CURRENT

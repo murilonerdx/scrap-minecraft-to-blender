@@ -229,6 +229,9 @@ public final class InputHandler {
                                 .then(Commands.argument("name", StringArgumentType.greedyString())
                                         .executes(c -> run(() -> SceneRecorder.recordShot(
                                                 StringArgumentType.getString(c, "name"))))))
+                        .then(Commands.literal("atmosphere")
+                                .then(Commands.literal("on").executes(c -> run(() -> setAtmosphere(true))))
+                                .then(Commands.literal("off").executes(c -> run(() -> setAtmosphere(false)))))
                         .then(Commands.literal("preset")
                                 .then(Commands.literal("save")
                                         .then(Commands.argument("name", StringArgumentType.word())
@@ -257,5 +260,15 @@ public final class InputHandler {
     private static int run(Runnable task) {
         Minecraft.getInstance().execute(task);
         return 1;
+    }
+
+    private static void setAtmosphere(boolean on) {
+        StudioConfig.CURRENT.atmosphere = on;
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player != null) {
+            mc.player.displayClientMessage(net.minecraft.network.chat.Component.literal(on
+                    ? "§aAtmosfera LIGADA §7— scene/snapshot incluem domo de céu, nuvens, clima e partículas"
+                    : "§eAtmosfera DESLIGADA §7— scene/snapshot limpos (só blocos/entidades/luzes)"), true);
+        }
     }
 }

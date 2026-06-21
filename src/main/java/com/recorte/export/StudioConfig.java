@@ -20,6 +20,8 @@ public final class StudioConfig {
     public boolean dof = true;     // depth of field on the POV/placed cameras
     public int width = 1920;       // render resolution (studio scene template, #20)
     public int height = 1080;
+    public boolean atmosphere = false;   // include sky dome + clouds + weather + particles in scene/snapshot
+                                         // (off by default — keeps the basic export clean)
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
@@ -31,6 +33,7 @@ public final class StudioConfig {
         c.dof = CURRENT.dof;
         c.width = CURRENT.width;
         c.height = CURRENT.height;
+        c.atmosphere = CURRENT.atmosphere;
         c.slowmo = SlowMo.factor();
         c.shake = CameraShake.amount;
         return c;
