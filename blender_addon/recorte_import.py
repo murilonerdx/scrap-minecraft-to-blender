@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Recorte — Import from Minecraft",
     "author": "murilonerdx",
-    "version": (0, 1, 0),
+    "version": (0, 2, 0),
     "blender": (3, 0, 0),
     "location": "View3D > Sidebar (N) > Recorte",
     "description": "One-click import of the latest Recorte export from a running Minecraft instance.",
