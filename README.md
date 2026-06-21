@@ -180,9 +180,10 @@ add-on and import without touching files:
 animations onto the active Action so the **keyframes show in the Timeline**, drops **timeline markers**
 for block/sound events, keyframes the **day/night timelapse** (Sun lamp + World background), and turns
 on the compositor **render passes**. A **Show animation keys** button re-activates animations on any
-manually-imported file. **Multi-clip files** (animation library, takes) come in as a **stacked NLA**
-(one strip per clip) for non-linear blending — a **Stack clips as NLA** button re-applies it to manual
-imports. With **Studio scene** on, it also makes the scene **render-ready** — active camera,
+manually-imported file. For **multi-clip files** (animation library, takes) the first clip is activated
+(keys visible) and the rest are kept as **NLA strips** for non-linear blending — a **Stack clips as
+NLA** button pushes them all to the NLA. With **Studio scene** on, it also makes the scene
+**render-ready** — active camera,
 fps/resolution, faithful color management, sky-dome-safe clipping and EEVEE glow (a **Setup studio
 scene** button re-applies it).
 

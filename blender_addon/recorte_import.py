@@ -181,10 +181,11 @@ def _stack_nla(objs):
 
 
 def _activate_animations(objs):
-    """Make imported clips editable. A **single** clip is pulled onto the active Action so its keys show
-    in the Dope Sheet / Timeline; **multiple** clips (animation library, takes) are laid out as one NLA
-    strip per track for non-linear stacking (#14). Fits the scene frame range and sets 30 fps. Returns
-    the number of objects that ended up with animation."""
+    """Make imported keyframes visible. Always pull the **first** clip onto the active Action so its keys
+    show in the Dope Sheet / Timeline (this is what most people expect after a recording). For multi-clip
+    files (animation library, takes) the OTHER clips are left as NLA strips so the non-linear stack is
+    still there — use **Stack clips as NLA** to push the first one down too. Fits the scene frame range
+    and sets 30 fps. Returns the object count that got an active animation."""
     end = 1
     n = 0
     for obj in objs:
@@ -194,12 +195,12 @@ def _activate_animations(objs):
         actions = _collect_actions(ad)
         if not actions:
             continue
-        if len(actions) == 1:
-            for tr in list(ad.nla_tracks):
+        first = actions[0]
+        # drop only the NLA track that holds the first clip (so it isn't applied twice), keep the rest
+        for tr in list(ad.nla_tracks):
+            if any(st.action == first for st in tr.strips):
                 ad.nla_tracks.remove(tr)
-            ad.action = actions[0]
-        else:
-            _stack_as_nla(ad, actions)   # NLA stack for multi-clip files
+        ad.action = first   # active Action -> keyframes are visible in the Timeline
         n += 1
         for act in actions:
             try:
