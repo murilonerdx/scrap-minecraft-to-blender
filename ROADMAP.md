@@ -95,6 +95,8 @@ cinematics**. ✅ marks what already exists. (Versão em português abaixo / Por
 ## 💡 Lighting & environment
 - Export **sky/fog/biome color + sun angle** → recreate the in-game look in Blender (sun + world).
 - ✅ **Block light / sky light** baked into vertex colors (+ face shading) to match the game's lighting.
+- ✅ **Weather** — rain/snow exports as a **precipitation point cloud** (`Weather` object) filling the
+  scene volume, rain vs snow by biome, density by storm strength → instance + animate in Geometry Nodes.
 - Skybox, clouds, stars.
 - ✅ **Camera** + ✅ **Sun light** + ✅ **Sky color** (the add-on sets the Blender World from the live
   sky via the `/env` endpoint) → next: proper **fog**, and optional **depth-of-field** on your look target.

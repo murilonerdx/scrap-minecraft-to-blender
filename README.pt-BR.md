@@ -87,6 +87,9 @@ na Timeline** prontas pra editar.
 - 🔦 **Feixes de beacon** — o feixe de um beacon ativo é exportado como uma **cruz emissiva** alta (objeto
   `Beams`), colorida pelo vidro tingido acima dele, então raios de luz brilhantes sobem pela sua cena no
   Blender.
+- 🌧️ **Clima** — quando está chovendo/nevando, o volume da cena se enche de uma **nuvem de pontos de
+  precipitação** (objeto `Weather`): chuva (azul-acinzentada) ou neve (branca) pelo bioma, densidade pela
+  força da tempestade — instancie um risco/floco por ponto com Geometry Nodes e anime a queda.
 
 ---
 

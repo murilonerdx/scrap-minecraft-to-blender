@@ -89,6 +89,9 @@ the Timeline** ready to edit.
   **Geometry Nodes** (instance a billboard or volume on every point) for render-quality VFX.
 - 🔦 **Beacon beams** — an active beacon's beam exports as a tall **emissive cross** (`Beams` object),
   coloured by the stained glass above it, so glowing light shafts rise through your scene in Blender.
+- 🌧️ **Weather** — when it's raining/snowing, the scene volume fills with a **precipitation point cloud**
+  (`Weather` object): rain (blue-grey) or snow (white) by biome, density from the storm strength —
+  instance a streak/flake per point with Geometry Nodes and animate it falling.
 
 ---
 

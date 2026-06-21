@@ -342,6 +342,7 @@ public final class Exporter {
             ir.extraCameras.addAll(presetCameras(r));
             ir.extraCameras.addAll(CameraRig.toExportCameras(center));
             ParticleCapture.appendParticles(ir, center);   // live VFX as a point cloud
+            WeatherCapture.appendWeather(ir, center, r);    // rain/snow precipitation point cloud
             Path dir = newDir("scene_r" + r);
             writeAll(ir, dir, "scene");
             report("cena (raio " + r + ")", ir, dir);
@@ -565,6 +566,7 @@ public final class Exporter {
             }
         }
         ParticleCapture.appendParticles(ir, center);   // live VFX (fire/smoke/portal…) as a point cloud
+        WeatherCapture.appendWeather(ir, center, r);    // rain/snow as a precipitation point cloud
         if (entityCount != null && entityCount.length > 0) entityCount[0] = entities;
         return ir;
     }

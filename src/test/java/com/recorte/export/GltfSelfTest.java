@@ -26,6 +26,7 @@ public final class GltfSelfTest {
 
         assertAccessoryClears();
         assertCameraShake();
+        assertWeatherField();
 
         Ir.Model model = buildRig();
 
@@ -217,6 +218,46 @@ public final class GltfSelfTest {
             throw new IllegalStateException("FAIL: shake on produced no motion");
         }
         System.out.println("  camera-shake OK: zero when off, bounded & non-zero when on");
+    }
+
+    /** Weather field (studio #10): points stay inside the volume, scale with intensity, colour by type. */
+    private static void assertWeatherField() {
+        int radius = 16;
+        List<float[]> rain = WeatherField.points(radius, 1.0f, false, 123L);
+        if (rain.isEmpty()) {
+            throw new IllegalStateException("FAIL: full-intensity weather produced no points");
+        }
+        float topY = radius + WeatherField.HEADROOM;
+        for (float[] p : rain) {
+            if (Math.abs(p[0]) > radius + 1e-3f || Math.abs(p[2]) > radius + 1e-3f
+                    || p[1] < -radius - 1e-3f || p[1] > topY + 1e-3f) {
+                throw new IllegalStateException("FAIL: weather point outside the volume: "
+                        + p[0] + "," + p[1] + "," + p[2]);
+            }
+            for (int c = 3; c < 6; c++) {
+                if (p[c] < 0f || p[c] > 1f) {
+                    throw new IllegalStateException("FAIL: weather colour out of range: " + p[c]);
+                }
+            }
+        }
+        List<float[]> light = WeatherField.points(radius, 0.3f, false, 123L);
+        if (!(light.size() < rain.size())) {
+            throw new IllegalStateException("FAIL: weather density should scale with intensity ("
+                    + light.size() + " !< " + rain.size() + ")");
+        }
+        // snow reads whiter than rain: its blue channel sits higher on average
+        List<float[]> snow = WeatherField.points(radius, 1.0f, true, 123L);
+        if (!(avgChannel(snow, 5) > avgChannel(rain, 5))) {
+            throw new IllegalStateException("FAIL: snow should be whiter (bluer) than rain");
+        }
+        System.out.println("  weather-field OK: " + rain.size() + " in-bounds rain pts, scales w/ intensity, "
+                + "snow whiter than rain");
+    }
+
+    private static float avgChannel(List<float[]> pts, int ch) {
+        float s = 0f;
+        for (float[] p : pts) s += p[ch];
+        return s / Math.max(1, pts.size());
     }
 
     private static List<float[]> boxVerts(float x0, float y0, float z0, float x1, float y1, float z1) {
