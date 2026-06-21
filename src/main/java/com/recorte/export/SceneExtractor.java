@@ -69,7 +69,13 @@ public final class SceneExtractor {
                     // block entities (chests, signs, banners, beds, bells, shulkers…) via their renderer
                     if (state.hasBlockEntity()) {
                         net.minecraft.world.level.block.entity.BlockEntity be = level.getBlockEntity(pos);
-                        if (be != null) captureBlockEntity(out, be, pos, center);
+                        // a beacon's only rendered part is its beam — emit it as dedicated emissive geometry
+                        // (the block base is a normal model) instead of the renderer's flat textured strip
+                        if (be instanceof net.minecraft.world.level.block.entity.BeaconBlockEntity beacon) {
+                            addBeaconBeam(out, beacon, pos, center);
+                        } else if (be != null) {
+                            captureBlockEntity(out, be, pos, center);
+                        }
                     }
                     // light-emitting blocks (torches, glowstone, lava, lanterns…) → Blender point lights
                     if (state.getLightEmission() > 0 && out.lights.size() < MAX_POINT_LIGHTS) {
@@ -216,6 +222,64 @@ public final class SceneExtractor {
                 pos.getY() + 0.5f - center.getY(),
                 pos.getZ() + 0.5f - center.getZ()};
         out.lights.add(Ir.Light.point(position, new float[]{1.0f, 0.86f, 0.66f}, emission * emission * 4f));
+    }
+
+    private static final int BEAM_HEIGHT = 128;   // blocks the beacon beam rises in the export
+
+    /**
+     * Studio feature #9 — emits an active beacon's beam as a tall <b>emissive</b> cross of billboard
+     * quads (inner bright core + faint outer glow), coloured by the beam (the stained glass above it),
+     * in a {@code Beams} object. Skipped when the beacon is inactive ({@code getBeamSections()} empty).
+     */
+    private void addBeaconBeam(Ir.Model out, net.minecraft.world.level.block.entity.BeaconBlockEntity beacon,
+                               BlockPos pos, BlockPos center) {
+        java.util.List<net.minecraft.world.level.block.entity.BeaconBlockEntity.BeaconBeamSection> sections;
+        try {
+            sections = beacon.getBeamSections();
+        } catch (Throwable t) {
+            return;
+        }
+        if (sections == null || sections.isEmpty()) return;
+        float[] color = sections.get(0).getColor();
+        if (color == null || color.length < 3) return;
+
+        float cx = -(pos.getX() + 0.5f - center.getX());   // export space: X negated, centred
+        float cz = pos.getZ() + 0.5f - center.getZ();
+        float y0 = pos.getY() - center.getY();
+        float y1 = y0 + BEAM_HEIGHT;
+        String hex = String.format("%02x%02x%02x",
+                clampByte(color[0]), clampByte(color[1]), clampByte(color[2]));
+        addBeamCross(out, "Beam_" + hex + "_core", color, 0.10f, 1.0f, cx, cz, y0, y1);
+        addBeamCross(out, "Beam_" + hex + "_glow", color, 0.20f, 0.35f, cx, cz, y0, y1);
+    }
+
+    private static int clampByte(float v) {
+        return Math.max(0, Math.min(255, (int) (v * 255f)));
+    }
+
+    /** One emissive, translucent vertical cross (two perpendicular quads) for a beam, half-width {@code w}. */
+    private void addBeamCross(Ir.Model out, String matName, float[] color, float w, float alpha,
+                              float cx, float cz, float y0, float y1) {
+        int mi = out.materialIndex(matName);
+        Ir.Material m = out.materials.get(mi);
+        m.emissiveColor = new float[]{color[0], color[1], color[2]};   // textureless coloured glow
+        m.translucent = true;                                          // BLEND
+        m.alpha = alpha;
+        Ir.Primitive prim = out.primitiveForMaterial(mi);
+        prim.group = "Beams";
+        float r = color[0], g = color[1], b = color[2];
+        // quad spanning X (faces ±Z)
+        prim.addQuad(
+                new Ir.Vertex(cx - w, y0, cz, 0, 0, 1, 0, 0, 0, r, g, b, 1f),
+                new Ir.Vertex(cx + w, y0, cz, 0, 0, 1, 1, 0, 0, r, g, b, 1f),
+                new Ir.Vertex(cx + w, y1, cz, 0, 0, 1, 1, 1, 0, r, g, b, 1f),
+                new Ir.Vertex(cx - w, y1, cz, 0, 0, 1, 0, 1, 0, r, g, b, 1f));
+        // quad spanning Z (faces ±X)
+        prim.addQuad(
+                new Ir.Vertex(cx, y0, cz - w, 1, 0, 0, 0, 0, 0, r, g, b, 1f),
+                new Ir.Vertex(cx, y0, cz + w, 1, 0, 0, 1, 0, 0, r, g, b, 1f),
+                new Ir.Vertex(cx, y1, cz + w, 1, 0, 0, 1, 1, 0, r, g, b, 1f),
+                new Ir.Vertex(cx, y1, cz - w, 1, 0, 0, 0, 1, 0, r, g, b, 1f));
     }
 
     private void addBlock(Ir.Model out, Level level, BlockPos pos, BlockPos center, BlockState state,

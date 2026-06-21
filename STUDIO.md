@@ -14,7 +14,7 @@ each verified by `gradlew gltfSelfTest` before it ships. ✅ = done.
 | 6 | **Ridden-entity parenting** ✅ | in a cinematic, a rider on a boat/horse/minecart has its root bone **re-parented onto the mount** (keyed relative), so they move as one and editing the mount in Blender moves the rider. |
 | 7 | **Motion trails (onion skin)** ✅ | `/recorte ghost add` snaps a faded **ghost** of the entity at its current pose/position (move it, snap, repeat); `ghost export` writes them all in one glTF, fading oldest→newest — an animation reference. |
 | 8 | **Particle / VFX point cloud** ✅ | `scene`/`snapshot` capture every live particle (fire/smoke/portal/redstone…) as a glTF **POINTS** cloud (`Particles` object) — each point carries its colour as `COLOR_0`, ready to feed **Geometry Nodes** (instance a billboard/volume on each point) for render-quality VFX. |
-| 9 | **Beams & lasers** | beacon beams / end-gateway beams as animated geometry. |
+| 9 | **Beams & lasers** ✅ | an active **beacon's beam** is captured by `scene`/`snapshot` as a tall **emissive cross** of billboard quads (bright core + faint outer glow) in a `Beams` object, coloured by the stained glass above it — real glowing light shafts in Blender. (Next: end-gateway beams.) |
 | 10 | **Weather plane** | rain/snow as a particle plane over the scene. |
 | 11 | **Sky dome + clouds** | the in-game sky/clouds as a Blender world dome. |
 | 12 | **Sound emitters → Speakers** | sounds become positioned Blender **Speaker** objects for spatial audio in the VSE. |

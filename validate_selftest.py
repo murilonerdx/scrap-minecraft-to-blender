@@ -66,6 +66,9 @@ def validate_common(name, js, bin_len):
     check(any((mm.get("pbrMetallicRoughness", {}).get("baseColorFactor") or [1, 1, 1, 1])[3] < 1.0 for mm in mats),
           "a material has fade alpha (baseColorFactor < 1, for ghosts)")
     check(any("normalTexture" in mm for mm in mats), "a material has normalTexture")
+    # textureless coloured glow (beacon beams): an emissiveFactor that isn't plain white and has no emissiveTexture
+    check(any((mm.get("emissiveFactor") not in (None, [1, 1, 1])) and "emissiveTexture" not in mm for mm in mats),
+          "a material has a coloured emissiveFactor without a texture (beam glow)")
     check(any("metallicRoughnessTexture" in mm.get("pbrMetallicRoughness", {}) for mm in mats),
           "a material has metallicRoughnessTexture")
     check(len(js.get("images", [])) == 4, f"4 images (2 base + normal + mr) -> {len(js.get('images', []))}")

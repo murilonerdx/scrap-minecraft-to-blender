@@ -87,6 +87,8 @@ the Timeline** ready to edit.
 - ✨ **Particle / VFX point cloud** — `scene`/`snapshot` capture every live particle (fire, smoke, portal,
   redstone…) as a glTF **point cloud** (`Particles` object); each point keeps its colour, ready to drive
   **Geometry Nodes** (instance a billboard or volume on every point) for render-quality VFX.
+- 🔦 **Beacon beams** — an active beacon's beam exports as a tall **emissive cross** (`Beams` object),
+  coloured by the stained glass above it, so glowing light shafts rise through your scene in Blender.
 
 ---
 

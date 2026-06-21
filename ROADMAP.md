@@ -85,7 +85,9 @@ cinematics**. ✅ marks what already exists. (Versão em português abaixo / Por
   with per-point position + colour (`COLOR_0`) → instance a billboard/volume on each point in **Geometry
   Nodes**. Next: capture the cloud **over time** for animated trails.
 - **Capture an effect over time** → animated VFX (particle trails).
-- **Beacon beam, end gateway, dragon breath, explosions.**
+- ✅ **Beacon beam** — an active beacon's beam exports as a tall emissive cross of billboard quads
+  (bright core + outer glow), coloured by the stained glass above it, in a `Beams` object. Next:
+  **end gateway**, dragon breath, explosions.
 - ✅ **Fluid surfaces** (water/lava) — the exposed **top surface AND vertical sides** (waterfalls, pool
   edges) are emitted with the fluid's still sprite at the real fluid height, biome-tinted (water) or
   emissive (lava), face-shaded, reusing the animated-texture frames. Next: per-corner slope + flow dir.

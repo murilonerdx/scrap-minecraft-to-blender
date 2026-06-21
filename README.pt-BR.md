@@ -84,6 +84,9 @@ na Timeline** prontas pra editar.
   portal, redstone…) como uma **nuvem de pontos** glTF (objeto `Particles`); cada ponto guarda a cor,
   pronta pra alimentar **Geometry Nodes** (instanciar um billboard ou volume em cada ponto) e gerar VFX
   com qualidade de render.
+- 🔦 **Feixes de beacon** — o feixe de um beacon ativo é exportado como uma **cruz emissiva** alta (objeto
+  `Beams`), colorida pelo vidro tingido acima dele, então raios de luz brilhantes sobem pela sua cena no
+  Blender.
 
 ---
 

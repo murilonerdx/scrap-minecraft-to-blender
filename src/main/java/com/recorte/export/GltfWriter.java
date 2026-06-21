@@ -317,13 +317,20 @@ public final class GltfWriter {
                 normalTexture.addProperty("index", nrm);
                 material.add("normalTexture", normalTexture);
             }
-            if (m.emissive && tex != null) {
-                JsonObject emissiveTexture = new JsonObject();
-                emissiveTexture.addProperty("index", tex);
-                material.add("emissiveTexture", emissiveTexture);
+            boolean texEmissive = m.emissive && tex != null;
+            if (texEmissive || m.emissiveColor != null) {
                 JsonArray ef = new JsonArray();
-                ef.add(1); ef.add(1); ef.add(1);
+                if (m.emissiveColor != null) {   // textureless coloured glow (beacon beams)
+                    ef.add(m.emissiveColor[0]); ef.add(m.emissiveColor[1]); ef.add(m.emissiveColor[2]);
+                } else {                          // textured emissive (lava/glowstone) — colour from the texture
+                    ef.add(1); ef.add(1); ef.add(1);
+                }
                 material.add("emissiveFactor", ef);
+                if (texEmissive) {
+                    JsonObject emissiveTexture = new JsonObject();
+                    emissiveTexture.addProperty("index", tex);
+                    material.add("emissiveTexture", emissiveTexture);
+                }
                 JsonObject strength = new JsonObject();
                 strength.addProperty("emissiveStrength", 4.0);
                 JsonObject ext = new JsonObject();
