@@ -358,6 +358,7 @@ public final class Exporter {
             return;
         }
         int r = Math.max(1, Math.min(radius, 64));
+        StudioConfig.CURRENT.radius = r;   // remember the last radius (saved in presets, used as default)
         try {
             BlockPos center = mc.player.blockPosition();
             feedback("§7Capturando cena (raio " + r + ")... pode travar alguns segundos.");
@@ -535,6 +536,7 @@ public final class Exporter {
             return;
         }
         int r = Math.max(1, Math.min(radius, 48));
+        StudioConfig.CURRENT.radius = r;   // remember the last radius (saved in presets, used as default)
         try {
             BlockPos center = mc.player.blockPosition();
             feedback("§7Capturando snapshot (raio " + r + ")... pode travar alguns segundos.");

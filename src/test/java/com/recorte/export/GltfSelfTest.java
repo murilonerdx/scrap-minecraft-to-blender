@@ -32,6 +32,7 @@ public final class GltfSelfTest {
         assertNlaUniqueNames();
         assertRetargetMap();
         assertShots();
+        assertPresets();
 
         Ir.Model model = buildRig();
 
@@ -353,6 +354,31 @@ public final class GltfSelfTest {
             throw new IllegalStateException("FAIL: NLA names not unique: " + out);
         }
         System.out.println("  nla-names OK: collisions de-duplicated, order preserved -> " + out);
+    }
+
+    /** Studio presets (#18): a config round-trips through JSON, and apply() pushes to the global holders. */
+    private static void assertPresets() {
+        StudioConfig c = new StudioConfig();
+        c.radius = 24;
+        c.slowmo = 4f;
+        c.shake = 3f;
+        c.fps = 60;
+        c.dof = false;
+        StudioConfig back = StudioConfig.fromJson(c.toJson());
+        if (back.radius != 24 || back.slowmo != 4f || back.shake != 3f || back.fps != 60 || back.dof) {
+            throw new IllegalStateException("FAIL: preset JSON round-trip lost data: " + back.describe());
+        }
+        // apply() must push slow-mo + shake to the live holders and become CURRENT
+        SlowMo.set(1f);
+        CameraShake.amount = 0f;
+        back.apply();
+        if (SlowMo.factor() != 4f || CameraShake.amount != 3f || StudioConfig.CURRENT != back) {
+            throw new IllegalStateException("FAIL: preset apply() didn't update globals");
+        }
+        SlowMo.set(1f);                 // reset so exported GLBs aren't slowed
+        CameraShake.amount = 0f;
+        StudioConfig.CURRENT = new StudioConfig();
+        System.out.println("  presets OK: JSON round-trip + apply() pushes slow-mo/shake to globals");
     }
 
     /** Shot markers (studio #17): only "shot:" events are extracted, prefix stripped, sorted by time. */

@@ -53,6 +53,7 @@ para uma captura estática (mas saem!).
 | `/recorte take start [nome]` (· `stop` · `export` · `list` · `clear`) | 🎬 **takes**: grave o mesmo sujeito várias vezes no mesmo rig; cada take é um clip nomeado → `take export` escreve todos num glTF multi-clip (uma Action cada) pra comparar e escolher o melhor |
 | `/recorte slowmo <1-16>` | 🐢 **câmera lenta**: as próximas gravações/takes/cinematics amostram N× mais denso e esticam os tempos ×N → câmera lenta suave N× a 30 fps (1 = tempo real) |
 | `/recorte shot <nome>` | 🎬 **marcador de shot**: durante um cinematic, nomeie um corte no tempo atual → um marker nomeado limpo na timeline do Blender (`🎬 <nome>`) + um `shots.csv` |
+| `/recorte preset save` (· `load` · `list`) `<nome>` | 💾 **presets**: salve/carregue configs do estúdio (raio, slow-mo, shake, fps, DOF) como arquivos JSON nomeados — ajuste um visual uma vez, recarregue na próxima sessão |
 
 As gravações são amostradas **por frame renderizado com interpolação (~30 fps)**, então o movimento
 fica liso, não travado no tick de 20 Hz. O addon puxa o clip pra Action ativa, então as **keys aparecem

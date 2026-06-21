@@ -67,6 +67,9 @@ cinematics**. ✅ marks what already exists. (Versão em português abaixo / Por
 - ✅ **Retarget rig** — `/recorte export retarget` names the player's bones with Mixamo-compatible
   humanoid labels (Hips/Spine/Head/arms/legs) for one-click retargeting in Blender; every export also
   carries the humanoid label + original MC bone name in node `extras`.
+- ✅ **Export presets** — `/recorte preset save|load|list <name>` stores studio settings (radius,
+  slow-mo, camera shake, fps, DOF) as named JSON files under `recorte_exports/presets/`; loading one
+  re-applies the look.
 - **Resource-pack PBR (LabPBR)** — when the active pack ships them, scene materials export the `_n`
   **normal map** (glTF `normalTexture`) and the `_s` **specular** repacked into a glTF
   **metallic-roughness** texture (LabPBR smoothness→roughness, F0→metalness), so blocks get real bumpy,

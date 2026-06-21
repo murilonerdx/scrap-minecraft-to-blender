@@ -56,6 +56,7 @@ to a static capture (but they still export!).
 | `/recorte take start [name]` (· `stop` · `export` · `list` · `clear`) | 🎬 **takes**: record one subject repeatedly on a shared rig; each take is a named clip → `take export` writes them all as one multi-clip glTF (one Action each) to compare and keep the best |
 | `/recorte slowmo <1-16>` | 🐢 **slow-mo**: the next recordings/takes/cinematics sample N× denser and stretch their keyframe times ×N → smooth N× slow motion at 30 fps (1 = real time) |
 | `/recorte shot <name>` | 🎬 **shot marker**: during a cinematic, name a cut point at the current time → a clean named Blender timeline marker (`🎬 <name>`) + a `shots.csv` |
+| `/recorte preset save` (· `load` · `list`) `<name>` | 💾 **presets**: save/load studio settings (radius, slow-mo, shake, fps, DOF) as named JSON files — dial a look in once, reload it next session |
 
 Recordings are sampled on **render frames with interpolation (~30 fps)**, so motion is smooth, not
 stepped at the 20 Hz tick. The add-on pulls the clip onto the active Action so the **keyframes show in

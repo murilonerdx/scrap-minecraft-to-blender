@@ -9,8 +9,10 @@ import com.recorte.export.Exporter;
 import com.recorte.export.GhostRig;
 import com.recorte.export.HttpBridge;
 import com.recorte.export.Recorder;
+import com.recorte.export.Presets;
 import com.recorte.export.SceneRecorder;
 import com.recorte.export.SlowMo;
+import com.recorte.export.StudioConfig;
 import com.recorte.export.TakeRecorder;
 import net.minecraft.client.Minecraft;
 import net.minecraft.commands.Commands;
@@ -166,12 +168,12 @@ public final class InputHandler {
                                         .executes(c -> run(() -> Exporter.exportMod(
                                                 StringArgumentType.getString(c, "modid"))))))
                         .then(Commands.literal("scene")
-                                .executes(c -> run(() -> Exporter.exportScene(16)))
+                                .executes(c -> run(() -> Exporter.exportScene(StudioConfig.CURRENT.radius)))
                                 .then(Commands.argument("radius", IntegerArgumentType.integer(1, 64))
                                         .executes(c -> run(() -> Exporter.exportScene(
                                                 IntegerArgumentType.getInteger(c, "radius"))))))
                         .then(Commands.literal("snapshot")
-                                .executes(c -> run(() -> Exporter.exportSnapshot(16)))
+                                .executes(c -> run(() -> Exporter.exportSnapshot(StudioConfig.CURRENT.radius)))
                                 .then(Commands.argument("radius", IntegerArgumentType.integer(1, 48))
                                         .executes(c -> run(() -> Exporter.exportSnapshot(
                                                 IntegerArgumentType.getInteger(c, "radius")))))))
@@ -227,6 +229,16 @@ public final class InputHandler {
                                 .then(Commands.argument("name", StringArgumentType.greedyString())
                                         .executes(c -> run(() -> SceneRecorder.recordShot(
                                                 StringArgumentType.getString(c, "name"))))))
+                        .then(Commands.literal("preset")
+                                .then(Commands.literal("save")
+                                        .then(Commands.argument("name", StringArgumentType.word())
+                                                .executes(c -> run(() -> Presets.save(
+                                                        StringArgumentType.getString(c, "name"))))))
+                                .then(Commands.literal("load")
+                                        .then(Commands.argument("name", StringArgumentType.word())
+                                                .executes(c -> run(() -> Presets.load(
+                                                        StringArgumentType.getString(c, "name"))))))
+                                .then(Commands.literal("list").executes(c -> run(Presets::list))))
                         .then(Commands.literal("slowmo")
                                 .then(Commands.argument("factor", IntegerArgumentType.integer(1, 16))
                                         .executes(c -> run(() -> {
