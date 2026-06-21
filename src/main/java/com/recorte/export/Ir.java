@@ -150,6 +150,7 @@ public final class Ir {
         public final float[] position;       // x, y, z
         public final float[] rotation;       // quaternion x, y, z, w
         public final float yfovRadians;
+        public String name;                  // optional: a placed camera's name (else GltfWriter numbers it)
 
         public Camera(float[] position, float[] rotation, float yfovRadians) {
             this.position = position;

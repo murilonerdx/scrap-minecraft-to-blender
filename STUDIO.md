@@ -7,7 +7,7 @@ each verified by `gradlew gltfSelfTest` before it ships. ✅ = done.
 | # | Feature | What it gives you |
 |---|---------|-------------------|
 | 1 | **Point-light rig** ✅ | torches/lanterns/glowstone/sea-lanterns in a scene export as Blender **point lights**, colored by the block — the scene is lit by real lamps, not just emission. |
-| 2 | **Placeable cameras** | `/recorte cam add <name>` drops a named camera at your eye; the export carries them all as Blender cameras to switch between. |
+| 2 | **Placeable cameras** ✅ | `/recorte cam add <name>` drops a named camera at your eye (`cam clear` / `cam list` too); every scene/snapshot/region/cinematic export carries them as named Blender cameras to switch between. |
 | 3 | **Depth of field** | cameras carry a focus distance (to your look target) + aperture → real DOF in Blender. |
 | 4 | **Camera path from waypoints** | record a smooth bezier flythrough between placed camera points. |
 | 5 | **Camera shake / handheld** | optional procedural shake on the POV camera for a handheld feel. |

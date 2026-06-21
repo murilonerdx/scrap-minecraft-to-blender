@@ -3,6 +3,7 @@ package com.recorte.client;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.recorte.Recorte;
+import com.recorte.export.CameraRig;
 import com.recorte.export.Exporter;
 import com.recorte.export.HttpBridge;
 import com.recorte.export.Recorder;
@@ -177,7 +178,14 @@ public final class InputHandler {
                                                         .executes(c -> run(() -> SceneRecorder.start(
                                                                 IntegerArgumentType.getInteger(c, "radius"))))))
                                         .then(Commands.literal("stop").executes(c -> run(SceneRecorder::stop)))))
-                        .then(Commands.literal("live").executes(c -> run(Exporter::toggleLive))));
+                        .then(Commands.literal("live").executes(c -> run(Exporter::toggleLive)))
+                        .then(Commands.literal("cam")
+                                .then(Commands.literal("add")
+                                        .then(Commands.argument("name", StringArgumentType.word())
+                                                .executes(c -> run(() -> CameraRig.add(
+                                                        StringArgumentType.getString(c, "name"))))))
+                                .then(Commands.literal("clear").executes(c -> run(CameraRig::clear)))
+                                .then(Commands.literal("list").executes(c -> run(CameraRig::list)))));
     }
 
     private static int run(Runnable task) {

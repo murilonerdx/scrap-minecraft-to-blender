@@ -340,6 +340,7 @@ public final class Exporter {
             ir.camera = playerCamera(center);
             ir.sun = worldSun();
             ir.extraCameras.addAll(presetCameras(r));
+            ir.extraCameras.addAll(CameraRig.toExportCameras(center));
             Path dir = newDir("scene_r" + r);
             writeAll(ir, dir, "scene");
             report("cena (raio " + r + ")", ir, dir);
@@ -368,6 +369,7 @@ public final class Exporter {
             ir.camera = playerCamera(center);
             ir.sun = worldSun();
             ir.extraCameras.addAll(presetCameras((int) (Math.max(sx, Math.max(sy, sz)) / 2)));
+            ir.extraCameras.addAll(CameraRig.toExportCameras(center));
             Path dir = newDir("region");
             writeAll(ir, dir, "region");
             report("região " + sx + "×" + sy + "×" + sz, ir, dir);
@@ -406,6 +408,7 @@ public final class Exporter {
         ir.camera = playerCamera(center);
         ir.sun = worldSun();
         ir.extraCameras.addAll(presetCameras(r));
+        ir.extraCameras.addAll(CameraRig.toExportCameras(center));
         int entities = 0;
         AABB box = new AABB(center).inflate(r);
         // ALL entities — living ones get a rig; everything else (item frames, paintings, boats,

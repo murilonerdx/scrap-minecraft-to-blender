@@ -48,6 +48,7 @@ to a static capture (but they still export!).
 | `R` (key) or `/recorte record start` … `stop` | record **one mob/player**: limbs **and** world path → a keyframed glTF animation |
 | `/recorte record scene start [radius]` … `stop` | 🎬 **cinematic**: the whole moment — scene + every nearby entity animating (mobs rigged; boats/minecarts/items by world path) + **animated POV camera** + sun + sky |
 | `/recorte live` | real-time link: the mod auto-exports ~1×/s and the Blender add-on re-imports as you play |
+| `/recorte cam add <name>` (· `clear` · `list`) | 🎥 drop a **named camera** at your eye; every scene/snapshot/cinematic carries your placed cameras into Blender |
 
 Recordings are sampled on **render frames with interpolation (~30 fps)**, so motion is smooth, not
 stepped at the 20 Hz tick. The add-on pulls the clip onto the active Action so the **keyframes show in

@@ -136,7 +136,8 @@ public final class GltfWriter {
         for (int ci = 0; ci < model.extraCameras.size(); ci++) {
             Ir.Camera ec = model.extraCameras.get(ci);
             cameras.add(perspectiveCamera(ec.yfovRadians));
-            nodes.add(cameraNodeObj("Camera_" + (ci + 1), cameras.size() - 1, ec.position, ec.rotation));
+            String camName = ec.name != null ? ec.name : "Camera_" + (ci + 1);
+            nodes.add(cameraNodeObj(camName, cameras.size() - 1, ec.position, ec.rotation));
             extraCameraNodes.add(nodes.size() - 1);
         }
         if (cameras.size() > 0) root.add("cameras", cameras);

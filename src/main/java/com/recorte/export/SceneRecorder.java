@@ -84,6 +84,7 @@ public final class SceneRecorder {
             out.camera = new Ir.Camera(new float[]{0, 0, 0}, new float[]{0, 0, 0, 1},
                     (float) Math.toRadians(mc.options.fov().get()));
             out.extraCameras.addAll(Exporter.presetCameras(r));   // static cinematic angles too
+            out.extraCameras.addAll(CameraRig.toExportCameras(center));   // your placed cameras
 
             List<Tracked> tracked = new ArrayList<>();
             AABB box = new AABB(center).inflate(r);
