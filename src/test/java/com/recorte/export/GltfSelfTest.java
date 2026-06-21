@@ -94,6 +94,7 @@ public final class GltfSelfTest {
         m.materials.get(mat0).png = png;
         m.materials.get(mat0).textureFile = "tex_0.png";
         m.materials.get(mat0).translucent = true;   // exercises alphaMode BLEND
+        m.materials.get(mat0).alpha = 0.5f;          // exercises ghost fade (baseColorFactor alpha)
         int mat1 = m.materialIndex("tex_1");
         Ir.Material pbr = m.materials.get(mat1);
         pbr.png = png;

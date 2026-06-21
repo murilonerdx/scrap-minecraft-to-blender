@@ -63,6 +63,8 @@ def validate_common(name, js, bin_len):
     modes = [mm.get("alphaMode") for mm in mats]
     check("BLEND" in modes, f"a material is alphaMode BLEND (translucent) -> {modes}")
     check("MASK" in modes, f"a material is alphaMode MASK (cutout) -> {modes}")
+    check(any((mm.get("pbrMetallicRoughness", {}).get("baseColorFactor") or [1, 1, 1, 1])[3] < 1.0 for mm in mats),
+          "a material has fade alpha (baseColorFactor < 1, for ghosts)")
     check(any("normalTexture" in mm for mm in mats), "a material has normalTexture")
     check(any("metallicRoughnessTexture" in mm.get("pbrMetallicRoughness", {}) for mm in mats),
           "a material has metallicRoughnessTexture")

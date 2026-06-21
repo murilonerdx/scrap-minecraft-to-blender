@@ -450,6 +450,56 @@ public final class Exporter {
         }
     }
 
+    /** Exports accumulated onion-skin ghosts in one glTF, fading oldest → newest. */
+    public static void exportGhosts(java.util.List<GhostRig.Ghost> ghosts) {
+        try {
+            GhostRig.Ghost g0 = ghosts.get(0);
+            BlockPos center = new BlockPos((int) Math.floor(g0.x), (int) Math.floor(g0.y), (int) Math.floor(g0.z));
+            Ir.Model out = new Ir.Model();
+            Ir.Bone root = new Ir.Bone("ghosts", -1, new org.joml.Matrix4f());
+            root.localTransform = new org.joml.Matrix4f();
+            out.addBone(root);
+            int n = ghosts.size();
+            for (int i = 0; i < n; i++) {
+                GhostRig.Ghost g = ghosts.get(i);
+                float alpha = 0.25f + 0.75f * (i / (float) (n - 1));   // oldest faint → newest solid
+                mergeGhost(out, g.model,
+                        -((float) g.x - center.getX()), (float) (g.y - center.getY()), (float) g.z - center.getZ(),
+                        "ghost_" + i, "g" + i + "_", alpha);
+            }
+            Path dir = newDir("ghosts");
+            writeAll(out, dir, "ghosts");
+            report("onion-skin (" + n + " fantasmas)", out, dir);
+        } catch (Throwable t) {
+            fail(t);
+        }
+    }
+
+    private static void mergeGhost(Ir.Model target, Ir.Model src, float ox, float oy, float oz,
+                                   String group, String texPrefix, float alpha) {
+        java.util.Map<Integer, Integer> matMap = new java.util.HashMap<>();
+        for (int i = 0; i < src.materials.size(); i++) {
+            Ir.Material sm = src.materials.get(i);
+            Ir.Material tm = new Ir.Material(group + "_" + sm.name);
+            tm.png = sm.png;
+            tm.textureFile = sm.textureFile != null ? texPrefix + sm.textureFile : null;
+            tm.emissive = sm.emissive;
+            tm.alpha = alpha;
+            target.materials.add(tm);
+            matMap.put(i, target.materials.size() - 1);
+        }
+        for (Ir.Primitive sp : src.primitives) {
+            Ir.Primitive tp = target.primitiveForMaterial(matMap.get(sp.materialIndex));
+            tp.group = group;
+            int base = tp.vertices.size();
+            for (Ir.Vertex v : sp.vertices) {
+                tp.vertices.add(new Ir.Vertex(v.px + ox, v.py + oy, v.pz + oz,
+                        v.nx, v.ny, v.nz, v.u, v.v, 0, v.r, v.g, v.b, v.a));
+            }
+            for (int idx : sp.indices) tp.indices.add(base + idx);
+        }
+    }
+
     public static void exportSnapshot(int radius) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null) {

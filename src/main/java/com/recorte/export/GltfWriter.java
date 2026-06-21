@@ -297,6 +297,9 @@ public final class GltfWriter {
                 baseColorTexture.addProperty("index", tex);
                 pbr.add("baseColorTexture", baseColorTexture);
             }
+            if (m.alpha < 1f) {   // onion-skin ghost: fade via base-colour alpha
+                pbr.add("baseColorFactor", vec4(1f, 1f, 1f, m.alpha));
+            }
             Integer mr = materialToMR.get(mi);
             if (mr != null) {
                 JsonObject mrTexture = new JsonObject();
@@ -328,8 +331,8 @@ public final class GltfWriter {
                 material.add("extensions", ext);
                 anyEmissive = true;
             }
-            if (m.translucent) {
-                material.addProperty("alphaMode", "BLEND");   // real see-through (glass, water, ice)
+            if (m.translucent || m.alpha < 1f) {
+                material.addProperty("alphaMode", "BLEND");   // real see-through (glass, water, ice, ghosts)
             } else {
                 material.addProperty("alphaMode", "MASK");    // pixel-art cutout (leaves, grass, …)
                 material.addProperty("alphaCutoff", 0.5);

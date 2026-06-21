@@ -12,7 +12,7 @@ each verified by `gradlew gltfSelfTest` before it ships. ✅ = done.
 | 4 | **Camera path from waypoints** ✅ | `/recorte cam path <seconds>` builds a smooth **flythrough** (Catmull-Rom position + slerped rotation) sweeping the POV camera through your placed cameras, exported as an animated camera over the scene. |
 | 5 | **Camera shake / handheld** ✅ | `/recorte cam shake <0-10>` layers a bounded procedural shake (position + rotation) onto the cinematic POV and camera-path animation for a hand-held feel. |
 | 6 | **Ridden-entity parenting** ✅ | in a cinematic, a rider on a boat/horse/minecart has its root bone **re-parented onto the mount** (keyed relative), so they move as one and editing the mount in Blender moves the rider. |
-| 7 | **Motion trails (onion skin)** | N ghost copies of a moving entity along its path, for animation reference. |
+| 7 | **Motion trails (onion skin)** ✅ | `/recorte ghost add` snaps a faded **ghost** of the entity at its current pose/position (move it, snap, repeat); `ghost export` writes them all in one glTF, fading oldest→newest — an animation reference. |
 | 8 | **Particle / VFX point cloud** | capture active particles (fire/smoke/portal) as an animated point cloud → Geometry Nodes. |
 | 9 | **Beams & lasers** | beacon beams / end-gateway beams as animated geometry. |
 | 10 | **Weather plane** | rain/snow as a particle plane over the scene. |

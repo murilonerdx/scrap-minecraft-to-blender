@@ -6,6 +6,7 @@ import com.recorte.Recorte;
 import com.recorte.export.CameraRig;
 import com.recorte.export.CameraShake;
 import com.recorte.export.Exporter;
+import com.recorte.export.GhostRig;
 import com.recorte.export.HttpBridge;
 import com.recorte.export.Recorder;
 import com.recorte.export.SceneRecorder;
@@ -202,7 +203,11 @@ public final class InputHandler {
                                                                 CameraShake.amount > 0 ? "§aCamera shake: §f" + (int) CameraShake.amount
                                                                         : "§eCamera shake OFF"), true);
                                                     }
-                                                }))))));
+                                                })))))
+                        .then(Commands.literal("ghost")
+                                .then(Commands.literal("add").executes(c -> run(GhostRig::add)))
+                                .then(Commands.literal("clear").executes(c -> run(GhostRig::clear)))
+                                .then(Commands.literal("export").executes(c -> run(GhostRig::export)))));
     }
 
     private static int run(Runnable task) {

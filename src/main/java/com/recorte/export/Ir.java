@@ -198,6 +198,7 @@ public final class Ir {
         public byte[] png;                     // encoded PNG bytes, for embedding in the GLB
         public boolean emissive;               // glows (lava, glowstone, …): emissive in glTF
         public boolean translucent;            // glass/water/ice…: real alpha BLEND instead of MASK cutout
+        public float alpha = 1f;               // <1 = semi-transparent (onion-skin ghosts) → BLEND + baseColor alpha
         public String normalFile;              // optional LabPBR normal map filename
         public byte[] normalPng;               // optional normal map PNG bytes → glTF normalTexture
         public String mrFile;                  // optional metallic-roughness filename

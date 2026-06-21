@@ -48,6 +48,7 @@ para uma captura estática (mas saem!).
 | `/recorte cam add <nome>` (· `clear` · `list`) | 🎥 larga uma **câmera nomeada** no seu olho; toda cena/snapshot/cinematic leva as câmeras posicionadas pro Blender |
 | `/recorte cam path <segundos>` | 🎬 um **flythrough** suave passando a câmera pelas câmeras posicionadas — câmera animada sobre a cena |
 | `/recorte cam shake <0-10>` | 🤳 adiciona **tremida de câmera** na mão à animação de câmera gravada/flythrough (0 = desliga) |
+| `/recorte ghost add` (· `clear` · `export`) | 👻 **onion-skin**: tira fantasmas esmaecidos de uma entidade (mexe, tira, repete) e exporta todos esmaecendo do mais antigo ao mais novo |
 
 As gravações são amostradas **por frame renderizado com interpolação (~30 fps)**, então o movimento
 fica liso, não travado no tick de 20 Hz. O addon puxa o clip pra Action ativa, então as **keys aparecem
