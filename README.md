@@ -52,6 +52,7 @@ to a static capture (but they still export!).
 | `/recorte cam path <seconds>` | 🎬 a smooth **flythrough** sweeping the camera through your placed cameras — an animated camera over the scene |
 | `/recorte cam shake <0-10>` | 🤳 layer a hand-held **camera shake** onto recorded/flythrough camera animation (0 = off) |
 | `/recorte ghost add` (· `clear` · `export`) | 👻 **onion-skin**: snap faded ghosts of an entity (move, snap, repeat), then export them all fading oldest→newest |
+| `/recorte take start [name]` (· `stop` · `export` · `list` · `clear`) | 🎬 **takes**: record one subject repeatedly on a shared rig; each take is a named clip → `take export` writes them all as one multi-clip glTF (one Action each) to compare and keep the best |
 
 Recordings are sampled on **render frames with interpolation (~30 fps)**, so motion is smooth, not
 stepped at the 20 Hz tick. The add-on pulls the clip onto the active Action so the **keyframes show in

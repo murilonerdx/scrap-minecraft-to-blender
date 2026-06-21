@@ -10,6 +10,7 @@ import com.recorte.export.GhostRig;
 import com.recorte.export.HttpBridge;
 import com.recorte.export.Recorder;
 import com.recorte.export.SceneRecorder;
+import com.recorte.export.TakeRecorder;
 import net.minecraft.client.Minecraft;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
@@ -63,6 +64,7 @@ public final class InputHandler {
         float partial = mc.getFrameTime();
         Recorder.renderTick(partial);
         SceneRecorder.renderTick(partial);
+        TakeRecorder.renderTick(partial);
     }
 
     @SubscribeEvent
@@ -207,7 +209,17 @@ public final class InputHandler {
                         .then(Commands.literal("ghost")
                                 .then(Commands.literal("add").executes(c -> run(GhostRig::add)))
                                 .then(Commands.literal("clear").executes(c -> run(GhostRig::clear)))
-                                .then(Commands.literal("export").executes(c -> run(GhostRig::export)))));
+                                .then(Commands.literal("export").executes(c -> run(GhostRig::export))))
+                        .then(Commands.literal("take")
+                                .then(Commands.literal("start")
+                                        .executes(c -> run(() -> TakeRecorder.start(null)))
+                                        .then(Commands.argument("name", StringArgumentType.word())
+                                                .executes(c -> run(() -> TakeRecorder.start(
+                                                        StringArgumentType.getString(c, "name"))))))
+                                .then(Commands.literal("stop").executes(c -> run(TakeRecorder::stop)))
+                                .then(Commands.literal("export").executes(c -> run(TakeRecorder::export)))
+                                .then(Commands.literal("clear").executes(c -> run(TakeRecorder::clear)))
+                                .then(Commands.literal("list").executes(c -> run(TakeRecorder::list)))));
     }
 
     private static int run(Runnable task) {

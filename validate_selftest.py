@@ -138,5 +138,16 @@ if pprims:
     check(idx_count == pos_count == 16, f"16 points (idx {idx_count} == pos {pos_count})")
 check(any(mm.get("name") == "Particles" for mm in js.get("materials", [])), "a 'Particles' material present")
 
+# --- takes.glb: several recordings of one rig as named clips (studio #13) ---------------------------
+js, bl = parse_glb(os.path.join(root, "takes.glb"))
+validate_common("takes.glb", js, bl)
+tanims = js.get("animations", [])
+check(len(tanims) == 2, f"takes has 2 clips ({len(tanims)})")
+tnames = [a.get("name") for a in tanims]
+for n in ("take_1", "take_2"):
+    check(n in tnames, f"takes has '{n}' clip")
+for a in tanims:
+    check(len(a["channels"]) > 0 and len(a["samplers"]) > 0, f"take '{a.get('name')}' has channels+samplers")
+
 print("\n" + ("ALL SELF-TEST CHECKS PASSED" if not fails else f"{len(fails)} CHECK(S) FAILED"))
 sys.exit(1 if fails else 0)

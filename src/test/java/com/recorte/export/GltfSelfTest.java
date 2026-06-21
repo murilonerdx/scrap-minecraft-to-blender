@@ -51,7 +51,13 @@ public final class GltfSelfTest {
         // 4) particle / VFX point cloud (studio #8) — a POINTS-mode primitive with per-point colour
         GltfWriter.write(buildPointCloud(), outDir.resolve("points.glb"));
 
-        System.out.println("SELFTEST OK -> single.glb, library.glb, static.glb, points.glb in "
+        // 5) takes (studio #13) — several recordings of one rig as named clips (multi-clip on the rig)
+        List<Ir.Animation> takes = new ArrayList<>();
+        takes.add(walkClip("take_1", 0.2f));
+        takes.add(walkClip("take_2", 0.6f));
+        GltfWriter.writeLibrary(model, takes, outDir.resolve("takes.glb"));
+
+        System.out.println("SELFTEST OK -> single.glb, library.glb, static.glb, points.glb, takes.glb in "
                 + outDir.toAbsolutePath());
     }
 

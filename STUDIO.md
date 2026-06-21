@@ -18,7 +18,7 @@ each verified by `gradlew gltfSelfTest` before it ships. ✅ = done.
 | 10 | **Weather plane** ✅ | when it's raining/snowing, `scene`/`snapshot` fill the scene volume with a **precipitation point cloud** (`Weather` object) — rain (blue-grey) or snow (white, by biome), density from the rain strength; instance a streak/flake per point in Geometry Nodes and animate it falling. |
 | 11 | **Sky dome + clouds** ✅ | `scene`/`snapshot` enclose the scene in a vertex-coloured **sky dome** (gradient from the live sky colour at the zenith to a hazy horizon, normals inward) plus a procedural **`Clouds`** layer (soft self-lit, at the dimension's cloud height) — a visible, renderable sky, not just a World background. |
 | 12 | **Sound emitters → Speakers** ✅ | every sound played during a **cinematic** recording is exported as a positioned `Speaker_<sound>` node (deduped per spot, earliest time, with sound id/time/gain in extras); the add-on turns each into a Blender **Speaker** object for spatial audio in the VSE. |
-| 13 | **Takes** | record several takes; each becomes its own clip to compare/keep. |
+| 13 | **Takes** ✅ | `/recorte take start [name]` … `stop` records the same subject repeatedly on one shared rig; each take is a named clip. `take export` writes them all as one multi-clip glTF (one Blender Action per take, sharing the rig origin) to compare and keep the best. |
 | 14 | **NLA stacking** | stack the animation library + recorded clips as NLA strips for non-linear editing. |
 | 15 | **Time remap / slow-mo** | record at high sample rate + export a time curve for slow motion. |
 | 16 | **Retarget rig** | consistent humanoid bone names (root/hips/spine/arms/legs) for Mixamo-style retargeting. |

@@ -3,15 +3,11 @@ package com.recorte.export;
 import com.recorte.Recorte;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.EntityModel;
-import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.LivingEntity;
-import org.joml.Matrix4f;
-import org.joml.Quaternionf;
-import org.joml.Vector3f;
 
 /**
  * Records a live animation of an entity: starts on demand, samples each bone's pose every client tick
@@ -119,73 +115,22 @@ public final class Recorder {
 
     /** One in-progress recording. */
     private static final class Session {
-        static final float SAMPLE_DT = 1f / 30f;   // throttle render-frame sampling to ~30 fps
-
         final LivingEntity entity;
         final EntityModel<?> model;
         final Ir.Model ir;
         final Ir.Animation anim = new Ir.Animation();
-        final double startX, startY, startZ;
-        final float startYaw;
-        double startSeconds = -1;
-        float lastT = -1f;
+        final PoseSampler.State state;
         int frames;
 
         Session(LivingEntity entity, EntityModel<?> model, Ir.Model ir) {
             this.entity = entity;
             this.model = model;
             this.ir = ir;
-            this.startX = entity.getX();
-            this.startY = entity.getY();
-            this.startZ = entity.getZ();
-            this.startYaw = entity.yBodyRot;
+            this.state = new PoseSampler.State(entity);
         }
 
-        @SuppressWarnings({"rawtypes", "unchecked"})
         void sample(float partial) {
-            Minecraft mc = Minecraft.getInstance();
-            if (mc.level == null) return;
-
-            // real elapsed time + throttle, so playback speed is correct and files stay sane
-            double nowSec = (mc.level.getGameTime() + partial) * 0.05;
-            if (startSeconds < 0) startSeconds = nowSec;
-            float t = (float) (nowSec - startSeconds);
-            if (lastT >= 0f && t - lastT < SAMPLE_DT) return;
-            lastT = t;
-
-            float limbAmount = Math.min(entity.walkAnimation.speed(partial), 1.0f);
-            float limbSwing = entity.walkAnimation.position(partial);
-            float ageInTicks = entity.tickCount + partial;
-            float headPitch = entity.getViewXRot(partial);
-
-            EntityModel raw = model;
-            raw.prepareMobModel(entity, limbSwing, limbAmount, partial);
-            raw.setupAnim(entity, limbSwing, limbAmount, ageInTicks, 0f, headPitch);
-
-            anim.times.add(t);
-
-            // root bone (0): world movement + body yaw (interpolated), so the mob travels its path
-            double cx = net.minecraft.util.Mth.lerp(partial, entity.xOld, entity.getX());
-            double cy = net.minecraft.util.Mth.lerp(partial, entity.yOld, entity.getY());
-            double cz = net.minecraft.util.Mth.lerp(partial, entity.zOld, entity.getZ());
-            double dx = cx - startX, dy = cy - startY, dz = cz - startZ;
-            float bodyYaw = net.minecraft.util.Mth.rotLerp(partial, entity.yBodyRotO, entity.yBodyRot);
-            float dyaw = (float) Math.toRadians(bodyYaw - startYaw);
-            Matrix4f rootM = new Matrix4f()
-                    .translate((float) -dx, (float) dy, (float) dz)   // negate X to match export space
-                    .rotateY(-dyaw)
-                    .mul(Convert.matrix());
-            Vector3f rt = rootM.getTranslation(new Vector3f());
-            Quaternionf rq = rootM.getNormalizedRotation(new Quaternionf());
-            anim.key(0, new float[]{rt.x, rt.y, rt.z}, new float[]{rq.x, rq.y, rq.z, rq.w});
-
-            // limb bones: each ModelPart's local pose
-            for (int i = 1; i < ir.bones.size(); i++) {
-                if (!(ir.bones.get(i).sourcePart instanceof ModelPart p)) continue;
-                Quaternionf q = new Quaternionf().rotationZYX(p.zRot, p.yRot, p.xRot);
-                anim.key(i, new float[]{p.x, p.y, p.z}, new float[]{q.x, q.y, q.z, q.w});
-            }
-            frames++;
+            if (PoseSampler.sample(entity, model, ir, anim, state, partial)) frames++;
         }
     }
 }

@@ -53,6 +53,9 @@ cinematics**. ✅ marks what already exists. (Versão em português abaixo / Por
   reusable, looping **glTF animations on one rig** (driven through the model's own `setupAnim`), so you
   get ready-made Actions to reuse on the player in Blender. The glTF writer now supports many named
   clips in a single file.
+- ✅ **Takes** — `/recorte take start [name]` … `stop` records the same subject repeatedly on one shared
+  rig (sampled by the common `PoseSampler`); `take export` writes every take as one multi-clip glTF (one
+  Action each, sharing the rig origin) so you can compare and keep the best.
 - **Resource-pack PBR (LabPBR)** — when the active pack ships them, scene materials export the `_n`
   **normal map** (glTF `normalTexture`) and the `_s` **specular** repacked into a glTF
   **metallic-roughness** texture (LabPBR smoothness→roughness, F0→metalness), so blocks get real bumpy,

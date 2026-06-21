@@ -679,6 +679,26 @@ public final class Exporter {
         }
     }
 
+    /** Studio #13 — writes several recorded takes of one rig as a multi-clip glTF (one Action per take),
+     *  so you can compare/keep the best in Blender. */
+    public static void exportTakes(Ir.Model model, java.util.List<Ir.Animation> takes, String label) {
+        try {
+            Path dir = newDir("takes_" + label);
+            Files.createDirectories(dir);
+            for (Ir.Material m : model.materials) {
+                if (m.png != null && m.textureFile != null) Files.write(dir.resolve(m.textureFile), m.png);
+            }
+            Path glb = dir.resolve("takes.glb");
+            GltfWriter.writeLibrary(model, takes, glb);
+            ObjWriter.write(model, dir.resolve("takes.obj"), dir.resolve("takes.mtl"));
+            HttpBridge.setLastGlb(glb);
+            Recorte.LOGGER.info("Takes of {} ({} clips) to {}", label, takes.size(), dir);
+            feedback(String.format("§a■ %d takes de §f%s§a exportados §7→ §f%s", takes.size(), label, dir));
+        } catch (Throwable t) {
+            fail(t);
+        }
+    }
+
     public static void exportSceneRecording(Ir.Model model, Ir.Animation anim, int frames, int mobs) {
         try {
             Path dir = newDir("cinematic");
