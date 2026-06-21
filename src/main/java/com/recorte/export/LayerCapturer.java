@@ -51,12 +51,6 @@ public final class LayerCapturer {
         }
 
         model.setAllVisible(true);
-        // Snapshot the BODY geometry (already in the model) before adding accessories — it's the
-        // reference we push accessories clear of.
-        List<float[]> bodyVerts = new java.util.ArrayList<>();
-        for (Ir.Primitive p : out.primitives) {
-            for (Ir.Vertex v : p.vertices) bodyVerts.add(new float[]{v.px, v.py, v.pz});
-        }
         // Cape/elytra go into their own object so you can rig/animate the cloth separately in Blender;
         // everything else (armour, held items, Curios) stays grouped as accessories.
         CapturingBuffer accessories = new CapturingBuffer();
@@ -74,8 +68,36 @@ public final class LayerCapturer {
                         layer.getClass().getSimpleName(), t);
             }
         }
-        appendCaptured(accessories, out, Convert.matrixCaptured(), BODY_BONE, "Accessories", bodyVerts);
-        appendCaptured(cape, out, Convert.matrixCaptured(), BODY_BONE, "Cape", bodyVerts);
+        appendCaptured(accessories, out, Convert.matrixCaptured(), BODY_BONE, "Accessories");
+        appendCaptured(cape, out, Convert.matrixCaptured(), BODY_BONE, "Cape");
+    }
+
+    /**
+     * Replays a living entity's render layers (fur, wool, eyes, saddles, armour, held items) on top of an
+     * already-rigged body, so a snapshot mob isn't "bald" — the rig walk only sees the base model parts,
+     * not the extra {@link RenderLayer}s. The captured layers attach to the root bone (static overlay).
+     */
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    public static void captureEntityLayers(LivingEntityRenderer<?, ?> renderer,
+                                           net.minecraft.world.entity.LivingEntity entity, Ir.Model out) {
+        List<?> layers;
+        try {
+            Field layersField = ReflectUtil.fieldOfType(LivingEntityRenderer.class, List.class);
+            layers = (List<?>) ReflectUtil.get(layersField, renderer);
+        } catch (Throwable t) {
+            return;
+        }
+        CapturingBuffer buffer = new CapturingBuffer();
+        PoseStack pose = new PoseStack();
+        float age = entity.tickCount;
+        for (Object layerObj : layers) {
+            try {
+                ((RenderLayer) layerObj).render(pose, buffer, FULL_BRIGHT, entity, 0f, 0f, 1f, age, 0f, 0f);
+            } catch (Throwable t) {
+                Recorte.LOGGER.warn("Mob layer {} failed (skipped)", layerObj.getClass().getSimpleName(), t);
+            }
+        }
+        appendCaptured(buffer, out, Convert.matrixCaptured(), 0, "Overlay");
     }
 
     /** Whole-entity capture (mobs). Renders the entity renderer into the buffer; static (no bones). */
@@ -95,21 +117,15 @@ public final class LayerCapturer {
         } catch (Throwable t) {
             Recorte.LOGGER.warn("Entity render capture failed for {}", entity.getType(), t);
         }
-        appendCaptured(buffer, out, new Matrix4f(), 0, "Entity", null);   // standalone mob: no push
+        appendCaptured(buffer, out, new Matrix4f(), 0, "Entity");   // standalone mob: full renderer = all layers
         return out;
     }
 
     /**
-     * Converts the recorded quads into IR primitives, one material per distinct texture. When
-     * {@code bodyVerts} is non-null, each captured object (grouped by render type ≈ one accessory) is
-     * moved as a whole, horizontally, just PAST the body's surface at its own height — so worn 3D
-     * accessories (orbs, packs, belts) sit OUTSIDE the body instead of intersecting it. Pushing
-     * per-vertex along normals only inflates a centred accessory; moving the whole group past the
-     * measured body surface actually clears it. Pass {@code null} for standalone meshes (mobs, block
-     * entities).
+     * Converts the recorded quads into IR primitives, one material per distinct texture, at exactly the
+     * positions the render path produced (so worn items/armour/Curios land where the game draws them).
      */
-    static void appendCaptured(CapturingBuffer buffer, Ir.Model out, Matrix4f m, int boneIndex,
-                               String group, List<float[]> bodyVerts) {
+    static void appendCaptured(CapturingBuffer buffer, Ir.Model out, Matrix4f m, int boneIndex, String group) {
         Map<Integer, Integer> texIdToMaterial = new HashMap<>();
         int textureCounter = out.materials.size();
         java.util.Set<String> seenQuads = new java.util.HashSet<>();   // drop duplicate passes (enchant glint, etc.)
@@ -139,19 +155,9 @@ public final class LayerCapturer {
             Ir.Primitive prim = out.primitiveForMaterial(materialIndex);
             prim.group = group;
 
-            // Push the whole accessory just past the body surface at its height (measured, guaranteed).
-            float pushX = 0f, pushZ = 0f;
-            if (bodyVerts != null) {
-                List<float[]> pos = new java.util.ArrayList<>(verts.size());
-                for (float[] a : verts) {
-                    Vector3f p = m.transformPosition(new Vector3f(a[0], a[1], a[2]));
-                    pos.add(new float[]{p.x, p.y, p.z});
-                }
-                float[] push = AccessoryPush.compute(pos, bodyVerts);
-                pushX = push[0];
-                pushZ = push[1];
-            }
-
+            // Use the captured position as-is: the render path already places accessories exactly where
+            // the game draws them on the body. (We used to shove them horizontally "clear" of the body,
+            // which only made worn items float off to the side — trust the real render instead.)
             for (int i = 0; i + 3 < verts.size(); i += 4) {
                 StringBuilder key = new StringBuilder();
                 for (int k = 0; k < 4; k++) {
@@ -167,8 +173,7 @@ public final class LayerCapturer {
                     Vector3f p = m.transformPosition(new Vector3f(a[0], a[1], a[2]));
                     Vector3f n = m.transformDirection(new Vector3f(a[5], a[6], a[7]));
                     if (n.lengthSquared() > 1.0e-8f) n.normalize();
-                    quad[k] = new Ir.Vertex(p.x + pushX, p.y, p.z + pushZ,
-                            n.x, n.y, n.z, a[3], a[4], boneIndex);
+                    quad[k] = new Ir.Vertex(p.x, p.y, p.z, n.x, n.y, n.z, a[3], a[4], boneIndex);
                 }
                 prim.addQuad(quad[0], quad[1], quad[2], quad[3]);
             }

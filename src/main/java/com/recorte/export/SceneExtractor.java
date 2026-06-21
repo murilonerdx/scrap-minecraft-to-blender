@@ -115,7 +115,7 @@ public final class SceneExtractor {
         int dy = pos.getY() - center.getY();
         int dz = pos.getZ() - center.getZ();
         Matrix4f m = new Matrix4f().translate(-dx, dy, dz).scale(-1f, 1f, 1f);
-        LayerCapturer.appendCaptured(buffer, out, m, 0, "BlockEntities", (java.util.List<float[]>) null);
+        LayerCapturer.appendCaptured(buffer, out, m, 0, "BlockEntities");
     }
 
     /**

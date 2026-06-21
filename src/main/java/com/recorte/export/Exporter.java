@@ -684,6 +684,9 @@ public final class Exporter {
             if (r.triangleCount() <= 0) return null;
             ResourceLocation tex = ((EntityRenderer) renderer).getTextureLocation(e);
             r.materials.get(0).png = TextureExporter.bytesFor(tex);
+            // the rig walk only sees the base model parts — add the render layers (fur, wool, eyes,
+            // saddles, armour) so the mob isn't "bald" in the snapshot
+            LayerCapturer.captureEntityLayers(living, e, r);
             return r;
         } catch (Throwable t) {
             return null;
