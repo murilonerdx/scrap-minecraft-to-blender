@@ -195,6 +195,7 @@ def _activate_animations(objs):
     and sets 30 fps. Returns the object count that got an active animation."""
     end = 1
     n = 0
+    animated = []
     for obj in objs:
         ad = getattr(obj, "animation_data", None)
         if not ad:
@@ -205,15 +206,40 @@ def _activate_animations(objs):
         first = actions[0]
         # drop only the NLA track that holds the first clip (so it isn't applied twice), keep the rest
         for tr in list(ad.nla_tracks):
-            if any(st.action == first for st in tr.strips):
-                ad.nla_tracks.remove(tr)
-        ad.action = first   # active Action -> keyframes are visible in the Timeline
-        n += 1
+            try:
+                if any(st.action == first for st in tr.strips):
+                    ad.nla_tracks.remove(tr)
+            except Exception:  # noqa: BLE001
+                pass
+        try:
+            ad.action = first   # active Action -> keyframes are visible in the Timeline
+            animated.append(obj)
+            n += 1
+        except Exception:  # noqa: BLE001
+            pass
         for act in actions:
             try:
                 end = max(end, int(round(act.frame_range[1])))
             except Exception:  # noqa: BLE001
                 pass
+    # IMPORTANT: the Dope Sheet / Timeline only shows keys for the ACTIVE object. The glTF importer
+    # leaves the mesh selected, not the armature that holds the action, so the keys look "missing".
+    # Select the animated object(s) and make the first one active so the keyframes actually show.
+    if animated:
+        try:
+            for o in list(bpy.context.selected_objects):
+                o.select_set(False)
+        except Exception:  # noqa: BLE001
+            pass
+        for o in animated:
+            try:
+                o.select_set(True)
+            except Exception:  # noqa: BLE001
+                pass
+        try:
+            bpy.context.view_layer.objects.active = animated[0]
+        except Exception:  # noqa: BLE001
+            pass
     scene = bpy.context.scene
     if scene:
         # the in-game recorder samples at ~30 fps (render-frame interpolated) — match it so
