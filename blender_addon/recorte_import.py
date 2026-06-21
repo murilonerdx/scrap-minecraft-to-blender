@@ -461,7 +461,13 @@ def _apply_speakers(objs):
             cols = list(obj.users_collection) or [bpy.context.scene.collection]
             for c in cols:
                 c.objects.link(spk_obj)
-            bpy.data.objects.remove(obj, do_unlink=True)   # replace the placeholder empty
+            # drop the placeholder empty from the caller's object list FIRST, so later post-steps
+            # (e.g. the studio-scene template) don't iterate a removed object and raise ReferenceError
+            try:
+                objs.remove(obj)
+            except ValueError:
+                pass
+            bpy.data.objects.remove(obj, do_unlink=True)
             n += 1
         except Exception:  # noqa: BLE001
             pass

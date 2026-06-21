@@ -37,6 +37,7 @@ public final class GltfSelfTest {
         assertRigGrounding();
         assertFinite();
         assertNearestBone();
+        assertNanRotationSanitized();
 
         Ir.Model model = buildRig();
 
@@ -364,6 +365,23 @@ public final class GltfSelfTest {
             throw new IllegalStateException("FAIL: NLA names not unique: " + out);
         }
         System.out.println("  nla-names OK: collisions de-duplicated, order preserved -> " + out);
+    }
+
+    /** A NaN rotation key (degenerate camera/limb) must be sanitised so the animation never carries NaN. */
+    private static void assertNanRotationSanitized() {
+        Ir.Animation a = new Ir.Animation();
+        a.times.add(0f);
+        a.key(1, new float[]{0, 0, 0}, new float[]{0, 0, 0, 1});                  // a good key
+        a.times.add(1f);
+        a.key(1, new float[]{0, 0, 0}, new float[]{Float.NaN, Float.NaN, Float.NaN, Float.NaN}); // degenerate
+        for (float[] r : a.rotations.get(1)) {
+            for (float c : r) {
+                if (!Float.isFinite(c)) {
+                    throw new IllegalStateException("FAIL: NaN leaked into a rotation key");
+                }
+            }
+        }
+        System.out.println("  nan-rotation OK: degenerate rotation key sanitised to a finite quaternion");
     }
 
     /** Captured accessories/overlays bind to the nearest bone (a ring on the hand rides the arm). */

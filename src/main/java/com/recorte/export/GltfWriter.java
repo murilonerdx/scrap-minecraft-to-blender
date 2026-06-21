@@ -583,7 +583,7 @@ public final class GltfWriter {
         camNode.addProperty("name", name);
         camNode.addProperty("camera", cameraIndex);
         camNode.add("translation", vec3(cam.position[0], cam.position[1], cam.position[2]));
-        camNode.add("rotation", vec4(cam.rotation[0], cam.rotation[1], cam.rotation[2], cam.rotation[3]));
+        camNode.add("rotation", quat(cam.rotation));   // a degenerate look (NaN/zero) becomes identity
         if (Float.isFinite(cam.focusDistance) && cam.focusDistance > 0f) {   // depth of field → add-on node extras
             JsonObject extras = new JsonObject();
             extras.addProperty("dof_focus", finite(cam.focusDistance));
@@ -656,6 +656,17 @@ public final class GltfWriter {
         a.add(finite(z));
         a.add(finite(w));
         return a;
+    }
+
+    /** A valid unit quaternion for a node rotation: identity if the input is non-finite or zero-length
+     *  (a degenerate camera look would otherwise emit [0,0,0,0], which has no valid orientation). */
+    private static JsonArray quat(float[] r) {
+        float x = r[0], y = r[1], z = r[2], w = r[3];
+        float len2 = x * x + y * y + z * z + w * w;
+        if (!Float.isFinite(len2) || len2 < 1e-8f) {
+            x = 0; y = 0; z = 0; w = 1;
+        }
+        return vec4(x, y, z, w);
     }
 
     private static final class Bin {

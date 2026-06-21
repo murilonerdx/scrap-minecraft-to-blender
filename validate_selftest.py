@@ -87,6 +87,13 @@ def validate_common(name, js, bin_len):
     check(len([n for n in nodes if "camera" in n]) == 3, "3 camera nodes")
     check(any(n.get("name") == "cam_hero" for n in nodes), "named (placed) camera node 'cam_hero' present")
     check(any("dof_focus" in (n.get("extras") or {}) for n in nodes), "a camera node carries DOF extras")
+    # every camera node rotation must be a NON-degenerate quaternion (a NaN/zero look becomes identity,
+    # never [0,0,0,0] which has no orientation); buildRig injects a NaN-rotation camera to exercise this
+    for cnode in [n for n in nodes if "camera" in n]:
+        rot = cnode.get("rotation")
+        if rot is not None:
+            ln = sum(c * c for c in rot) ** 0.5
+            check(ln > 0.5, f"camera '{cnode.get('name')}' rotation is non-degenerate ({ln:.4f})")
     check("KHR_lights_punctual" in js.get("extensions", {}), "KHR_lights_punctual present")
     check("KHR_lights_punctual" in js.get("extensionsUsed", []), "KHR_lights_punctual in extensionsUsed")
     llist = js.get("extensions", {}).get("KHR_lights_punctual", {}).get("lights", [])

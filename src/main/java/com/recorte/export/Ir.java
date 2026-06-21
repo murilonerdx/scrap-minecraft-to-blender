@@ -116,6 +116,11 @@ public final class Ir {
          * hemisphere makes every interpolation take the short path.
          */
         private static float[] continuous(List<float[]> track, float[] q) {
+            // a degenerate orientation (e.g. a camera looking straight along its up vector) can yield a
+            // NaN quaternion; reuse the last good key (or identity) so the animation never carries NaN
+            if (!(Float.isFinite(q[0]) && Float.isFinite(q[1]) && Float.isFinite(q[2]) && Float.isFinite(q[3]))) {
+                return track.isEmpty() ? new float[]{0, 0, 0, 1} : track.get(track.size() - 1).clone();
+            }
             if (!track.isEmpty()) {
                 float[] p = track.get(track.size() - 1);
                 float dot = p[0] * q[0] + p[1] * q[1] + p[2] * q[2] + p[3] * q[3];
