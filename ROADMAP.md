@@ -33,6 +33,9 @@ cinematics**. ✅ marks what already exists. (Versão em português abaixo / Por
   The add-on pulls the animation from the NLA onto the active Action and sets the scene to 30 fps, so
   the **keyframes show up in the Timeline / Dope Sheet ready to edit** (plus a "Show animation keys"
   button for manual imports).
+- ✅ **NLA stacking** — multi-clip files (animation library, takes) import with each clip laid out as
+  its own **NLA strip/track** for non-linear blending/reordering; the writer de-duplicates colliding
+  clip names so each is a distinct Action, and a **Stack clips as NLA** button re-applies it.
 - **Event timeline** — during a cinematic, **block breaks/placements** (`BlockEvent`) and **sounds**
   (`PlaySoundEvent`: footsteps, hits, music) are recorded as timestamped events, exported as
   `events.json` + `events.csv` and served at `/events`. The add-on drops a **timeline marker** per

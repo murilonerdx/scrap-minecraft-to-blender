@@ -124,27 +124,79 @@ def _apply_pixel_art(objs):
                         node.interpolation = "Closest"
 
 
-def _activate_animations(objs):
-    """glTF stashes animations in the NLA; pull them onto the active Action so the tracks are
-    editable in the Dope Sheet / Graph Editor, and fit the scene frame range to them. Returns the
-    number of objects that ended up with an active animation."""
-    end = 1
-    n_act = 0
+def _collect_actions(ad):
+    """All distinct Actions reachable from an object's animation_data (active + NLA strips), in order."""
+    actions = []
+    if ad.action and ad.action not in actions:
+        actions.append(ad.action)
+    for tr in list(ad.nla_tracks):
+        for st in tr.strips:
+            if st.action and st.action not in actions:
+                actions.append(st.action)
+    return actions
+
+
+def _stack_as_nla(ad, actions):
+    """Rebuild a clean NLA: clear the active Action + tracks, then lay out one named track/strip per
+    Action so the clips can be blended/reordered non-linearly (#14). Returns the strip count."""
+    ad.action = None
+    for tr in list(ad.nla_tracks):
+        ad.nla_tracks.remove(tr)
+    n = 0
+    for act in actions:
+        try:
+            tr = ad.nla_tracks.new()
+            tr.name = act.name
+            try:
+                start = int(round(act.frame_range[0]))
+            except Exception:  # noqa: BLE001
+                start = 0
+            tr.strips.new(act.name, start, act)
+            n += 1
+        except Exception:  # noqa: BLE001
+            pass
+    return n
+
+
+def _stack_nla(objs):
+    """Lay every imported clip out as its own NLA strip/track for the given objects (regardless of
+    count). Returns (objects_stacked, total_strips)."""
+    n_obj = 0
+    n_strips = 0
     for obj in objs:
         ad = getattr(obj, "animation_data", None)
         if not ad:
             continue
-        act = ad.action
-        if act is None and ad.nla_tracks:
+        actions = _collect_actions(ad)
+        if not actions:
+            continue
+        n_strips += _stack_as_nla(ad, actions)
+        n_obj += 1
+    return n_obj, n_strips
+
+
+def _activate_animations(objs):
+    """Make imported clips editable. A **single** clip is pulled onto the active Action so its keys show
+    in the Dope Sheet / Timeline; **multiple** clips (animation library, takes) are laid out as one NLA
+    strip per track for non-linear stacking (#14). Fits the scene frame range and sets 30 fps. Returns
+    the number of objects that ended up with animation."""
+    end = 1
+    n = 0
+    for obj in objs:
+        ad = getattr(obj, "animation_data", None)
+        if not ad:
+            continue
+        actions = _collect_actions(ad)
+        if not actions:
+            continue
+        if len(actions) == 1:
             for tr in list(ad.nla_tracks):
-                for st in tr.strips:
-                    if st.action and act is None:
-                        act = st.action
                 ad.nla_tracks.remove(tr)
-            if act:
-                ad.action = act
-        if act:
-            n_act += 1
+            ad.action = actions[0]
+        else:
+            _stack_as_nla(ad, actions)   # NLA stack for multi-clip files
+        n += 1
+        for act in actions:
             try:
                 end = max(end, int(round(act.frame_range[1])))
             except Exception:  # noqa: BLE001
@@ -157,7 +209,7 @@ def _activate_animations(objs):
         if end > 1:
             scene.frame_start = 0
             scene.frame_end = end
-    return n_act
+    return n
 
 
 def _setup_render_passes(objs):
@@ -403,6 +455,25 @@ class RECORTE_OT_activate_anim(bpy.types.Operator):
         return {"FINISHED"}
 
 
+class RECORTE_OT_stack_nla(bpy.types.Operator):
+    """Lay every animation clip of the selected (or all) objects out as its own NLA strip/track, so a
+    multi-clip file (animation library, takes) becomes a non-linear stack you can blend and reorder in
+    the NLA editor. 'Import latest' already stacks multi-clip files automatically."""
+    bl_idname = "recorte.stack_nla"
+    bl_label = "Stack clips as NLA"
+    bl_options = {"REGISTER", "UNDO"}
+
+    def execute(self, context):
+        objs = list(context.selected_objects) or list(bpy.data.objects)
+        n_obj, n_strips = _stack_nla(objs)
+        if n_obj:
+            self.report({"INFO"}, "Stacked %d clip(s) as NLA strips on %d object(s) — open the NLA "
+                                  "editor to blend them." % (n_strips, n_obj))
+        else:
+            self.report({"WARNING"}, "No animation clips found to stack.")
+        return {"FINISHED"}
+
+
 class RECORTE_OT_live(bpy.types.Operator):
     """Auto-reimport the live export whenever the game pushes a new one (real-time link)."""
     bl_idname = "recorte.live"
@@ -482,6 +553,7 @@ class RECORTE_PT_panel(bpy.types.Panel):
         layout.operator("recorte.import_latest", icon="IMPORT")
         layout.operator("recorte.ping", icon="PLUGIN")
         layout.operator("recorte.activate_anim", icon="ACTION")
+        layout.operator("recorte.stack_nla", icon="NLA")
         layout.separator()
         layout.label(text="Real-time link:")
         if context.scene.recorte_live:
@@ -492,7 +564,7 @@ class RECORTE_PT_panel(bpy.types.Panel):
 
 
 classes = (RECORTE_OT_import_latest, RECORTE_OT_ping, RECORTE_OT_activate_anim,
-           RECORTE_OT_live, RECORTE_PT_panel)
+           RECORTE_OT_stack_nla, RECORTE_OT_live, RECORTE_PT_panel)
 
 
 def register():

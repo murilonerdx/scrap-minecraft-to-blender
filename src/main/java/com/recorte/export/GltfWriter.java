@@ -372,10 +372,17 @@ public final class GltfWriter {
 
         // --- animations (optional; one or many named clips) ---------------------------------------
         if (animations != null && !animations.isEmpty()) {
-            JsonArray animArray = new JsonArray();
+            // de-duplicate clip names so each imports as a distinct Blender Action (NLA stacking, #14)
+            List<String> rawNames = new ArrayList<>();
             for (Ir.Animation anim : animations) {
+                rawNames.add(anim != null && anim.name != null ? anim.name : "recording");
+            }
+            List<String> names = NlaStack.uniqueNames(rawNames);
+            JsonArray animArray = new JsonArray();
+            for (int ai = 0; ai < animations.size(); ai++) {
+                Ir.Animation anim = animations.get(ai);
                 if (anim == null || anim.times.isEmpty()) continue;
-                animArray.add(buildAnimation(bin, anim, cameraNode));
+                animArray.add(buildAnimation(bin, anim, names.get(ai), cameraNode));
             }
             if (animArray.size() > 0) root.add("animations", animArray);
         }
@@ -477,7 +484,7 @@ public final class GltfWriter {
         return primitive;
     }
 
-    private static JsonObject buildAnimation(Bin bin, Ir.Animation anim, int cameraNode) {
+    private static JsonObject buildAnimation(Bin bin, Ir.Animation anim, String name, int cameraNode) {
         int n = anim.times.size();
         bin.align4();
         int tStart = bin.length();
@@ -536,7 +543,7 @@ public final class GltfWriter {
         JsonObject animation = new JsonObject();
         animation.add("samplers", samplers);
         animation.add("channels", channels);
-        animation.addProperty("name", anim.name != null ? anim.name : "recording");
+        animation.addProperty("name", name != null ? name : "recording");
         return animation;
     }
 

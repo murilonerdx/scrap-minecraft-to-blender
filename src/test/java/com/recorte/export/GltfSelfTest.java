@@ -29,6 +29,7 @@ public final class GltfSelfTest {
         assertWeatherField();
         assertSkyGeometry();
         assertSpeakers();
+        assertNlaUniqueNames();
 
         Ir.Model model = buildRig();
 
@@ -51,10 +52,11 @@ public final class GltfSelfTest {
         // 4) particle / VFX point cloud (studio #8) — a POINTS-mode primitive with per-point colour
         GltfWriter.write(buildPointCloud(), outDir.resolve("points.glb"));
 
-        // 5) takes (studio #13) — several recordings of one rig as named clips (multi-clip on the rig)
+        // 5) takes (studio #13) + NLA name de-dup (studio #14) — two clips intentionally share a name;
+        //    the writer must make them distinct Actions so they stack cleanly as NLA strips
         List<Ir.Animation> takes = new ArrayList<>();
-        takes.add(walkClip("take_1", 0.2f));
-        takes.add(walkClip("take_2", 0.6f));
+        takes.add(walkClip("take", 0.2f));
+        takes.add(walkClip("take", 0.6f));
         GltfWriter.writeLibrary(model, takes, outDir.resolve("takes.glb"));
 
         System.out.println("SELFTEST OK -> single.glb, library.glb, static.glb, points.glb, takes.glb in "
@@ -327,6 +329,21 @@ public final class GltfSelfTest {
             throw new IllegalStateException("FAIL: harp speaker should keep the earliest time 0.5");
         }
         System.out.println("  speakers OK: 5 events -> 2 deduped speakers, earliest time kept");
+    }
+
+    /** NLA stacking (studio #14): colliding clip names are made unique (stable order) so each imports
+     *  as a distinct Blender Action; blanks become "clip". */
+    private static void assertNlaUniqueNames() {
+        List<String> in = new ArrayList<>(List.of("walk", "take", "take", "take", "walk", ""));
+        List<String> out = NlaStack.uniqueNames(in);
+        List<String> expect = List.of("walk", "take", "take_2", "take_3", "walk_2", "clip");
+        if (!out.equals(expect)) {
+            throw new IllegalStateException("FAIL: NLA unique names " + out + " != " + expect);
+        }
+        if (out.size() != new java.util.HashSet<>(out).size()) {
+            throw new IllegalStateException("FAIL: NLA names not unique: " + out);
+        }
+        System.out.println("  nla-names OK: collisions de-duplicated, order preserved -> " + out);
     }
 
     private static float avgChannel(List<float[]> pts, int ch) {

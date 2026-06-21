@@ -175,7 +175,9 @@ add-on and import without touching files:
 animations onto the active Action so the **keyframes show in the Timeline**, drops **timeline markers**
 for block/sound events, keyframes the **day/night timelapse** (Sun lamp + World background), and turns
 on the compositor **render passes**. A **Show animation keys** button re-activates animations on any
-manually-imported file.
+manually-imported file. **Multi-clip files** (animation library, takes) come in as a **stacked NLA**
+(one strip per clip) for non-linear blending — a **Stack clips as NLA** button re-applies it to manual
+imports.
 
 **Live mode:** run `/recorte live` (or the panel's *Live link* button) in-game and click **Start Live
 link** in the add-on — the mod auto-exports a snapshot (**the world around you + nearby entities**)

@@ -138,14 +138,15 @@ if pprims:
     check(idx_count == pos_count == 16, f"16 points (idx {idx_count} == pos {pos_count})")
 check(any(mm.get("name") == "Particles" for mm in js.get("materials", [])), "a 'Particles' material present")
 
-# --- takes.glb: several recordings of one rig as named clips (studio #13) ---------------------------
+# --- takes.glb: several recordings of one rig as clips (studio #13) + NLA name de-dup (studio #14) ---
 js, bl = parse_glb(os.path.join(root, "takes.glb"))
 validate_common("takes.glb", js, bl)
 tanims = js.get("animations", [])
 check(len(tanims) == 2, f"takes has 2 clips ({len(tanims)})")
 tnames = [a.get("name") for a in tanims]
-for n in ("take_1", "take_2"):
-    check(n in tnames, f"takes has '{n}' clip")
+# both takes were named "take"; the writer must make them distinct Actions (NLA-ready)
+check(len(set(tnames)) == 2, f"clip names are unique for NLA stacking -> {tnames}")
+check("take" in tnames and "take_2" in tnames, f"colliding names de-duped to take/take_2 -> {tnames}")
 for a in tanims:
     check(len(a["channels"]) > 0 and len(a["samplers"]) > 0, f"take '{a.get('name')}' has channels+samplers")
 
