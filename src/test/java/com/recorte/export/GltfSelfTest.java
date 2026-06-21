@@ -36,6 +36,7 @@ public final class GltfSelfTest {
         assertPreviewGrid();
         assertRigGrounding();
         assertFinite();
+        assertNearestBone();
 
         Ir.Model model = buildRig();
 
@@ -360,6 +361,23 @@ public final class GltfSelfTest {
             throw new IllegalStateException("FAIL: NLA names not unique: " + out);
         }
         System.out.println("  nla-names OK: collisions de-duplicated, order preserved -> " + out);
+    }
+
+    /** Captured accessories/overlays bind to the nearest bone (a ring on the hand rides the arm). */
+    private static void assertNearestBone() {
+        Ir.Model m = new Ir.Model();
+        m.addBone(new Ir.Bone("root", -1, new Matrix4f().translate(0, 0, 0)));        // 0
+        m.addBone(new Ir.Bone("body", 0, new Matrix4f().translate(0, 1.0f, 0)));      // 1
+        m.addBone(new Ir.Bone("head", 1, new Matrix4f().translate(0, 1.7f, 0)));      // 2
+        m.addBone(new Ir.Bone("rightArm", 1, new Matrix4f().translate(0.5f, 1.2f, 0))); // 3
+        int onHand = LayerCapturer.nearestBoneTo(m, 0.55f, 1.2f, 0f, 0);   // a ring on the right hand
+        int onHead = LayerCapturer.nearestBoneTo(m, 0.0f, 1.75f, 0f, 0);   // a hat
+        int onChest = LayerCapturer.nearestBoneTo(m, 0.0f, 1.0f, 0.1f, 0); // an amulet
+        if (onHand != 3 || onHead != 2 || onChest != 1) {
+            throw new IllegalStateException("FAIL: nearest bone hand=" + onHand + " head=" + onHead
+                    + " chest=" + onChest + " (want 3,2,1)");
+        }
+        System.out.println("  nearest-bone OK: hand->arm, hat->head, amulet->body");
     }
 
     /** NaN sanitisation ("Bad glTF: json contained NaN"): non-finite floats become 0 in the JSON. */

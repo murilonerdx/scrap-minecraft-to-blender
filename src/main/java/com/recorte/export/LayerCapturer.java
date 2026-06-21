@@ -89,10 +89,10 @@ public final class LayerCapturer {
         }
         CapturingBuffer buffer = new CapturingBuffer();
         PoseStack pose = new PoseStack();
-        float age = entity.tickCount;
+        // age 0 / no swing: the exact idle pose the rig was extracted at, so the overlay aligns with it
         for (Object layerObj : layers) {
             try {
-                ((RenderLayer) layerObj).render(pose, buffer, FULL_BRIGHT, entity, 0f, 0f, 1f, age, 0f, 0f);
+                ((RenderLayer) layerObj).render(pose, buffer, FULL_BRIGHT, entity, 0f, 0f, 1f, 0f, 0f, 0f);
             } catch (Throwable t) {
                 Recorte.LOGGER.warn("Mob layer {} failed (skipped)", layerObj.getClass().getSimpleName(), t);
             }
@@ -155,6 +155,11 @@ public final class LayerCapturer {
             Ir.Primitive prim = out.primitiveForMaterial(materialIndex);
             prim.group = group;
 
+            // Bind this captured object (≈ one accessory/overlay) to the bone nearest its centroid, so a
+            // ring on the hand rides the arm and a cape rides the body during animation. The bind-pose
+            // POSITION is unchanged (skinning uses inverse-bind), so static exports look identical.
+            int joint = nearestBone(out, verts, m, boneIndex);
+
             // Use the captured position as-is: the render path already places accessories exactly where
             // the game draws them on the body. (We used to shove them horizontally "clear" of the body,
             // which only made worn items float off to the side — trust the real render instead.)
@@ -173,11 +178,35 @@ public final class LayerCapturer {
                     Vector3f p = m.transformPosition(new Vector3f(a[0], a[1], a[2]));
                     Vector3f n = m.transformDirection(new Vector3f(a[5], a[6], a[7]));
                     if (n.lengthSquared() > 1.0e-8f) n.normalize();
-                    quad[k] = new Ir.Vertex(p.x, p.y, p.z, n.x, n.y, n.z, a[3], a[4], boneIndex);
+                    quad[k] = new Ir.Vertex(p.x, p.y, p.z, n.x, n.y, n.z, a[3], a[4], joint);
                 }
                 prim.addQuad(quad[0], quad[1], quad[2], quad[3]);
             }
         }
+    }
+
+    /** Bone nearest the centroid of a captured group (in export space), or {@code fallback} if not riggable. */
+    private static int nearestBone(Ir.Model out, List<float[]> verts, Matrix4f m, int fallback) {
+        if (out.bones.size() < 2 || verts.isEmpty()) return fallback;
+        Vector3f c = new Vector3f();
+        for (float[] a : verts) c.add(m.transformPosition(new Vector3f(a[0], a[1], a[2])));
+        c.div(verts.size());
+        return nearestBoneTo(out, c.x, c.y, c.z, fallback);
+    }
+
+    /** Pure: index of the bone whose bind position is nearest {@code (x,y,z)}; {@code fallback} if none. */
+    static int nearestBoneTo(Ir.Model out, float x, float y, float z, int fallback) {
+        int best = fallback;
+        float bestD = Float.MAX_VALUE;
+        for (int i = 0; i < out.bones.size(); i++) {
+            Vector3f bp = out.bones.get(i).globalBind.getTranslation(new Vector3f());
+            float d = bp.distanceSquared(new Vector3f(x, y, z));
+            if (d < bestD) {
+                bestD = d;
+                best = i;
+            }
+        }
+        return best;
     }
 
     /** Binds the render type's texture and returns the GL texture id, restoring state afterwards. */
