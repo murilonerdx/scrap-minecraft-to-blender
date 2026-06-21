@@ -60,7 +60,9 @@ na Timeline** prontas pra editar.
   iluminada como no jogo.
 - 🧱 **Culling** das faces escondidas + **block entities** (baús, placas, estandartes, camas…) nas cenas.
 - 📷 **Multi-câmera** — `scene`/`snapshot`/cinematic exportam a câmera POV do jogo **+** câmeras de
-  render (orbital + topo).
+  render (orbital + topo) + as que você colocou com `/recorte cam add`.
+- 🔭 **Depth of field** — a câmera POV/colocadas focam no que você está olhando (com f-stop); o addon
+  liga o DOF do Blender pra desfocar o fundo de forma cinematográfica.
 - ☀️ **Sol** — luz direcional pela hora do dia; cinematics animam um **timelapse dia/noite** (sol + céu).
 - 🧩 **Render passes** — o addon dá IDs de objeto e liga os passes Z/normal/mist pra composição.
 - 🪨 **PBR de resource pack (LabPBR)** — normal map `_n` + specular `_s` → metallic-roughness do glTF.

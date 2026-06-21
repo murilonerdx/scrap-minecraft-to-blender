@@ -130,14 +130,14 @@ public final class GltfWriter {
         List<Integer> extraCameraNodes = new ArrayList<>();
         if (model.camera != null) {
             cameras.add(perspectiveCamera(model.camera.yfovRadians));
-            nodes.add(cameraNodeObj("Camera", cameras.size() - 1, model.camera.position, model.camera.rotation));
+            nodes.add(cameraNodeObj("Camera", cameras.size() - 1, model.camera));
             cameraNode = nodes.size() - 1;
         }
         for (int ci = 0; ci < model.extraCameras.size(); ci++) {
             Ir.Camera ec = model.extraCameras.get(ci);
             cameras.add(perspectiveCamera(ec.yfovRadians));
             String camName = ec.name != null ? ec.name : "Camera_" + (ci + 1);
-            nodes.add(cameraNodeObj(camName, cameras.size() - 1, ec.position, ec.rotation));
+            nodes.add(cameraNodeObj(camName, cameras.size() - 1, ec));
             extraCameraNodes.add(nodes.size() - 1);
         }
         if (cameras.size() > 0) root.add("cameras", cameras);
@@ -524,16 +524,18 @@ public final class GltfWriter {
         return cam;
     }
 
-    private static JsonObject cameraNodeObj(String name, int cameraIndex, float[] position, float[] rotation) {
+    private static JsonObject cameraNodeObj(String name, int cameraIndex, Ir.Camera cam) {
         JsonObject camNode = new JsonObject();
         camNode.addProperty("name", name);
         camNode.addProperty("camera", cameraIndex);
-        JsonArray t = new JsonArray();
-        for (float v : position) t.add(v);
-        camNode.add("translation", t);
-        JsonArray r = new JsonArray();
-        for (float v : rotation) r.add(v);
-        camNode.add("rotation", r);
+        camNode.add("translation", vec3(cam.position[0], cam.position[1], cam.position[2]));
+        camNode.add("rotation", vec4(cam.rotation[0], cam.rotation[1], cam.rotation[2], cam.rotation[3]));
+        if (cam.focusDistance > 0f) {   // depth of field → read by the add-on (glTF imports node extras)
+            JsonObject extras = new JsonObject();
+            extras.addProperty("dof_focus", cam.focusDistance);
+            extras.addProperty("dof_fstop", cam.fstop);
+            camNode.add("extras", extras);
+        }
         return camNode;
     }
 

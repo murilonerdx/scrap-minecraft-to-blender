@@ -151,6 +151,8 @@ public final class Ir {
         public final float[] rotation;       // quaternion x, y, z, w
         public final float yfovRadians;
         public String name;                  // optional: a placed camera's name (else GltfWriter numbers it)
+        public float focusDistance;          // depth of field: distance to the focus plane (0 = no DOF)
+        public float fstop = 2.8f;            // aperture (smaller = shallower / blurrier background)
 
         public Camera(float[] position, float[] rotation, float yfovRadians) {
             this.position = position;

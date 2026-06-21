@@ -110,6 +110,7 @@ public final class GltfSelfTest {
         quad(p1, 2, 1f, 1f, 1f);       // white → no COLOR_0
 
         m.camera = new Ir.Camera(new float[]{0, 2, 5}, new float[]{0, 0, 0, 1}, 1.0f);
+        m.camera.focusDistance = 5f;   // exercises depth-of-field extras
         m.extraCameras.add(new Ir.Camera(new float[]{5, 2, 0}, new float[]{0, 0.7f, 0, 0.7f}, 0.9f));
         m.extraCameras.get(0).name = "cam_hero";   // a placed (named) studio camera
         m.extraCameras.add(new Ir.Camera(new float[]{0, 8, 0}, new float[]{-0.7f, 0, 0, 0.7f}, 0.9f));

@@ -797,7 +797,12 @@ public final class Exporter {
         org.joml.Quaternionf q = new org.joml.Quaternionf()
                 .lookAlong(-f.x, f.y, f.z, -u.x, u.y, u.z).conjugate();
         float yfov = (float) Math.toRadians(mc.options.fov().get());
-        return new Ir.Camera(new float[]{px, py, pz}, new float[]{q.x, q.y, q.z, q.w}, yfov);
+        Ir.Camera camera = new Ir.Camera(new float[]{px, py, pz}, new float[]{q.x, q.y, q.z, q.w}, yfov);
+        // depth of field: focus on whatever you're looking at (the crosshair target), else a default
+        camera.focusDistance = (mc.hitResult != null
+                && mc.hitResult.getType() != net.minecraft.world.phys.HitResult.Type.MISS)
+                ? (float) mc.hitResult.getLocation().distanceTo(p) : 12f;
+        return camera;
     }
 
     /** A directional sun light approximating the in-game time of day (export space, +Y up). */

@@ -66,6 +66,7 @@ def validate_common(name, js, bin_len):
     check(len(cams) == 3, f"3 cameras (POV + 2 presets) -> {len(cams)}")
     check(len([n for n in nodes if "camera" in n]) == 3, "3 camera nodes")
     check(any(n.get("name") == "cam_hero" for n in nodes), "named (placed) camera node 'cam_hero' present")
+    check(any("dof_focus" in (n.get("extras") or {}) for n in nodes), "a camera node carries DOF extras")
     check("KHR_lights_punctual" in js.get("extensions", {}), "KHR_lights_punctual present")
     check("KHR_lights_punctual" in js.get("extensionsUsed", []), "KHR_lights_punctual in extensionsUsed")
     llist = js.get("extensions", {}).get("KHR_lights_punctual", {}).get("lights", [])

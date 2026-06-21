@@ -63,7 +63,9 @@ the Timeline** ready to edit.
   scene already looks lit like the game.
 - 🧱 **Hidden-face culling** + **block entities** (chests, signs, banners, beds…) rendered into scenes.
 - 📷 **Multi-camera** — `scene`/`snapshot`/cinematic export the in-game POV camera **plus** preset orbit
-  + top-down render cameras.
+  + top-down render cameras, plus any you placed with `/recorte cam add`.
+- 🔭 **Depth of field** — the POV/placed cameras focus on what you're looking at (with an f-stop); the
+  add-on enables Blender DOF for cinematic background blur.
 - ☀️ **Sun** — a directional light angled & colored by the time of day; cinematics animate a full
   **day/night timelapse** (sun + sky).
 - 🧩 **Render passes** — the add-on assigns object IDs and enables Z/normal/mist passes for compositing.

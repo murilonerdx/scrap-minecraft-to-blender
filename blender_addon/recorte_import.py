@@ -84,6 +84,7 @@ class RECORTE_OT_import_latest(bpy.types.Operator):
 
         n_sun = _apply_sun(port, new_objs)   # day/night timelapse (after the static world is set)
         n_anim = _apply_animated_textures(port)
+        _apply_dof(new_objs)
 
         msg = "Imported latest Recorte export (%d objects)" % len(new_objs)
         if n_events:
@@ -259,6 +260,28 @@ def _apply_sun(port, objs):
     return keys
 
 
+def _apply_dof(objs):
+    """Turn on depth of field for imported cameras that carry dof_focus/dof_fstop (the glTF importer puts
+    node extras onto the camera object's custom properties). Returns how many cameras got DOF."""
+    n = 0
+    for obj in objs:
+        if getattr(obj, "type", None) != "CAMERA":
+            continue
+        focus = obj.get("dof_focus")
+        if focus is None:
+            continue
+        try:
+            obj.data.dof.use_dof = True
+            obj.data.dof.focus_distance = float(focus)
+            fstop = obj.get("dof_fstop")
+            if fstop:
+                obj.data.dof.aperture_fstop = float(fstop)
+            n += 1
+        except Exception:  # noqa: BLE001
+            pass
+    return n
+
+
 def _apply_animated_textures(port):
     """Build a looping Image Sequence for each animated-texture material (water/lava/fire/portal),
     downloading the frames from the running game and wiring them into the imported material so they
@@ -397,6 +420,7 @@ class RECORTE_OT_live(bpy.types.Operator):
         _apply_events(port)
         _apply_sun(port, self._objs)
         _apply_animated_textures(port)
+        _apply_dof(self._objs)
 
     def execute(self, context):
         context.scene.recorte_live = True

@@ -26,9 +26,12 @@ public final class CameraRig {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
         net.minecraft.client.Camera cam = mc.gameRenderer.getMainCamera();
+        float focus = (mc.hitResult != null
+                && mc.hitResult.getType() != net.minecraft.world.phys.HitResult.Type.MISS)
+                ? (float) mc.hitResult.getLocation().distanceTo(cam.getPosition()) : 12f;
         cameras.add(new Placed(name, cam.getPosition(),
                 new Vector3f(cam.getLookVector()), new Vector3f(cam.getUpVector()),
-                (float) Math.toRadians(mc.options.fov().get())));
+                (float) Math.toRadians(mc.options.fov().get()), focus));
         feedback("§a● Câmera §f" + name + "§a colocada §7(" + cameras.size() + " no rig)");
     }
 
@@ -65,6 +68,7 @@ public final class CameraRig {
                     .lookAlong(-p.look.x, p.look.y, p.look.z, -p.up.x, p.up.y, p.up.z).conjugate();
             Ir.Camera c = new Ir.Camera(new float[]{px, py, pz}, new float[]{q.x, q.y, q.z, q.w}, p.yfov);
             c.name = "cam_" + p.name;
+            c.focusDistance = p.focus;
             out.add(c);
         }
         return out;
@@ -81,13 +85,15 @@ public final class CameraRig {
         final Vec3 pos;
         final Vector3f look, up;
         final float yfov;
+        final float focus;
 
-        Placed(String name, Vec3 pos, Vector3f look, Vector3f up, float yfov) {
+        Placed(String name, Vec3 pos, Vector3f look, Vector3f up, float yfov, float focus) {
             this.name = name;
             this.pos = pos;
             this.look = look;
             this.up = up;
             this.yfov = yfov;
+            this.focus = focus;
         }
     }
 }
