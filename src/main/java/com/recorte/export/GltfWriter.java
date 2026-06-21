@@ -568,7 +568,8 @@ public final class GltfWriter {
 
     private static JsonObject perspectiveCamera(float yfovRadians) {
         JsonObject perspective = new JsonObject();
-        perspective.addProperty("yfov", yfovRadians);
+        float yfov = Float.isFinite(yfovRadians) && yfovRadians > 0f ? yfovRadians : (float) Math.toRadians(50);
+        perspective.addProperty("yfov", yfov);
         perspective.addProperty("znear", 0.05);
         perspective.addProperty("zfar", 1000.0);
         JsonObject cam = new JsonObject();
@@ -583,10 +584,10 @@ public final class GltfWriter {
         camNode.addProperty("camera", cameraIndex);
         camNode.add("translation", vec3(cam.position[0], cam.position[1], cam.position[2]));
         camNode.add("rotation", vec4(cam.rotation[0], cam.rotation[1], cam.rotation[2], cam.rotation[3]));
-        if (cam.focusDistance > 0f) {   // depth of field → read by the add-on (glTF imports node extras)
+        if (Float.isFinite(cam.focusDistance) && cam.focusDistance > 0f) {   // depth of field → add-on node extras
             JsonObject extras = new JsonObject();
-            extras.addProperty("dof_focus", cam.focusDistance);
-            extras.addProperty("dof_fstop", cam.fstop);
+            extras.addProperty("dof_focus", finite(cam.focusDistance));
+            extras.addProperty("dof_fstop", finite(cam.fstop));
             camNode.add("extras", extras);
         }
         return camNode;
@@ -633,20 +634,27 @@ public final class GltfWriter {
         return bb.array();
     }
 
+    /** glTF JSON must be valid JSON, which has no NaN/Infinity. Replace any non-finite float with 0 so a
+     *  single degenerate value (a NaN camera rotation, a bad vertex) can never make Blender reject the
+     *  whole file ("Bad glTF: json contained NaN"). */
+    static float finite(float v) {
+        return Float.isFinite(v) ? v : 0f;
+    }
+
     private static JsonArray vec3(float x, float y, float z) {
         JsonArray a = new JsonArray();
-        a.add(x);
-        a.add(y);
-        a.add(z);
+        a.add(finite(x));
+        a.add(finite(y));
+        a.add(finite(z));
         return a;
     }
 
     private static JsonArray vec4(float x, float y, float z, float w) {
         JsonArray a = new JsonArray();
-        a.add(x);
-        a.add(y);
-        a.add(z);
-        a.add(w);
+        a.add(finite(x));
+        a.add(finite(y));
+        a.add(finite(z));
+        a.add(finite(w));
         return a;
     }
 
@@ -697,8 +705,8 @@ public final class GltfWriter {
             a.addProperty("componentType", componentType);
             a.addProperty("count", count);
             a.addProperty("type", type);
-            if (min != null) { JsonArray j = new JsonArray(); for (float v : min) j.add(v); a.add("min", j); }
-            if (max != null) { JsonArray j = new JsonArray(); for (float v : max) j.add(v); a.add("max", j); }
+            if (min != null) { JsonArray j = new JsonArray(); for (float v : min) j.add(finite(v)); a.add("min", j); }
+            if (max != null) { JsonArray j = new JsonArray(); for (float v : max) j.add(finite(v)); a.add("max", j); }
             accessors.add(a);
             return accessors.size() - 1;
         }

@@ -35,6 +35,7 @@ public final class GltfSelfTest {
         assertPresets();
         assertPreviewGrid();
         assertRigGrounding();
+        assertFinite();
 
         Ir.Model model = buildRig();
 
@@ -165,7 +166,10 @@ public final class GltfSelfTest {
         m.camera.focusDistance = 5f;   // exercises depth-of-field extras
         m.extraCameras.add(new Ir.Camera(new float[]{5, 2, 0}, new float[]{0, 0.7f, 0, 0.7f}, 0.9f));
         m.extraCameras.get(0).name = "cam_hero";   // a placed (named) studio camera
-        m.extraCameras.add(new Ir.Camera(new float[]{0, 8, 0}, new float[]{-0.7f, 0, 0, 0.7f}, 0.9f));
+        // a deliberately-degenerate camera: NaN rotation must be sanitised to 0 by the writer, not leak
+        // into the JSON (the "Bad glTF: json contained NaN" bug)
+        m.extraCameras.add(new Ir.Camera(new float[]{0, 8, 0},
+                new float[]{Float.NaN, Float.NaN, Float.NaN, Float.NaN}, 0.9f));
         m.sun = new Ir.Light(new float[]{-0.3f, -1f, -0.2f}, new float[]{1f, 0.95f, 0.9f}, 4f);
         m.lights.add(Ir.Light.point(new float[]{1f, 1.5f, 1f}, new float[]{1f, 0.86f, 0.66f}, 50f));
         m.lights.add(Ir.Light.point(new float[]{-1f, 1.5f, -1f}, new float[]{1f, 0.86f, 0.66f}, 50f));
@@ -356,6 +360,15 @@ public final class GltfSelfTest {
             throw new IllegalStateException("FAIL: NLA names not unique: " + out);
         }
         System.out.println("  nla-names OK: collisions de-duplicated, order preserved -> " + out);
+    }
+
+    /** NaN sanitisation ("Bad glTF: json contained NaN"): non-finite floats become 0 in the JSON. */
+    private static void assertFinite() {
+        if (GltfWriter.finite(Float.NaN) != 0f || GltfWriter.finite(Float.POSITIVE_INFINITY) != 0f
+                || GltfWriter.finite(Float.NEGATIVE_INFINITY) != 0f || GltfWriter.finite(2.5f) != 2.5f) {
+            throw new IllegalStateException("FAIL: finite() didn't sanitise non-finite floats");
+        }
+        System.out.println("  finite OK: NaN/Inf -> 0, normal values preserved");
     }
 
     /** Rig grounding (the "player sunk into the floor" bug): a rig whose feet sit ~1.5 below the origin

@@ -25,7 +25,12 @@ def parse_glb(path):
         off += 8
         chunks[ctype] = data[off:off + clen]
         off += clen
-    js = json.loads(chunks[0x4E4F534A].decode("utf-8"))
+    raw_json = chunks[0x4E4F534A].decode("utf-8")
+    # JSON has no NaN/Infinity — Blender rejects "Bad glTF: json contained NaN". The writer must
+    # sanitise every float, so the literal must never appear.
+    check("NaN" not in raw_json and "Infinity" not in raw_json,
+          f"{os.path.basename(path)}: JSON has no NaN/Infinity literal")
+    js = json.loads(raw_json)
     return js, len(chunks.get(0x004E4942, b""))
 
 

@@ -1097,13 +1097,14 @@ public final class Exporter {
     /** Preset render cameras framing the scene centre: four 3/4 orbit views + one top-down. */
     static java.util.List<Ir.Camera> presetCameras(int radius) {
         java.util.List<Ir.Camera> cams = new java.util.ArrayList<>();
+        int r = Math.max(2, radius);   // never 0 — a degenerate frame yields NaN camera rotations
         float yfov = (float) Math.toRadians(50);
-        float d = radius * 2.0f, h = radius * 1.2f;
+        float d = r * 2.0f, h = r * 1.2f;
         for (float deg : new float[]{45, 135, 225, 315}) {
             double a = Math.toRadians(deg);
             cams.add(lookAtOrigin((float) (d * Math.cos(a)), h, (float) (d * Math.sin(a)), 0, 1, 0, yfov));
         }
-        cams.add(lookAtOrigin(0.001f, radius * 2.5f, 0.001f, 0, 0, -1, yfov));   // top-down
+        cams.add(lookAtOrigin(0.001f, r * 2.5f, 0.001f, 0, 0, -1, yfov));   // top-down
         return cams;
     }
 
@@ -1112,8 +1113,10 @@ public final class Exporter {
         org.joml.Vector3f dir = new org.joml.Vector3f(-px, -py, -pz);
         if (dir.lengthSquared() < 1e-8f) dir.set(0, -1, 0);
         dir.normalize();
+        org.joml.Vector3f up = new org.joml.Vector3f(ux, uy, uz).normalize();
+        if (Math.abs(dir.dot(up)) > 0.999f) up.set(0, 0, 1);   // up parallel to look dir → pick another, else NaN
         org.joml.Quaternionf q = new org.joml.Quaternionf()
-                .lookAlong(dir.x, dir.y, dir.z, ux, uy, uz).conjugate();
+                .lookAlong(dir.x, dir.y, dir.z, up.x, up.y, up.z).conjugate();
         return new Ir.Camera(new float[]{px, py, pz}, new float[]{q.x, q.y, q.z, q.w}, yfov);
     }
 
