@@ -10,6 +10,7 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraftforge.registries.ForgeRegistries;
 
 /**
  * The Recorte control panel: a single in-game screen to trigger every export mode (player/entity, scene,
@@ -21,6 +22,10 @@ public final class RecorteScreen extends Screen {
     private EditBox idBox;
     private ExportPreview.Data preview;   // #19: top-down thumbnail of the scene/snapshot footprint
     private int lastPreviewRadius = -1;
+    // searchable item/block browser
+    private final java.util.List<ResourceLocation> results = new java.util.ArrayList<>();
+    private int resultsX, resultsY, resultsW;
+    private static final int ROW_H = 12, MAX_RESULTS = 8;
 
     public RecorteScreen() {
         super(Component.literal("Recorte — Export to Blender"));
@@ -36,6 +41,12 @@ public final class RecorteScreen extends Screen {
         // --- you / looked-at ---
         addRenderableWidget(Button.builder(Component.literal("Export (looked-at / self)"),
                 b -> run(Exporter::exportLookedAtOrSelf)).bounds(left, y, w, 20).build());
+        y += 24;
+
+        addRenderableWidget(Button.builder(Component.literal("Looked-at block"),
+                b -> run(Exporter::exportLookedAtBlock)).bounds(left, y, 108, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("Held item"),
+                b -> run(Exporter::exportHeldItem)).bounds(left + 112, y, 108, 20).build());
         y += 24;
 
         String recLabel = Recorder.isRecording() ? "■ Stop recording" : "● Record (looked-at / self)";
@@ -61,12 +72,16 @@ public final class RecorteScreen extends Screen {
                 b -> run(() -> Exporter.exportSnapshot(radius()))).bounds(left + 140, y, 80, 20).build());
         y += 36;
 
-        // --- id field + item/block/entity/mod ---
+        // --- search field + item/block/entity/mod ---
         idBox = new EditBox(this.font, left, y, w, 20, Component.literal("id"));
-        idBox.setHint(Component.literal("minecraft:diamond_sword   (or a modid)"));
+        idBox.setHint(Component.literal("search items/blocks…  (or type a full id / modid)"));
+        idBox.setResponder(this::onSearch);
         addRenderableWidget(idBox);
         y += 24;
 
+        resultsX = left;
+        resultsY = y;       // the search-results overlay covers the type buttons while you're searching
+        resultsW = w;
         addRenderableWidget(Button.builder(Component.literal("Item"),
                 b -> withId(Exporter::exportItem)).bounds(left, y, 52, 20).build());
         addRenderableWidget(Button.builder(Component.literal("Block"),
@@ -79,6 +94,67 @@ public final class RecorteScreen extends Screen {
 
         addRenderableWidget(Button.builder(Component.literal("Close"),
                 b -> this.onClose()).bounds(cx - 50, y, 100, 20).build());
+    }
+
+    /** Filters items then blocks whose id contains the query, up to MAX_RESULTS, for the click-to-export list. */
+    private void onSearch(String query) {
+        results.clear();
+        String q = query.trim().toLowerCase(java.util.Locale.ROOT);
+        if (q.length() < 2 || q.contains(":") && q.endsWith(":")) {
+            return;   // too short, or just a namespace — let the explicit Item/Block buttons handle full ids
+        }
+        for (ResourceLocation id : ForgeRegistries.ITEMS.getKeys()) {
+            if (idMatches(id, q)) {
+                results.add(id);
+                if (results.size() >= MAX_RESULTS) return;
+            }
+        }
+        for (ResourceLocation id : ForgeRegistries.BLOCKS.getKeys()) {
+            if (idMatches(id, q) && !results.contains(id)) {
+                results.add(id);
+                if (results.size() >= MAX_RESULTS) return;
+            }
+        }
+    }
+
+    private static boolean idMatches(ResourceLocation id, String q) {
+        return id.getPath().toLowerCase(java.util.Locale.ROOT).contains(q)
+                || id.toString().toLowerCase(java.util.Locale.ROOT).contains(q);
+    }
+
+    private void drawResults(GuiGraphics g, int mouseX, int mouseY) {
+        if (results.isEmpty()) return;
+        int h = results.size() * ROW_H + 2;
+        g.fill(resultsX, resultsY, resultsX + resultsW, resultsY + h, 0xF00D1117);
+        g.fill(resultsX, resultsY, resultsX + resultsW, resultsY + 1, 0xFF3A4655);
+        for (int i = 0; i < results.size(); i++) {
+            ResourceLocation id = results.get(i);
+            int ry = resultsY + 1 + i * ROW_H;
+            boolean hover = mouseX >= resultsX && mouseX <= resultsX + resultsW && mouseY >= ry && mouseY < ry + ROW_H;
+            if (hover) g.fill(resultsX, ry, resultsX + resultsW, ry + ROW_H, 0x40FFFFFF);
+            boolean isItem = ForgeRegistries.ITEMS.containsKey(id);
+            g.drawString(this.font, (isItem ? "§b[I] §f" : "§a[B] §f") + id, resultsX + 4, ry + 2, 0xFFFFFF, false);
+        }
+    }
+
+    @Override
+    public boolean mouseClicked(double mx, double my, int button) {
+        if (!results.isEmpty()) {
+            for (int i = 0; i < results.size(); i++) {
+                int ry = resultsY + 1 + i * ROW_H;
+                if (mx >= resultsX && mx <= resultsX + resultsW && my >= ry && my < ry + ROW_H) {
+                    ResourceLocation id = results.get(i);
+                    boolean isItem = ForgeRegistries.ITEMS.containsKey(id);
+                    results.clear();
+                    run(() -> {
+                        if (isItem) Exporter.exportItem(id);
+                        else Exporter.exportBlock(id);
+                    });
+                    return true;
+                }
+            }
+        }
+        return super.mouseClicked(mx, my, button);
     }
 
     private int radius() {
@@ -146,6 +222,7 @@ public final class RecorteScreen extends Screen {
         refreshPreview();
         drawPreview(g);
         super.render(g, mouseX, mouseY, partialTick);
+        drawResults(g, mouseX, mouseY);   // click-to-export search results, drawn on top
     }
 
     @Override

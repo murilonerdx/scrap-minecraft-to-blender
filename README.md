@@ -31,8 +31,10 @@ files appear ready to import into Blender.
 | `/recorte export player <name>` | a player by name | ✅ |
 | `/recorte export entity <id>` | a **mob** (e.g. `minecraft:zombie`) | ✅ vanilla¹ |
 | `/recorte export item <id>` | a 3D **item** model (sword, egg…) | – |
+| `/recorte export held` | the item you're **holding** (main hand) — no id needed | – |
 | `/recorte export block <id>` | a **block** model | – |
-| `/recorte export mod <modid>` | **all** items + blocks **+ entities** of a mod (batch) | ✅ |
+| `/recorte export block` (no id) | the **block/object you're looking at** (chests, machines, signs come with their real state + block entity) | – |
+| `/recorte export mod <modid>` | **all** items + blocks **+ entities** of a mod (batch) **+ a `manifest.json` catalog** | ✅ |
 | `/recorte export animlib` | a **library of player animations** (idle/walk/run/sneak) on one rig | ✅ |
 | `/recorte export retarget` | the player with **Mixamo-compatible humanoid bone names** (Hips/Spine/Head/arms/legs) for retargeting | ✅ |
 | `/recorte export scene [radius]` | 🎬 the **surroundings** (a diorama of your build/terrain) | – |
@@ -134,9 +136,10 @@ Run a dev client: `./gradlew runClient`
 ## 🎮 Usage
 
 1. Join a world.
-2. Press **`G`** for the **control panel** (buttons for every export + record, plus a live **top-down
-   preview thumbnail** of the scene/snapshot footprint), **`O`** to export the looked-at/yourself, **`R`**
-   to record an animation, or run a `/recorte export …` command.
+2. Press **`G`** for the **control panel** (buttons for every export + record, a **searchable item/block
+   browser** (type to filter, click a result to export), **Looked-at block** / **Held item** buttons, plus
+   a live **top-down preview thumbnail** of the scene/snapshot footprint), **`O`** to export the
+   looked-at/yourself, **`R`** to record an animation, or run a `/recorte export …` command.
 3. Files land in:
    ```
    <instance folder>/recorte_exports/<timestamp>_<name>/

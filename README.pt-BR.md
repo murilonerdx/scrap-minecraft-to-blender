@@ -28,8 +28,10 @@ do jogo e os arquivos aparecem prontos pra importar no Blender.
 | `/recorte export player <nome>` | um player pelo nome | ✅ |
 | `/recorte export entity <id>` | um **mob** (ex.: `minecraft:zombie`) | ✅ vanilla¹ |
 | `/recorte export item <id>` | modelo 3D de um **item** (espada, ovo…) | – |
+| `/recorte export held` | o item que você está **segurando** (mão principal) — sem precisar de id | – |
 | `/recorte export block <id>` | modelo de um **bloco** | – |
-| `/recorte export mod <modid>` | **todos** os itens + blocos **+ entidades** de um mod (lote) | ✅ |
+| `/recorte export block` (sem id) | o **bloco/objeto que você está olhando** (baús, máquinas, placas vêm com o estado real + block entity) | – |
+| `/recorte export mod <modid>` | **todos** os itens + blocos **+ entidades** de um mod (lote) **+ um catálogo `manifest.json`** | ✅ |
 | `/recorte export animlib` | uma **biblioteca de animações** do player (idle/walk/run/sneak) num rig | ✅ |
 | `/recorte export retarget` | o player com **nomes de osso humanóides estilo Mixamo** (Hips/Spine/Head/braços/pernas) pra retargeting | ✅ |
 | `/recorte export scene [raio]` | 🎬 **cenário** ao redor (diorama do seu build/terreno) | – |
@@ -133,9 +135,10 @@ Rodar um cliente de teste (dev): `./gradlew runClient`
 ## 🎮 Como usar
 
 1. Entre num mundo.
-2. Aperte **`G`** para o **painel de controle** (botões pra cada export + uma **miniatura top-down ao
-   vivo** do que a cena/snapshot vai capturar), **`O`** (rebindável em *Opções → Controles → Recorte*)
-   pra exportar, ou use um `/recorte export …`.
+2. Aperte **`G`** para o **painel de controle** (botões pra cada export, um **navegador buscável de
+   items/blocks** (digite pra filtrar, clique num resultado pra exportar), botões **Looked-at block** /
+   **Held item**, e uma **miniatura top-down ao vivo** do que a cena/snapshot vai capturar), **`O`**
+   (rebindável em *Opções → Controles → Recorte*) pra exportar, ou use um `/recorte export …`.
 3. Os arquivos saem em `<pasta da instância>/recorte_exports/<data_hora>_<nome>/` (`.glb`, `.obj`/`.mtl`, `.png`).
 
 ### Exemplos

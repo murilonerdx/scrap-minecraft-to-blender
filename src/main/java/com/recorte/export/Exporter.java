@@ -353,6 +353,49 @@ public final class Exporter {
         }
     }
 
+    /** Exports the item the player is holding in the main hand (no id needed). */
+    public static void exportHeldItem() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null) {
+            feedback("§cEntre num mundo primeiro.");
+            return;
+        }
+        ItemStack stack = mc.player.getMainHandItem();
+        if (stack.isEmpty()) {
+            feedback("§eMão vazia — segure um item e tente de novo.");
+            return;
+        }
+        ResourceLocation id = ForgeRegistries.ITEMS.getKey(stack.getItem());
+        if (id == null) {
+            feedback("§cNão consegui identificar o item na mão.");
+            return;
+        }
+        exportItem(id);
+    }
+
+    /** Exports the block (or block entity) the player is looking at — a faithful 1-block region capture
+     *  so chests/machines/signs come with their real state, block entity and lighting. */
+    public static void exportLookedAtBlock() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level == null || mc.player == null) {
+            feedback("§cEntre num mundo primeiro.");
+            return;
+        }
+        net.minecraft.world.phys.HitResult hit = mc.hitResult;
+        if (hit == null || hit.getType() != net.minecraft.world.phys.HitResult.Type.BLOCK) {
+            feedback("§eMire num bloco e tente de novo.");
+            return;
+        }
+        BlockPos pos = ((net.minecraft.world.phys.BlockHitResult) hit).getBlockPos();
+        BlockState state = mc.level.getBlockState(pos);
+        if (state.isAir()) {
+            feedback("§eEsse bloco é ar.");
+            return;
+        }
+        // a 1-block region captures the real in-world block: state, block entity, biome tint, lighting
+        exportRegion(pos.getX(), pos.getY(), pos.getZ(), pos.getX(), pos.getY(), pos.getZ());
+    }
+
     public static void exportScene(int radius) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null) {
@@ -764,13 +807,16 @@ public final class Exporter {
         Minecraft mc = Minecraft.getInstance();
         try {
             Path base = newDir("mod_" + modid);
+            java.util.List<String> catalog = new java.util.ArrayList<>();   // one JSON entry per asset
             int items = 0;
             for (var e : ForgeRegistries.ITEMS.getEntries()) {
                 ResourceLocation id = e.getKey().location();
                 if (!id.getNamespace().equals(modid)) continue;
                 try {
                     Ir.Model ir = bakeItem(e.getValue());
-                    writeAll(ir, base.resolve("items").resolve(sanitize(id.getPath())), id.getPath());
+                    String folder = "items/" + sanitize(id.getPath());
+                    writeAll(ir, base.resolve(folder), id.getPath());
+                    catalog.add(catalogEntry("item", id, folder, ir));
                     items++;
                 } catch (Throwable t) {
                     Recorte.LOGGER.warn("Item {} failed", id, t);
@@ -782,7 +828,9 @@ public final class Exporter {
                 if (!id.getNamespace().equals(modid)) continue;
                 try {
                     Ir.Model ir = bakeBlock(e.getValue());
-                    writeAll(ir, base.resolve("blocks").resolve(sanitize(id.getPath())), id.getPath());
+                    String folder = "blocks/" + sanitize(id.getPath());
+                    writeAll(ir, base.resolve(folder), id.getPath());
+                    catalog.add(catalogEntry("block", id, folder, ir));
                     blocks++;
                 } catch (Throwable t) {
                     Recorte.LOGGER.warn("Block {} failed", id, t);
@@ -800,29 +848,46 @@ public final class Exporter {
                     }
                     Ir.Model ir = buildEntityModel(entity);
                     if (ir == null || ir.triangleCount() <= 0) continue;
-                    writeAll(ir, base.resolve("entities").resolve(sanitize(id.getPath())), id.getPath());
+                    String folder = "entities/" + sanitize(id.getPath());
+                    writeAll(ir, base.resolve(folder), id.getPath());
+                    catalog.add(catalogEntry("entity", id, folder, ir));
                     entities++;
                 } catch (Throwable t) {
                     Recorte.LOGGER.warn("Entity {} failed", id, t);
                 }
             }
-            writeModManifest(base, modid, items, blocks, entities);
+            writeModManifest(base, modid, items, blocks, entities, catalog);
             Recorte.LOGGER.info("Exported mod {}: {} items, {} blocks, {} entities to {}",
                     modid, items, blocks, entities, base);
-            feedback(String.format("§aMod §f%s§a: %d itens + %d blocos + %d entidades §7→ §f%s",
+            feedback(String.format("§aMod §f%s§a: %d itens + %d blocos + %d entidades §7(catálogo em manifest.json) §7→ §f%s",
                     modid, items, blocks, entities, base));
         } catch (Throwable t) {
             fail(t);
         }
     }
 
-    /** A small JSON manifest of what a mod batch produced, so the export folder is self-describing. */
-    private static void writeModManifest(Path base, String modid, int items, int blocks, int entities) {
-        String json = String.format(java.util.Locale.ROOT,
-                "{\"mod\":\"%s\",\"items\":%d,\"blocks\":%d,\"entities\":%d,\"exportedAt\":\"%s\"}",
-                esc(modid), items, blocks, entities, LocalDateTime.now().format(STAMP));
+    private static String catalogEntry(String type, ResourceLocation id, String folder, Ir.Model ir) {
+        return String.format(java.util.Locale.ROOT,
+                "{\"type\":\"%s\",\"id\":\"%s\",\"name\":\"%s\",\"path\":\"%s\",\"glb\":\"%s/%s.glb\",\"tris\":%d}",
+                type, esc(id.toString()), esc(id.getPath()), esc(folder), esc(folder), esc(id.getPath()),
+                ir.triangleCount());
+    }
+
+    /** A JSON manifest cataloguing every asset a mod batch produced (id, type, folder, glb, tri count),
+     *  so the export folder is a self-describing asset library. */
+    private static void writeModManifest(Path base, String modid, int items, int blocks, int entities,
+                                         java.util.List<String> catalog) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(String.format(java.util.Locale.ROOT,
+                "{\"mod\":\"%s\",\"exportedAt\":\"%s\",\"counts\":{\"items\":%d,\"blocks\":%d,\"entities\":%d},\"assets\":[",
+                esc(modid), LocalDateTime.now().format(STAMP), items, blocks, entities));
+        for (int i = 0; i < catalog.size(); i++) {
+            if (i > 0) sb.append(',');
+            sb.append("\n  ").append(catalog.get(i));
+        }
+        sb.append("\n]}");
         try {
-            Files.writeString(base.resolve("manifest.json"), json);
+            Files.writeString(base.resolve("manifest.json"), sb.toString());
         } catch (Throwable ignored) {
         }
     }

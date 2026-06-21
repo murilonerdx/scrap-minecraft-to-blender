@@ -152,11 +152,14 @@ public final class InputHandler {
                                         .executes(c -> run(() -> Exporter.exportItem(
                                                 ResourceLocationArgument.getId(c, "id"))))))
                         .then(Commands.literal("block")
+                                .executes(c -> run(Exporter::exportLookedAtBlock))   // no id = the block you're looking at
                                 .then(Commands.argument("id", ResourceLocationArgument.id())
                                         .suggests((c, b) -> SharedSuggestionProvider.suggestResource(
                                                 ForgeRegistries.BLOCKS.getKeys(), b))
                                         .executes(c -> run(() -> Exporter.exportBlock(
                                                 ResourceLocationArgument.getId(c, "id"))))))
+                        .then(Commands.literal("held")
+                                .executes(c -> run(Exporter::exportHeldItem)))
                         .then(Commands.literal("entity")
                                 .then(Commands.argument("id", ResourceLocationArgument.id())
                                         .suggests((c, b) -> SharedSuggestionProvider.suggestResource(
