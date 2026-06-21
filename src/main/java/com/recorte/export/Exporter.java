@@ -104,6 +104,31 @@ public final class Exporter {
         }
     }
 
+    /** Studio #16 — exports the local player with consistent humanoid bone names (Hips/Spine/Head/arms/
+     *  legs) for Mixamo-style retargeting in Blender. */
+    public static void exportRetarget() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null) {
+            feedback("§cEntre num mundo primeiro.");
+            return;
+        }
+        try {
+            Ir.Model ir = buildPlayer(mc.player);
+            if (ir == null) {
+                feedback("§cRenderer do jogador não encontrado.");
+                return;
+            }
+            int n = RetargetMap.apply(ir);
+            ir.useRetargetNames = true;
+            Path dir = newDir("retarget_" + mc.player.getGameProfile().getName());
+            writeAll(ir, dir, "retarget");
+            feedback(String.format("§a■ Rig de retarget §f(%d ossos humanóides: Hips/Spine/Head/arms/legs)§a §7→ §f%s",
+                    n, dir));
+        } catch (Throwable t) {
+            fail(t);
+        }
+    }
+
     /** Full player model: rigged body + skin + captured accessories (armour/Curios), or null. */
     static Ir.Model buildPlayer(AbstractClientPlayer target) throws java.io.IOException {
         Minecraft mc = Minecraft.getInstance();

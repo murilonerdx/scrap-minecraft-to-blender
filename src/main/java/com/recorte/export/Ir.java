@@ -26,6 +26,7 @@ public final class Ir {
         public Light sun;       // optional: a directional light matching the in-game sun
         public final List<Light> lights = new ArrayList<>();          // point lights (torches, glowstone…)
         public final List<Speaker> speakers = new ArrayList<>();      // positioned sound emitters → Blender Speakers
+        public boolean useRetargetNames;   // #16: name bone nodes with humanoid retarget names (Mixamo-style)
 
         public int addBone(Bone b) {
             bones.add(b);
@@ -66,6 +67,7 @@ public final class Ir {
         public final Matrix4f globalBind;     // export-space global bind transform (axis + scale already applied)
         public Matrix4f localTransform;       // node transform relative to parent; filled in by the extractor
         public transient Object sourcePart;   // the live ModelPart this bone samples (for animation recording)
+        public String retargetName;           // #16: humanoid label (Hips/Spine/Head/…) for retargeting
 
         public Bone(String name, int parentIndex, Matrix4f globalBind) {
             this.name = name;

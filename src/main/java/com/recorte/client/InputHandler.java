@@ -128,6 +128,8 @@ public final class InputHandler {
                                 .executes(c -> run(Exporter::exportLookedAtOrSelf)))
                         .then(Commands.literal("animlib")
                                 .executes(c -> run(Exporter::exportAnimLibrary)))
+                        .then(Commands.literal("retarget")
+                                .executes(c -> run(Exporter::exportRetarget)))
                         .then(Commands.literal("region")
                                 .then(Commands.argument("from", BlockPosArgument.blockPos())
                                         .then(Commands.argument("to", BlockPosArgument.blockPos())

@@ -41,6 +41,11 @@ def validate_common(name, js, bin_len):
     if "root" in idx and "body" in idx and "head" in idx:
         check(idx["body"] in (nodes[idx["root"]].get("children") or []), "'body' is a child of 'root'")
         check(idx["head"] in (nodes[idx["body"]].get("children") or []), "'head' is a child of 'body'")
+    # #16 retarget: bone nodes carry a humanoid label in extras (root->Hips, body->Spine, head->Head)
+    body_node = next((n for n in nodes if n.get("name") == "body"), None)
+    if body_node is not None:
+        check((body_node.get("extras") or {}).get("retarget") == "Spine",
+              "body bone carries retarget extras 'Spine'")
     skins = js.get("skins", [])
     check(len(skins) == 1, f"exactly one skin ({len(skins)})")
     if skins:
@@ -165,6 +170,19 @@ check(len(set(tnames)) == 2, f"clip names are unique for NLA stacking -> {tnames
 check("take" in tnames and "take_2" in tnames, f"colliding names de-duped to take/take_2 -> {tnames}")
 for a in tanims:
     check(len(a["channels"]) > 0 and len(a["samplers"]) > 0, f"take '{a.get('name')}' has channels+samplers")
+
+# --- retarget.glb: humanoid bone names for Mixamo-style retargeting (studio #16) --------------------
+js, bl = parse_glb(os.path.join(root, "retarget.glb"))
+print("\n=== retarget.glb ===")
+rnames = [n.get("name") for n in js.get("nodes", [])]
+for h in ("Hips", "Spine", "Head"):
+    check(h in rnames, f"bone node renamed to humanoid '{h}'")
+check("body" not in rnames and "head" not in rnames, f"MC bone names replaced -> {rnames}")
+rskins = js.get("skins", [])
+check(len(rskins) == 1 and len(rskins[0]["joints"]) == 3, "retarget rig still has the 3-joint skin")
+# the original MC name is preserved in extras for round-tripping
+spine = next((n for n in js["nodes"] if n.get("name") == "Spine"), None)
+check(spine and (spine.get("extras") or {}).get("mcBone") == "body", "Spine keeps mcBone='body' in extras")
 
 print("\n" + ("ALL SELF-TEST CHECKS PASSED" if not fails else f"{len(fails)} CHECK(S) FAILED"))
 sys.exit(1 if fails else 0)

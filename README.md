@@ -34,6 +34,7 @@ files appear ready to import into Blender.
 | `/recorte export block <id>` | a **block** model | – |
 | `/recorte export mod <modid>` | **all** items + blocks **+ entities** of a mod (batch) | ✅ |
 | `/recorte export animlib` | a **library of player animations** (idle/walk/run/sneak) on one rig | ✅ |
+| `/recorte export retarget` | the player with **Mixamo-compatible humanoid bone names** (Hips/Spine/Head/arms/legs) for retargeting | ✅ |
 | `/recorte export scene [radius]` | 🎬 the **surroundings** (a diorama of your build/terrain) | – |
 | `/recorte export snapshot [radius]` | 🎬 the **moment**: scene + every nearby **entity** (mobs rigged; item frames, paintings, boats, minecarts, dropped items… captured) | ✅ |
 | `/recorte export region <from> <to>` | a precise **box** between two corners (a whole build), framed and lit | – |

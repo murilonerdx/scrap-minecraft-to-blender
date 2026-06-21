@@ -62,6 +62,9 @@ cinematics**. ✅ marks what already exists. (Versão em português abaixo / Por
 - ✅ **Time remap / slow-mo** — `/recorte slowmo <1-16>` samples the next recordings/takes/cinematics N×
   denser and tags them `timeScale=N`; the writer stretches every keyframe time ×N for smooth N× slow
   motion at 30 fps.
+- ✅ **Retarget rig** — `/recorte export retarget` names the player's bones with Mixamo-compatible
+  humanoid labels (Hips/Spine/Head/arms/legs) for one-click retargeting in Blender; every export also
+  carries the humanoid label + original MC bone name in node `extras`.
 - **Resource-pack PBR (LabPBR)** — when the active pack ships them, scene materials export the `_n`
   **normal map** (glTF `normalTexture`) and the `_s` **specular** repacked into a glTF
   **metallic-roughness** texture (LabPBR smoothness→roughness, F0→metalness), so blocks get real bumpy,

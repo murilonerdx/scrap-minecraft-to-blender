@@ -30,6 +30,7 @@ public final class GltfSelfTest {
         assertSkyGeometry();
         assertSpeakers();
         assertNlaUniqueNames();
+        assertRetargetMap();
 
         Ir.Model model = buildRig();
 
@@ -61,8 +62,12 @@ public final class GltfSelfTest {
         takes.add(walkClip("take", 0.6f));
         GltfWriter.writeLibrary(model, takes, outDir.resolve("takes.glb"));
 
-        System.out.println("SELFTEST OK -> single.glb, library.glb, static.glb, points.glb, takes.glb in "
-                + outDir.toAbsolutePath());
+        // 6) retarget rig (studio #16) — same rig but bone nodes named with humanoid labels (Mixamo-style)
+        model.useRetargetNames = true;
+        GltfWriter.write(model, outDir.resolve("retarget.glb"));
+
+        System.out.println("SELFTEST OK -> single.glb, library.glb, static.glb, points.glb, takes.glb, "
+                + "retarget.glb in " + outDir.toAbsolutePath());
     }
 
     /** A minimal particle point cloud: one root bone + a POINTS primitive whose points carry colours.
@@ -161,6 +166,7 @@ public final class GltfSelfTest {
         m.lights.add(Ir.Light.point(new float[]{1f, 1.5f, 1f}, new float[]{1f, 0.86f, 0.66f}, 50f));
         m.lights.add(Ir.Light.point(new float[]{-1f, 1.5f, -1f}, new float[]{1f, 0.86f, 0.66f}, 50f));
         m.speakers.add(new Ir.Speaker("minecraft:block.note_block.harp", new float[]{2, 1, 3}, 0.5f, 1f));
+        RetargetMap.apply(m);   // #16: tag root/body/head with Hips/Spine/Head (carried in node extras)
         return m;
     }
 
@@ -346,6 +352,22 @@ public final class GltfSelfTest {
             throw new IllegalStateException("FAIL: NLA names not unique: " + out);
         }
         System.out.println("  nla-names OK: collisions de-duplicated, order preserved -> " + out);
+    }
+
+    /** Retarget map (studio #16): Minecraft bone names map to humanoid labels (case/separator-insensitive). */
+    private static void assertRetargetMap() {
+        check("Hips".equals(RetargetMap.humanoid("root")), "root -> Hips");
+        check("Spine".equals(RetargetMap.humanoid("body")), "body -> Spine");
+        check("Head".equals(RetargetMap.humanoid("head")), "head -> Head");
+        check("RightArm".equals(RetargetMap.humanoid("right_arm")), "right_arm -> RightArm");
+        check("LeftArm".equals(RetargetMap.humanoid("leftArm")), "leftArm -> LeftArm (separator-insensitive)");
+        check("RightUpLeg".equals(RetargetMap.humanoid("right_leg")), "right_leg -> RightUpLeg");
+        check(RetargetMap.humanoid("scene") == null, "unknown bone -> null");
+        System.out.println("  retarget-map OK: MC bones -> humanoid labels (Hips/Spine/Head/arms/legs)");
+    }
+
+    private static void check(boolean cond, String label) {
+        if (!cond) throw new IllegalStateException("FAIL: retarget map " + label);
     }
 
     private static float avgChannel(List<float[]> pts, int ch) {

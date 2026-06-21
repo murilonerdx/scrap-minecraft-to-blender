@@ -64,7 +64,16 @@ public final class GltfWriter {
         for (int i = 0; i < model.bones.size(); i++) {
             Ir.Bone b = model.bones.get(i);
             JsonObject node = new JsonObject();
-            node.addProperty("name", b.name);
+            // #16 retarget rig: name the bone with its humanoid label when requested (Mixamo-style),
+            // and always carry the label in extras so retargeting tools/the add-on can map by it
+            boolean retarget = model.useRetargetNames && b.retargetName != null;
+            node.addProperty("name", retarget ? b.retargetName : b.name);
+            if (b.retargetName != null) {
+                JsonObject extras = new JsonObject();
+                extras.addProperty("retarget", b.retargetName);
+                extras.addProperty("mcBone", b.name);
+                node.add("extras", extras);
+            }
             // TRS (not a matrix) so the node can be animation-targeted (glTF forbids matrix + animation)
             org.joml.Vector3f tt = b.localTransform.getTranslation(new org.joml.Vector3f());
             org.joml.Quaternionf rr = b.localTransform.getNormalizedRotation(new org.joml.Quaternionf());
