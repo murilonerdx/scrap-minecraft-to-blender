@@ -134,8 +134,9 @@ Run a dev client: `./gradlew runClient`
 ## 🎮 Usage
 
 1. Join a world.
-2. Press **`G`** for the **control panel** (buttons for every export + record), **`O`** to export the
-   looked-at/yourself, **`R`** to record an animation, or run a `/recorte export …` command.
+2. Press **`G`** for the **control panel** (buttons for every export + record, plus a live **top-down
+   preview thumbnail** of the scene/snapshot footprint), **`O`** to export the looked-at/yourself, **`R`**
+   to record an animation, or run a `/recorte export …` command.
 3. Files land in:
    ```
    <instance folder>/recorte_exports/<timestamp>_<name>/

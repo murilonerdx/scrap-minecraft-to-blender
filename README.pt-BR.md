@@ -133,7 +133,9 @@ Rodar um cliente de teste (dev): `./gradlew runClient`
 ## 🎮 Como usar
 
 1. Entre num mundo.
-2. Aperte **`O`** (rebindável em *Opções → Controles → Recorte*) ou use um `/recorte export …`.
+2. Aperte **`G`** para o **painel de controle** (botões pra cada export + uma **miniatura top-down ao
+   vivo** do que a cena/snapshot vai capturar), **`O`** (rebindável em *Opções → Controles → Recorte*)
+   pra exportar, ou use um `/recorte export …`.
 3. Os arquivos saem em `<pasta da instância>/recorte_exports/<data_hora>_<nome>/` (`.glb`, `.obj`/`.mtl`, `.png`).
 
 ### Exemplos

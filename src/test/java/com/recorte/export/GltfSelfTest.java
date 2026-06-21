@@ -33,6 +33,7 @@ public final class GltfSelfTest {
         assertRetargetMap();
         assertShots();
         assertPresets();
+        assertPreviewGrid();
 
         Ir.Model model = buildRig();
 
@@ -354,6 +355,37 @@ public final class GltfSelfTest {
             throw new IllegalStateException("FAIL: NLA names not unique: " + out);
         }
         System.out.println("  nla-names OK: collisions de-duplicated, order preserved -> " + out);
+    }
+
+    /** Preview grid (studio #19): the footprint maps onto an N×N grid; centre/corners land in the right
+     *  cells, out-of-range columns are dropped, and build() samples one colour per cell. */
+    private static void assertPreviewGrid() {
+        int cx = 100, cz = 200, radius = 16, size = PreviewGrid.SIZE;
+        // a column just inside the centre maps to the middle row/col; the NW corner to (0,0)
+        int mid = PreviewGrid.index(cx, cz, cx, cz, radius, size);
+        if (mid != (size / 2) * size + (size / 2)) {
+            throw new IllegalStateException("FAIL: centre cell wrong: " + mid);
+        }
+        if (PreviewGrid.index(cx - radius, cz - radius, cx, cz, radius, size) != 0) {
+            throw new IllegalStateException("FAIL: NW corner should be cell 0");
+        }
+        if (PreviewGrid.index(cx + radius * 4, cz, cx, cz, radius, size) != -1) {
+            throw new IllegalStateException("FAIL: far-out column should be -1");
+        }
+        // build() must produce size*size cells, sampling each cell's world position
+        int[] grid = PreviewGrid.build(cx, cz, radius, size, (wx, wz) -> (wx << 16) | (wz & 0xFFFF));
+        if (grid.length != size * size) {
+            throw new IllegalStateException("FAIL: grid length " + grid.length + " != " + (size * size));
+        }
+        // cells increase in world-x left→right and world-z top→bottom
+        if (!(decodeX(grid[0]) < decodeX(grid[size - 1]))) {
+            throw new IllegalStateException("FAIL: grid columns not west→east");
+        }
+        System.out.println("  preview-grid OK: " + size + "×" + size + " cells, centre/corner mapping correct");
+    }
+
+    private static int decodeX(int packed) {
+        return packed >> 16;
     }
 
     /** Studio presets (#18): a config round-trips through JSON, and apply() pushes to the global holders. */

@@ -24,7 +24,7 @@ each verified by `gradlew gltfSelfTest` before it ships. ✅ = done.
 | 16 | **Retarget rig** ✅ | `/recorte export retarget` exports the player with **Mixamo-compatible humanoid bone names** (Hips / Spine / Head / Left·RightArm / Left·RightUpLeg) so the armature retargets to/from other humanoid rigs in Blender (Rokoko, Auto-Rig Pro, Rigify) in one click; every export also carries the humanoid label + original MC name in node `extras`. |
 | 17 | **Named shot markers** ✅ | `/recorte shot <name>` during a cinematic tags a cut point at the current time; it exports on the event timeline and the add-on drops a clean named marker (`🎬 Intro`), plus a `shots.csv` (name/time/frame) for your editor / shot board. |
 | 18 | **Export presets** ✅ | `/recorte preset save\|load\|list <name>` stores studio settings (default radius, slow-mo, camera shake, fps, DOF) as named JSON files under `recorte_exports/presets/`; loading one re-applies the look (slow-mo + shake take effect immediately, the radius becomes the default). |
-| 19 | **In-game preview** | a thumbnail of what you'll export, in the control panel. |
+| 19 | **In-game preview** ✅ | the control panel (key `G`) draws a live **top-down thumbnail** of the scene/snapshot footprint — surface map colours, height-shaded, with red entity dots and the player at centre + an `r<radius> · <n> ent · rain` readout — updating as you change the radius, so you see what you'll capture before you export. |
 | 20 | **Studio scene template** | the add-on sets up a render-ready Blender scene (camera, color management, output) on import. |
 
 *Every feature compiles, passes the headless glTF self-test, and updates the docs in the same commit.*

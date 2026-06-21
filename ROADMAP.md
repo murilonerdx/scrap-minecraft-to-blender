@@ -82,7 +82,9 @@ cinematics**. ✅ marks what already exists. (Versão em português abaixo / Por
 - **Real-time link phase C**: true streaming (WebSocket/SSE) of bone transforms so it's frame-accurate,
   not ~1×/s.
 - **Particle/VFX capture**: record particle systems (fire, portal, explosions) as animated point clouds.
-- **In-game preview**: a render of the model/scene inside the control panel before exporting.
+- ✅ **In-game preview**: the control panel (key `G`) draws a live **top-down thumbnail** of the
+  scene/snapshot footprint (surface map colours, height-shaded + entity dots + an `r/ent/rain` readout)
+  that updates as you change the radius.
 - ✅ **Batch a mod's entities**: `export mod` now also exports every one of the mod's entities (rigged
   or captured) into an `entities/` folder, plus a `manifest.json` summarising the batch.
 - ✅ **Block entities in scenes**: chests, signs, banners, beds, bells, shulker boxes… are rendered via

@@ -1,5 +1,6 @@
 package com.recorte.client;
 
+import com.recorte.export.ExportPreview;
 import com.recorte.export.Exporter;
 import com.recorte.export.Recorder;
 import net.minecraft.client.Minecraft;
@@ -18,6 +19,8 @@ public final class RecorteScreen extends Screen {
 
     private EditBox radiusBox;
     private EditBox idBox;
+    private ExportPreview.Data preview;   // #19: top-down thumbnail of the scene/snapshot footprint
+    private int lastPreviewRadius = -1;
 
     public RecorteScreen() {
         super(Component.literal("Recorte — Export to Blender"));
@@ -102,10 +105,46 @@ public final class RecorteScreen extends Screen {
         Minecraft.getInstance().execute(export);
     }
 
+    /** Samples a top-down preview of the current radius, but only when the radius actually changes. */
+    private void refreshPreview() {
+        int r = radius();
+        if (preview != null && r == lastPreviewRadius) return;
+        lastPreviewRadius = r;
+        if (minecraft != null && minecraft.level != null && minecraft.player != null) {
+            try {
+                preview = ExportPreview.sample(minecraft.level, minecraft.player.blockPosition(), r);
+            } catch (Throwable ignored) {
+                preview = null;
+            }
+        }
+    }
+
+    /** Draws the top-down export-footprint thumbnail (surface colours + entity dots) under the title. */
+    private void drawPreview(GuiGraphics g) {
+        if (preview == null) return;
+        int cell = 2, gs = preview.size, pw = gs * cell;
+        int px = Math.min(this.width / 2 + 116, this.width - pw - 6);
+        int py = 44;
+        g.fill(px - 2, py - 2, px + pw + 2, py + pw + 2, 0xFF101418);   // border
+        for (int row = 0; row < gs; row++) {
+            for (int col = 0; col < gs; col++) {
+                int idx = row * gs + col;
+                int color = preview.entityCell[idx] ? 0xFFFF4040 : preview.colors[idx];
+                g.fill(px + col * cell, py + row * cell, px + col * cell + cell, py + row * cell + cell, color);
+            }
+        }
+        int mid = px + pw / 2, midY = py + pw / 2;   // player at centre
+        g.fill(mid - 1, midY - 1, mid + 2, midY + 2, 0xFFFFFFFF);
+        String lbl = "r" + preview.radius + " · " + preview.entities + " ent" + (preview.raining ? " · rain" : "");
+        g.drawString(this.font, lbl, px, py + pw + 3, 0xB0B0B0, false);
+    }
+
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         this.renderBackground(g);
         g.drawCenteredString(this.font, this.title, this.width / 2, 18, 0xFFFFFF);
+        refreshPreview();
+        drawPreview(g);
         super.render(g, mouseX, mouseY, partialTick);
     }
 
