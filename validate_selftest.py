@@ -120,6 +120,22 @@ for n in ("idle", "walk", "run", "spin"):
 for a in anims:
     check(len(a["channels"]) > 0 and len(a["samplers"]) > 0, f"clip '{a.get('name')}' has channels+samplers")
 
+
+def _clip_time_max(js, anim):
+    accs = js["accessors"]
+    s = anim["samplers"][anim["channels"][0]["sampler"]]
+    return accs[s["input"]]["max"][0]
+
+
+# slow-mo time remap (#15): 'idle' was tagged timeScale=2, so its keyframe times stretch to ~2.0,
+# while a normal clip ('walk') stays ~1.0
+_by_name = {a.get("name"): a for a in anims}
+if "idle" in _by_name and "walk" in _by_name:
+    idle_max = _clip_time_max(js, _by_name["idle"])
+    walk_max = _clip_time_max(js, _by_name["walk"])
+    check(abs(idle_max - 2.0) < 1e-3, f"slow-mo clip 'idle' times stretched to ~2.0 -> {idle_max}")
+    check(abs(walk_max - 1.0) < 1e-3, f"normal clip 'walk' times unchanged ~1.0 -> {walk_max}")
+
 # --- points.glb: particle / VFX point cloud (studio #8) ---------------------------------------------
 js, bl = parse_glb(os.path.join(root, "points.glb"))
 print("\n=== points.glb ===")

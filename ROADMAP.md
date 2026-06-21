@@ -59,6 +59,9 @@ cinematics**. ✅ marks what already exists. (Versão em português abaixo / Por
 - ✅ **Takes** — `/recorte take start [name]` … `stop` records the same subject repeatedly on one shared
   rig (sampled by the common `PoseSampler`); `take export` writes every take as one multi-clip glTF (one
   Action each, sharing the rig origin) so you can compare and keep the best.
+- ✅ **Time remap / slow-mo** — `/recorte slowmo <1-16>` samples the next recordings/takes/cinematics N×
+  denser and tags them `timeScale=N`; the writer stretches every keyframe time ×N for smooth N× slow
+  motion at 30 fps.
 - **Resource-pack PBR (LabPBR)** — when the active pack ships them, scene materials export the `_n`
   **normal map** (glTF `normalTexture`) and the `_s` **specular** repacked into a glTF
   **metallic-roughness** texture (LabPBR smoothness→roughness, F0→metalness), so blocks get real bumpy,

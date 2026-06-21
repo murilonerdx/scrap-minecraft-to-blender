@@ -39,7 +39,9 @@ public final class GltfSelfTest {
         // 2) multi-clip animation library (the riskiest refactor) + a spinning clip that would flip
         //    quaternion signs without the hemisphere fix (the cause of jittery recorded animations)
         List<Ir.Animation> lib = new ArrayList<>();
-        lib.add(walkClip("idle", 0.1f));
+        Ir.Animation idle = walkClip("idle", 0.1f);
+        idle.timeScale = 2f;   // slow-mo (#15): the writer must stretch this clip's times ×2
+        lib.add(idle);
         lib.add(walkClip("walk", 0.5f));
         lib.add(walkClip("run", 0.9f));
         lib.add(spinClip("spin"));

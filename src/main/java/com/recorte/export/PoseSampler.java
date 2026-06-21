@@ -20,10 +20,11 @@ public final class PoseSampler {
 
     public static final float SAMPLE_DT = 1f / 30f;   // throttle render-frame sampling to ~30 fps
 
-    /** Mutable per-recording state: the capture origin plus the sampling throttle/counters. */
+    /** Mutable per-recording state: the capture origin, the slow-mo factor, and throttle/counters. */
     public static final class State {
         public final double startX, startY, startZ;
         public final float startYaw;
+        public final float timeScale;   // slow-mo (#15): captured at start so it can't change mid-take
         public double startSeconds = -1;
         public float lastT = -1f;
         public int frames;
@@ -33,6 +34,7 @@ public final class PoseSampler {
             this.startY = e.getY();
             this.startZ = e.getZ();
             this.startYaw = e.yBodyRot;
+            this.timeScale = SlowMo.factor();
         }
     }
 
@@ -47,7 +49,8 @@ public final class PoseSampler {
         double nowSec = (mc.level.getGameTime() + partial) * 0.05;
         if (st.startSeconds < 0) st.startSeconds = nowSec;
         float t = (float) (nowSec - st.startSeconds);
-        if (st.lastT >= 0f && t - st.lastT < SAMPLE_DT) return false;
+        // slow-mo: sample timeScale× more densely in real time so the stretched clip stays smooth
+        if (st.lastT >= 0f && t - st.lastT < SAMPLE_DT / st.timeScale) return false;
         st.lastT = t;
 
         float limbAmount = Math.min(entity.walkAnimation.speed(partial), 1.0f);

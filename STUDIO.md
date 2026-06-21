@@ -20,7 +20,7 @@ each verified by `gradlew gltfSelfTest` before it ships. ✅ = done.
 | 12 | **Sound emitters → Speakers** ✅ | every sound played during a **cinematic** recording is exported as a positioned `Speaker_<sound>` node (deduped per spot, earliest time, with sound id/time/gain in extras); the add-on turns each into a Blender **Speaker** object for spatial audio in the VSE. |
 | 13 | **Takes** ✅ | `/recorte take start [name]` … `stop` records the same subject repeatedly on one shared rig; each take is a named clip. `take export` writes them all as one multi-clip glTF (one Blender Action per take, sharing the rig origin) to compare and keep the best. |
 | 14 | **NLA stacking** ✅ | multi-clip files (animation library, takes) import with each clip laid out as its own **NLA strip/track** for non-linear blending/reordering (single recordings still activate for editing); the writer de-duplicates colliding clip names so each is a distinct Action, and a **Stack clips as NLA** button re-applies it to manual imports. |
-| 15 | **Time remap / slow-mo** | record at high sample rate + export a time curve for slow motion. |
+| 15 | **Time remap / slow-mo** ✅ | `/recorte slowmo <1-16>` records every clip (recordings, takes, cinematics) **N× more densely** and tags it `timeScale=N`; the writer stretches all keyframe times ×N, so the action plays back N× slower at 30 fps — smooth slow motion straight out of the game. |
 | 16 | **Retarget rig** | consistent humanoid bone names (root/hips/spine/arms/legs) for Mixamo-style retargeting. |
 | 17 | **Named shot markers** | name shots while recording; they become named Blender timeline markers. |
 | 18 | **Export presets** | save/load studio settings (radius, fps, passes, DOF) as named presets. |

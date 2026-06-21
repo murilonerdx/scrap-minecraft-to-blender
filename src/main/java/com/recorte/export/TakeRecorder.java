@@ -75,6 +75,7 @@ public final class TakeRecorder {
         session.current = new Ir.Animation();
         session.current.name = (name != null && !name.isEmpty()) ? name : "take_" + (session.takes.size() + 1);
         session.state = new PoseSampler.State(session.entity);
+        session.current.timeScale = session.state.timeScale;   // slow-mo: writer stretches the clip
         session.frames = 0;
         feedback("§a● Gravando take §f" + session.current.name + "§a... §7/recorte take stop");
     }

@@ -245,6 +245,7 @@ public final class SceneRecorder {
         final BlockPos center;
         final List<Tracked> tracked;
         final Ir.Animation anim = new Ir.Animation();
+        final float timeScale = SlowMo.factor();   // slow-mo (#15), captured at start
         double startSeconds = -1;
         float lastT = -1f;
         int frames;
@@ -253,6 +254,7 @@ public final class SceneRecorder {
             this.out = out;
             this.center = center;
             this.tracked = tracked;
+            this.anim.timeScale = timeScale;
         }
 
         @SuppressWarnings({"rawtypes", "unchecked"})
@@ -265,7 +267,7 @@ public final class SceneRecorder {
             double nowSec = (mc.level.getGameTime() + partial) * 0.05;
             if (startSeconds < 0) startSeconds = nowSec;
             float t = (float) (nowSec - startSeconds);
-            if (lastT >= 0f && t - lastT < SAMPLE_DT) return;
+            if (lastT >= 0f && t - lastT < SAMPLE_DT / timeScale) return;   // slow-mo: denser real sampling
             lastT = t;
             anim.times.add(t);
 

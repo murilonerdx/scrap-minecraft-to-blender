@@ -127,6 +127,7 @@ public final class Recorder {
             this.model = model;
             this.ir = ir;
             this.state = new PoseSampler.State(entity);
+            this.anim.timeScale = state.timeScale;   // slow-mo: writer stretches the clip's times
         }
 
         void sample(float partial) {

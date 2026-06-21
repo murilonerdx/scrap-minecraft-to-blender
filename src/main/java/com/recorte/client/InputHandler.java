@@ -10,6 +10,7 @@ import com.recorte.export.GhostRig;
 import com.recorte.export.HttpBridge;
 import com.recorte.export.Recorder;
 import com.recorte.export.SceneRecorder;
+import com.recorte.export.SlowMo;
 import com.recorte.export.TakeRecorder;
 import net.minecraft.client.Minecraft;
 import net.minecraft.commands.Commands;
@@ -219,7 +220,20 @@ public final class InputHandler {
                                 .then(Commands.literal("stop").executes(c -> run(TakeRecorder::stop)))
                                 .then(Commands.literal("export").executes(c -> run(TakeRecorder::export)))
                                 .then(Commands.literal("clear").executes(c -> run(TakeRecorder::clear)))
-                                .then(Commands.literal("list").executes(c -> run(TakeRecorder::list)))));
+                                .then(Commands.literal("list").executes(c -> run(TakeRecorder::list))))
+                        .then(Commands.literal("slowmo")
+                                .then(Commands.argument("factor", IntegerArgumentType.integer(1, 16))
+                                        .executes(c -> run(() -> {
+                                            int f = IntegerArgumentType.getInteger(c, "factor");
+                                            SlowMo.set(f);
+                                            Minecraft mc = Minecraft.getInstance();
+                                            if (mc.player != null) {
+                                                mc.player.displayClientMessage(net.minecraft.network.chat.Component.literal(
+                                                        f > 1 ? "§aSlow-mo: §f" + f + "×§a (próximas gravações ficam " + f
+                                                                + "× mais lentas e densas)"
+                                                                : "§eSlow-mo OFF (tempo real)"), true);
+                                            }
+                                        })))));
     }
 
     private static int run(Runnable task) {

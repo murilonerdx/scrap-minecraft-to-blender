@@ -80,6 +80,7 @@ public final class Ir {
      */
     public static final class Animation {
         public String name = "recording";                            // glTF animation name (Blender Action)
+        public float timeScale = 1f;                                 // slow-mo (#15): writer stretches times ×this
         public final List<Float> times = new ArrayList<>();          // seconds, one per keyframe
         public final Map<Integer, List<float[]>> translations = new java.util.LinkedHashMap<>();  // bone -> [x,y,z]/key
         public final Map<Integer, List<float[]>> rotations = new java.util.LinkedHashMap<>();      // bone -> [x,y,z,w]/key

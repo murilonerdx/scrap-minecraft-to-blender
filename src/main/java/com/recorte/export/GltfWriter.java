@@ -486,13 +486,15 @@ public final class GltfWriter {
 
     private static JsonObject buildAnimation(Bin bin, Ir.Animation anim, String name, int cameraNode) {
         int n = anim.times.size();
+        float scale = anim.timeScale > 0f ? anim.timeScale : 1f;   // slow-mo (#15): stretch every keyframe time
         bin.align4();
         int tStart = bin.length();
         float tmin = Float.MAX_VALUE, tmax = -Float.MAX_VALUE;
         for (float t : anim.times) {
-            bin.f(t);
-            tmin = Math.min(tmin, t);
-            tmax = Math.max(tmax, t);
+            float ts = t * scale;
+            bin.f(ts);
+            tmin = Math.min(tmin, ts);
+            tmax = Math.max(tmax, ts);
         }
         int timeAcc = bin.accessor(bin.bufferView(tStart, bin.length() - tStart, null),
                 FLOAT, n, "SCALAR", new float[]{tmin}, new float[]{tmax});
