@@ -123,6 +123,22 @@ public final class SceneRecorder {
                     Recorte.LOGGER.warn("Cinematic: entity {} skipped", e.getType(), t);
                 }
             }
+            // ridden entities (player on a boat/horse/minecart) → re-parent the rider's root bone onto
+            // its mount's root, so they move as one and editing the mount in Blender moves the rider too
+            for (Tracked rider : tracked) {
+                Entity vehicle = rider.entity.getVehicle();
+                if (vehicle == null) continue;
+                for (int j = 0; j < tracked.size(); j++) {
+                    if (tracked.get(j).entity == vehicle) {
+                        rider.mountIndex = j;
+                        Ir.Bone riderRoot = out.bones.get(rider.boneOffset);
+                        Ir.Bone mountRoot = out.bones.get(tracked.get(j).boneOffset);
+                        riderRoot.parentIndex = tracked.get(j).boneOffset;
+                        riderRoot.localTransform = new Matrix4f(mountRoot.globalBind).invert().mul(riderRoot.globalBind);
+                        break;
+                    }
+                }
+            }
             active = new Session(out, center, tracked);
             feedback("§a● Gravando CINEMATIC §f(" + tracked.size() + " entidades)§a... §f/recorte record scene stop");
         } catch (Throwable t) {
@@ -211,6 +227,7 @@ public final class SceneRecorder {
         final int boneOffset;
         final List<ModelPart> parts;   // per local bone, the source ModelPart (null for the root)
         final boolean captured;        // true: static mesh, animate world position only (boats, item frames…)
+        int mountIndex = -1;           // index of the tracked entity this one is riding (-1 = none)
 
         Tracked(Entity entity, EntityModel<?> model, int boneOffset, List<ModelPart> parts, boolean captured) {
             this.entity = entity;
@@ -277,54 +294,57 @@ public final class SceneRecorder {
                     new float[]{cq.x, cq.y, cq.z, cq.w});
 
             for (Tracked tr : tracked) {
-                Entity e = tr.entity;
-                double ex = net.minecraft.util.Mth.lerp(partial, e.xOld, e.getX());
-                double ey = net.minecraft.util.Mth.lerp(partial, e.yOld, e.getY());
-                double ez = net.minecraft.util.Mth.lerp(partial, e.zOld, e.getZ());
-
-                if (tr.captured) {
-                    // non-living (boat/minecart/item frame/dropped item): animate world position only,
-                    // the orientation is baked into the captured mesh
-                    anim.key(tr.boneOffset, new float[]{
-                            (float) -(ex - center.getX()),
-                            (float) (ey - center.getY()),
-                            (float) (ez - center.getZ())}, new float[]{0f, 0f, 0f, 1f});
-                    continue;
+                // limb setup (rigged only) — read the exact pose the game shows
+                if (!tr.captured) {
+                    LivingEntity le = (LivingEntity) tr.entity;
+                    float limbAmount = Math.min(le.walkAnimation.speed(partial), 1.0f);
+                    float limbSwing = le.walkAnimation.position(partial);
+                    float age = le.tickCount + partial;
+                    EntityModel raw = tr.model;
+                    try {
+                        raw.prepareMobModel(le, limbSwing, limbAmount, partial);
+                        raw.setupAnim(le, limbSwing, limbAmount, age, 0f, le.getViewXRot(partial));
+                    } catch (Throwable ignored) {
+                    }
                 }
 
-                LivingEntity le = (LivingEntity) e;
-                float limbAmount = Math.min(le.walkAnimation.speed(partial), 1.0f);
-                float limbSwing = le.walkAnimation.position(partial);
-                float age = le.tickCount + partial;
-                EntityModel raw = tr.model;
-                try {
-                    raw.prepareMobModel(le, limbSwing, limbAmount, partial);
-                    raw.setupAnim(le, limbSwing, limbAmount, age, 0f, le.getViewXRot(partial));
-                } catch (Throwable ignored) {
+                // root: world placement, made RELATIVE to the mount when this entity rides one (its bone
+                // is parented under the mount, so they move as one and editing the mount moves the rider)
+                Matrix4f rootM = rootWorldMatrix(tr, partial);
+                if (tr.mountIndex >= 0) {
+                    rootM = new Matrix4f(rootWorldMatrix(tracked.get(tr.mountIndex), partial)).invert().mul(rootM);
                 }
-
-                // root: absolute world placement + body yaw (interpolated between ticks), so the
-                // travel path is smooth instead of stepping 20×/s
-                float bodyYaw = net.minecraft.util.Mth.rotLerp(partial, le.yBodyRotO, le.yBodyRot);
-                Matrix4f rootM = new Matrix4f()
-                        .translate((float) -(ex - center.getX()),
-                                (float) (ey - center.getY()),
-                                (float) (ez - center.getZ()))
-                        .rotateY((float) Math.toRadians(-bodyYaw))
-                        .mul(Convert.matrix());
                 Vector3f t2 = rootM.getTranslation(new Vector3f());
                 Quaternionf q = rootM.getNormalizedRotation(new Quaternionf());
                 anim.key(tr.boneOffset, new float[]{t2.x, t2.y, t2.z}, new float[]{q.x, q.y, q.z, q.w});
 
-                // limbs
-                for (int i = 1; i < tr.parts.size(); i++) {
-                    ModelPart p = tr.parts.get(i);
-                    if (p == null) continue;
-                    Quaternionf lq = new Quaternionf().rotationZYX(p.zRot, p.yRot, p.xRot);
-                    anim.key(tr.boneOffset + i, new float[]{p.x, p.y, p.z}, new float[]{lq.x, lq.y, lq.z, lq.w});
+                // limbs (rigged only)
+                if (!tr.captured) {
+                    for (int i = 1; i < tr.parts.size(); i++) {
+                        ModelPart p = tr.parts.get(i);
+                        if (p == null) continue;
+                        Quaternionf lq = new Quaternionf().rotationZYX(p.zRot, p.yRot, p.xRot);
+                        anim.key(tr.boneOffset + i, new float[]{p.x, p.y, p.z}, new float[]{lq.x, lq.y, lq.z, lq.w});
+                    }
                 }
             }
             frames++;
+        }
+
+        /** Root world transform of a tracked entity (rigged: position+yaw+axis-convert; captured: position-only). */
+        private Matrix4f rootWorldMatrix(Tracked tr, float partial) {
+            Entity e = tr.entity;
+            double ex = net.minecraft.util.Mth.lerp(partial, e.xOld, e.getX());
+            double ey = net.minecraft.util.Mth.lerp(partial, e.yOld, e.getY());
+            double ez = net.minecraft.util.Mth.lerp(partial, e.zOld, e.getZ());
+            Matrix4f m = new Matrix4f().translate(
+                    (float) -(ex - center.getX()), (float) (ey - center.getY()), (float) (ez - center.getZ()));
+            if (!tr.captured) {
+                LivingEntity le = (LivingEntity) e;
+                float bodyYaw = net.minecraft.util.Mth.rotLerp(partial, le.yBodyRotO, le.yBodyRot);
+                m.rotateY((float) Math.toRadians(-bodyYaw)).mul(Convert.matrix());
+            }
+            return m;
         }
     }
 }

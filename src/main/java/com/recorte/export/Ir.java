@@ -61,7 +61,7 @@ public final class Ir {
     /** A single joint of the skeleton. */
     public static final class Bone {
         public final String name;
-        public final int parentIndex;        // -1 for the root
+        public int parentIndex;              // -1 for the root (mutable: a rider gets re-parented onto its mount)
         public final Matrix4f globalBind;     // export-space global bind transform (axis + scale already applied)
         public Matrix4f localTransform;       // node transform relative to parent; filled in by the extractor
         public transient Object sourcePart;   // the live ModelPart this bone samples (for animation recording)

@@ -36,6 +36,11 @@ def validate_common(name, js, bin_len):
     check(len(nodes) >= 3, f"nodes present ({len(nodes)}): {names}")
     for b in ("root", "body", "head"):
         check(b in names, f"bone node '{b}' present")
+    # bone hierarchy: the writer turns parentIndex into node children (mount-parenting relies on this)
+    idx = {n.get("name"): i for i, n in enumerate(nodes)}
+    if "root" in idx and "body" in idx and "head" in idx:
+        check(idx["body"] in (nodes[idx["root"]].get("children") or []), "'body' is a child of 'root'")
+        check(idx["head"] in (nodes[idx["body"]].get("children") or []), "'head' is a child of 'body'")
     skins = js.get("skins", [])
     check(len(skins) == 1, f"exactly one skin ({len(skins)})")
     if skins:
