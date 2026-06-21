@@ -28,6 +28,16 @@ def _fetch(port, path):
         return r.read()
 
 
+def _safe(label, fn, *args):
+    """Run one import post-step; log and swallow any error so a single failing step never aborts the
+    whole import (the mesh is already in the scene by then). Returns the step's result or None."""
+    try:
+        return fn(*args)
+    except Exception as e:  # noqa: BLE001
+        print("[Recorte] import step '%s' failed (skipped): %r" % (label, e))
+        return None
+
+
 class RECORTE_OT_import_latest(bpy.types.Operator):
     """Fetch the most recent Recorte export from the running game and import it."""
     bl_idname = "recorte.import_latest"
@@ -48,47 +58,27 @@ class RECORTE_OT_import_latest(bpy.types.Operator):
             f.write(data)
 
         before = set(bpy.data.objects)
-        bpy.ops.import_scene.gltf(filepath=path)
+        try:
+            bpy.ops.import_scene.gltf(filepath=path)
+        except Exception as e:  # noqa: BLE001
+            self.report({"ERROR"}, "glTF import failed: %s (the .glb is at %s)" % (e, path))
+            return {"CANCELLED"}
         new_objs = [o for o in bpy.data.objects if o not in before]
 
-        # Pixel-art friendly: nearest filtering on every imported image texture.
-        for obj in new_objs:
-            for slot in getattr(obj, "material_slots", []):
-                mat = slot.material
-                if not mat or not mat.use_nodes:
-                    continue
-                for node in mat.node_tree.nodes:
-                    if node.type == "TEX_IMAGE":
-                        node.interpolation = "Closest"
-
-        _activate_animations(new_objs)
-        _setup_render_passes(new_objs)
-        n_events = _apply_events(port)
-
-        # Match the in-game sky as the world background.
-        try:
-            import json as _json
-            env = _json.loads(_fetch(port, "env").decode("utf-8"))
-            sky = env.get("sky")
-            if sky and len(sky) == 3:
-                world = context.scene.world
-                if world is None:
-                    world = bpy.data.worlds.new("Recorte World")
-                    context.scene.world = world
-                world.use_nodes = True
-                bg = world.node_tree.nodes.get("Background")
-                if bg is not None:
-                    bg.inputs[0].default_value = (sky[0], sky[1], sky[2], 1.0)
-        except Exception:  # noqa: BLE001
-            pass
-
-        n_sun = _apply_sun(port, new_objs)   # day/night timelapse (after the static world is set)
-        n_anim = _apply_animated_textures(port)
-        _apply_dof(new_objs)
-        n_spk = _apply_speakers(new_objs)    # sound emitters → positioned Blender Speakers
+        # Every step below is best-effort: a failure is logged and skipped so the import still
+        # succeeds with the imported mesh, rather than aborting the whole operator.
+        _safe("pixel-art", _apply_pixel_art, new_objs)
+        _safe("animations", _activate_animations, new_objs)
+        _safe("render-passes", _setup_render_passes, new_objs)
+        n_events = _safe("events", _apply_events, port) or 0
+        _safe("world-sky", _apply_world_sky, context, port)
+        n_sun = _safe("sun", _apply_sun, port, new_objs) or 0
+        n_anim = _safe("anim-textures", _apply_animated_textures, port) or 0
+        _safe("dof", _apply_dof, new_objs)
+        n_spk = _safe("speakers", _apply_speakers, new_objs) or 0
         studio = False
-        if context.scene.recorte_studio_template:   # #20: render-ready scene on import
-            studio = _setup_studio_scene(context, new_objs, port)
+        if getattr(context.scene, "recorte_studio_template", False):   # #20: render-ready scene
+            studio = _safe("studio-scene", _setup_studio_scene, context, new_objs, port)
 
         msg = "Imported latest Recorte export (%d objects)" % len(new_objs)
         if n_events:
@@ -117,6 +107,23 @@ class RECORTE_OT_ping(bpy.types.Operator):
         except Exception as e:  # noqa: BLE001
             self.report({"ERROR"}, "Not reachable: %s" % e)
         return {"FINISHED"}
+
+
+def _apply_world_sky(context, port):
+    """Set the Blender World background to the in-game sky colour (from /env)."""
+    import json as _json
+    env = _json.loads(_fetch(port, "env").decode("utf-8"))
+    sky = env.get("sky")
+    if not (sky and len(sky) == 3):
+        return
+    world = context.scene.world
+    if world is None:
+        world = bpy.data.worlds.new("Recorte World")
+        context.scene.world = world
+    world.use_nodes = True
+    bg = world.node_tree.nodes.get("Background")
+    if bg is not None:
+        bg.inputs[0].default_value = (sky[0], sky[1], sky[2], 1.0)
 
 
 def _apply_pixel_art(objs):
@@ -606,12 +613,16 @@ class RECORTE_OT_live(bpy.types.Operator):
         except Exception:  # noqa: BLE001
             return
         self._objs = [o for o in bpy.data.objects if o not in before]
-        _apply_pixel_art(self._objs)
-        _activate_animations(self._objs)
-        _apply_events(port)
-        _apply_sun(port, self._objs)
-        _apply_animated_textures(port)
-        _apply_dof(self._objs)
+        _safe("pixel-art", _apply_pixel_art, self._objs)
+        _safe("animations", _activate_animations, self._objs)
+        _safe("events", _apply_events, port)
+        _safe("world-sky", _apply_world_sky, context, port)
+        _safe("sun", _apply_sun, port, self._objs)
+        _safe("anim-textures", _apply_animated_textures, port)
+        _safe("dof", _apply_dof, self._objs)
+        _safe("speakers", _apply_speakers, self._objs)
+        if getattr(context.scene, "recorte_studio_template", False):
+            _safe("studio-scene", _setup_studio_scene, context, self._objs, port)
 
     def execute(self, context):
         context.scene.recorte_live = True
