@@ -386,8 +386,12 @@ public final class Exporter {
                 float[] ra = wps.get(i).rotation, rb = wps.get(i + 1).rotation;
                 org.joml.Quaternionf q = new org.joml.Quaternionf(ra[0], ra[1], ra[2], ra[3])
                         .slerp(new org.joml.Quaternionf(rb[0], rb[1], rb[2], rb[3]), lt);
-                anim.times.add(f / 30f);
-                anim.cameraKey(pos, new float[]{q.x, q.y, q.z, q.w});
+                float ts = f / 30f;
+                float[] so = CameraShake.positionOffset(ts), re = CameraShake.rotationEuler(ts);
+                q.rotateXYZ(re[0], re[1], re[2]);
+                anim.times.add(ts);
+                anim.cameraKey(new float[]{pos[0] + so[0], pos[1] + so[1], pos[2] + so[2]},
+                        new float[]{q.x, q.y, q.z, q.w});
             }
 
             Path dir = newDir("campath");

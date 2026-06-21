@@ -25,6 +25,7 @@ public final class GltfSelfTest {
         Files.createDirectories(outDir);
 
         assertAccessoryClears();
+        assertCameraShake();
 
         Ir.Model model = buildRig();
 
@@ -162,6 +163,31 @@ public final class GltfSelfTest {
         }
         System.out.println("  accessory-push OK: centred accessory cleared (dx=" + push[0] + " dz=" + push[1]
                 + "), already-clear one untouched");
+    }
+
+    /** Camera shake must be a no-op when off, and bounded + non-zero when on. */
+    private static void assertCameraShake() {
+        CameraShake.amount = 0f;
+        float[] off = CameraShake.positionOffset(1.5f);
+        if (off[0] != 0f || off[1] != 0f || off[2] != 0f) {
+            throw new IllegalStateException("FAIL: shake should be zero when off");
+        }
+        CameraShake.amount = 4f;
+        float bound = 4f * 0.03f * 1.5f + 1e-4f;
+        boolean moved = false;
+        for (float t = 0f; t < 3f; t += 0.1f) {
+            for (float v : CameraShake.positionOffset(t)) {
+                if (Math.abs(v) > 1e-4f) moved = true;
+                if (Math.abs(v) > bound) {
+                    throw new IllegalStateException("FAIL: shake offset out of bounds: " + v);
+                }
+            }
+        }
+        CameraShake.amount = 0f;   // reset so the exported GLBs aren't shaken
+        if (!moved) {
+            throw new IllegalStateException("FAIL: shake on produced no motion");
+        }
+        System.out.println("  camera-shake OK: zero when off, bounded & non-zero when on");
     }
 
     private static List<float[]> boxVerts(float x0, float y0, float z0, float x1, float y1, float z1) {

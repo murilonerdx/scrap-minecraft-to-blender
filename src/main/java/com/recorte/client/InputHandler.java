@@ -4,6 +4,7 @@ import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.recorte.Recorte;
 import com.recorte.export.CameraRig;
+import com.recorte.export.CameraShake;
 import com.recorte.export.Exporter;
 import com.recorte.export.HttpBridge;
 import com.recorte.export.Recorder;
@@ -190,7 +191,18 @@ public final class InputHandler {
                                         .executes(c -> run(() -> Exporter.exportCameraPath(8)))
                                         .then(Commands.argument("seconds", IntegerArgumentType.integer(1, 120))
                                                 .executes(c -> run(() -> Exporter.exportCameraPath(
-                                                        IntegerArgumentType.getInteger(c, "seconds"))))))));
+                                                        IntegerArgumentType.getInteger(c, "seconds"))))))
+                                .then(Commands.literal("shake")
+                                        .then(Commands.argument("amount", IntegerArgumentType.integer(0, 10))
+                                                .executes(c -> run(() -> {
+                                                    CameraShake.amount = IntegerArgumentType.getInteger(c, "amount");
+                                                    Minecraft mc = Minecraft.getInstance();
+                                                    if (mc.player != null) {
+                                                        mc.player.displayClientMessage(net.minecraft.network.chat.Component.literal(
+                                                                CameraShake.amount > 0 ? "§aCamera shake: §f" + (int) CameraShake.amount
+                                                                        : "§eCamera shake OFF"), true);
+                                                    }
+                                                }))))));
     }
 
     private static int run(Runnable task) {

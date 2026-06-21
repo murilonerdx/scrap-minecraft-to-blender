@@ -270,8 +270,10 @@ public final class SceneRecorder {
             org.joml.Vector3f cu = cam.getUpVector();
             org.joml.Quaternionf cq = new org.joml.Quaternionf()
                     .lookAlong(-cf.x, cf.y, cf.z, -cu.x, cu.y, cu.z).conjugate();
-            anim.cameraKey(new float[]{-(float) (cp.x - center.getX()),
-                    (float) (cp.y - center.getY()), (float) (cp.z - center.getZ())},
+            float[] so = CameraShake.positionOffset(t), re = CameraShake.rotationEuler(t);
+            cq.rotateXYZ(re[0], re[1], re[2]);
+            anim.cameraKey(new float[]{-(float) (cp.x - center.getX()) + so[0],
+                    (float) (cp.y - center.getY()) + so[1], (float) (cp.z - center.getZ()) + so[2]},
                     new float[]{cq.x, cq.y, cq.z, cq.w});
 
             for (Tracked tr : tracked) {

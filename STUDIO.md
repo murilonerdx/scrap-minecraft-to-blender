@@ -10,7 +10,7 @@ each verified by `gradlew gltfSelfTest` before it ships. ✅ = done.
 | 2 | **Placeable cameras** ✅ | `/recorte cam add <name>` drops a named camera at your eye (`cam clear` / `cam list` too); every scene/snapshot/region/cinematic export carries them as named Blender cameras to switch between. |
 | 3 | **Depth of field** ✅ | the POV + placed cameras carry a **focus distance** (to whatever you're looking at) + f-stop in their node extras; the add-on turns on Blender DOF so backgrounds blur cinematically. |
 | 4 | **Camera path from waypoints** ✅ | `/recorte cam path <seconds>` builds a smooth **flythrough** (Catmull-Rom position + slerped rotation) sweeping the POV camera through your placed cameras, exported as an animated camera over the scene. |
-| 5 | **Camera shake / handheld** | optional procedural shake on the POV camera for a handheld feel. |
+| 5 | **Camera shake / handheld** ✅ | `/recorte cam shake <0-10>` layers a bounded procedural shake (position + rotation) onto the cinematic POV and camera-path animation for a hand-held feel. |
 | 6 | **Ridden-entity parenting** | a rider on a boat/horse/minecart is parented to the mount, so they move as one. |
 | 7 | **Motion trails (onion skin)** | N ghost copies of a moving entity along its path, for animation reference. |
 | 8 | **Particle / VFX point cloud** | capture active particles (fire/smoke/portal) as an animated point cloud → Geometry Nodes. |
