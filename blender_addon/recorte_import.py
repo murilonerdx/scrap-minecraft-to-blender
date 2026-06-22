@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Recorte — Minecraft ↔ Blender",
     "author": "murilonerdx",
-    "version": (0, 4, 0),
+    "version": (0, 5, 0),
     "blender": (3, 0, 0),
     "location": "View3D > Sidebar (N) > Recorte",
     "description": "One-click import of the latest Recorte export from a running Minecraft instance.",
@@ -702,6 +702,34 @@ def _corridor(length, w=3, h=3):   # 4 walls along +X, open ends (a hollow tube)
     return v, f
 
 
+def _box_at(ox, oy, oz, w, d, h):   # a solid box anchored at (ox,oy,oz)
+    v = [(ox, oy, oz), (ox + w, oy, oz), (ox + w, oy + d, oz), (ox, oy + d, oz),
+         (ox, oy, oz + h), (ox + w, oy, oz + h), (ox + w, oy + d, oz + h), (ox, oy + d, oz + h)]
+    f = [(0, 1, 2, 3), (4, 5, 6, 7), (0, 1, 5, 4), (1, 2, 6, 5), (2, 3, 7, 6), (3, 0, 4, 7)]
+    return v, f
+
+
+def _combine(parts):   # merge several (verts,faces) into one mesh
+    verts, faces = [], []
+    for pv, pf in parts:
+        base = len(verts)
+        verts += pv
+        faces += [tuple(i + base for i in face) for face in pf]
+    return verts, faces
+
+
+def _arch(w=6, h=7, depth=2, thick=1):   # a doorway frame: two legs + a lintel
+    return _combine([
+        _box_at(0, 0, 0, thick, depth, h),
+        _box_at(w - thick, 0, 0, thick, depth, h),
+        _box_at(0, 0, h - thick, w, depth, thick),
+    ])
+
+
+def _stairs(steps=8, run=1, width=3, rise=1):   # a solid staircase profile
+    return _combine([_box_at(i * run, 0, 0, run, width, (i + 1) * rise) for i in range(steps)])
+
+
 class RECORTE_OT_corrupt(bpy.types.Operator):
     """Make the selected objects feel WRONG: small random rotations, non-uniform scale and per-vertex
     jitter. The 'start normal, then corrupt' cosmic-horror technique — subtle is scarier."""
@@ -729,23 +757,51 @@ class RECORTE_OT_corrupt(bpy.types.Operator):
 
 
 class RECORTE_OT_module(bpy.types.Operator):
-    """Add a cosmic-horror building module at the 3D cursor (corridor / room / pillar)."""
+    """Add a cosmic-horror building module at the 3D cursor. Each gets a thematic block you can change
+    via its `mc_block` custom property."""
     bl_idname = "recorte.module"
     bl_label = "Add module"
     bl_options = {"REGISTER", "UNDO"}
     kind: bpy.props.EnumProperty(name="Module", default="CORRIDOR", items=[  # noqa: F821
-        ("CORRIDOR", "Corridor 3×3", ""), ("ROOM", "Hollow room", ""), ("PILLAR", "Pillar", "")])
+        ("CORRIDOR", "Corridor 3×3", ""), ("ROOM", "Hollow room", ""), ("PILLAR", "Pillar", ""),
+        ("ARCH", "Broken arch", ""), ("STAIRS", "Stairs", ""), ("EYE", "Eye", ""),
+        ("COCOON", "Cocoon", "")])
     size: bpy.props.IntProperty(name="Size/Length", default=8, min=1, max=64)  # noqa: F821
 
     def execute(self, context):
         s = self.size
+        cursor = context.scene.cursor.location
+        if self.kind in ("EYE", "COCOON"):
+            try:
+                bpy.ops.mesh.primitive_uv_sphere_add(radius=max(1.0, s / 2.0), location=cursor)
+            except Exception:  # noqa: BLE001
+                self.report({"WARNING"}, "Couldn't add sphere.")
+                return {"CANCELLED"}
+            obj = context.active_object
+            if self.kind == "EYE":
+                obj.name = "horror_eye"
+                obj["mc_block"] = "minecraft:sculk"
+            else:
+                obj.name = "horror_cocoon"
+                obj.scale[2] = 2.2   # elongate into a cocoon
+                obj["mc_block"] = "minecraft:bone_block[axis=y]"
+            return {"FINISHED"}
         if self.kind == "CORRIDOR":
             v, f = _corridor(s)
+            block = "minecraft:deepslate_bricks"
         elif self.kind == "ROOM":
             v, f = _box(s, s, max(3, s - 2))
-        else:
+            block = "minecraft:deepslate_tiles"
+        elif self.kind == "PILLAR":
             v, f = _box(2, 2, s)
-        _new_mesh_obj(context, "horror_" + self.kind.lower(), v, f)
+            block = "minecraft:basalt[axis=y]"
+        elif self.kind == "ARCH":
+            v, f = _arch(max(4, s), max(5, s), 2, 1)
+            block = "minecraft:cracked_deepslate_bricks"
+        else:  # STAIRS
+            v, f = _stairs(max(3, s))
+            block = "minecraft:polished_blackstone"
+        _new_mesh_obj(context, "horror_" + self.kind.lower(), v, f, block)
         return {"FINISHED"}
 
 
@@ -822,6 +878,116 @@ class RECORTE_OT_generate(bpy.types.Operator):
                     made += 1
         self.report({"INFO"}, "Generated %d modules in collection 'liminal'. Corrupt + Send to Minecraft."
                     % made)
+        return {"FINISHED"}
+
+
+class RECORTE_OT_deform(bpy.types.Operator):
+    """Wrap the selection in a Simple Deform (twist / bend / taper / stretch). The voxelizer reads the
+    EVALUATED mesh, so the deform bakes into the blocks on Send — small angles unsettle, large ones
+    go alien."""
+    bl_idname = "recorte.deform"
+    bl_label = "Deform (twist/bend/taper)"
+    bl_options = {"REGISTER", "UNDO"}
+    method: bpy.props.EnumProperty(name="Method", default="TWIST", items=[  # noqa: F821
+        ("TWIST", "Twist", ""), ("BEND", "Bend", ""), ("TAPER", "Taper", ""), ("STRETCH", "Stretch", "")])
+    angle: bpy.props.FloatProperty(name="Amount (deg / factor·45)", default=30.0, min=-360.0, max=360.0)  # noqa: F821
+
+    def execute(self, context):
+        import math
+        n = 0
+        for obj in [o for o in context.selected_objects if o.type == "MESH"]:
+            try:
+                m = obj.modifiers.new("horror_deform", "SIMPLE_DEFORM")
+                m.deform_method = self.method
+                if self.method in ("TWIST", "BEND"):
+                    m.angle = math.radians(self.angle)
+                else:
+                    m.factor = self.angle / 45.0
+                n += 1
+            except Exception:  # noqa: BLE001
+                pass
+        self.report({"INFO"}, "Deformed %d object(s) — bakes in on Send (or Ctrl+A apply)." % n)
+        return {"FINISHED"}
+
+
+class RECORTE_OT_absurd_scale(bpy.types.Operator):
+    """Absurd scale: blow up or shrink the selection to wrong sizes (a 2-block door in a 100-block wall,
+    a giant chair). Each object gets an independent random giant/tiny factor."""
+    bl_idname = "recorte.absurd_scale"
+    bl_label = "Absurd scale"
+    bl_options = {"REGISTER", "UNDO"}
+
+    def execute(self, context):
+        import random
+        factors = [0.15, 0.25, 0.4, 3.0, 6.0, 12.0]
+        n = 0
+        for obj in [o for o in context.selected_objects if o.type == "MESH"]:
+            fct = random.choice(factors)
+            obj.scale = [s * fct for s in obj.scale]
+            n += 1
+        self.report({"INFO"}, "Scaled %d object(s) to absurd sizes." % n)
+        return {"FINISHED"}
+
+
+class RECORTE_OT_concept(bpy.types.Operator):
+    """Build by CONCEPT, not by object — the strongest cosmic-horror technique. Observation = eyes
+    converging on you; Repetition = the same thing again and again; Void = a vast empty room with a
+    single object at its centre."""
+    bl_idname = "recorte.concept"
+    bl_label = "Concept generator"
+    bl_options = {"REGISTER", "UNDO"}
+    concept: bpy.props.EnumProperty(name="Concept", default="OBSERVATION", items=[  # noqa: F821
+        ("OBSERVATION", "Observation (eyes)", ""), ("REPETITION", "Repetition", ""),
+        ("VOID", "Void", "")])
+    n: bpy.props.IntProperty(name="Count / size", default=12, min=1, max=200)  # noqa: F821
+
+    def execute(self, context):
+        import random
+        base = context.scene.cursor.location.copy()
+        coll = bpy.data.collections.new(self.concept.lower())
+        context.scene.collection.children.link(coll)
+        if self.concept == "OBSERVATION":
+            for _ in range(self.n):
+                try:
+                    bpy.ops.mesh.primitive_uv_sphere_add(radius=random.uniform(0.6, 2.0))
+                except Exception:  # noqa: BLE001
+                    break
+                e = context.active_object
+                e["mc_block"] = "minecraft:sculk"
+                e.location = (base[0] + random.uniform(-self.n, self.n),
+                              base[1] + random.uniform(-self.n, self.n),
+                              base[2] + random.uniform(0, self.n))
+                for c in list(e.users_collection):
+                    c.objects.unlink(e)
+                coll.objects.link(e)
+        elif self.concept == "REPETITION":
+            src = context.active_object
+            if src is None or src.type != "MESH":
+                self.report({"WARNING"}, "Select a mesh to repeat.")
+                return {"CANCELLED"}
+            for i in range(self.n):
+                copy = src.copy()
+                copy.data = src.data
+                copy.location = (src.location[0] + i * (max(src.dimensions[0], 1.0) + 1.0),
+                                 src.location[1], src.location[2])
+                coll.objects.link(copy)
+        else:  # VOID
+            rv, rf = _box(self.n * 2, self.n * 2, self.n)
+            ro = _new_mesh_obj(context, "void_room", rv, rf, "minecraft:black_concrete")
+            for c in list(ro.users_collection):
+                c.objects.unlink(ro)
+            coll.objects.link(ro)
+            try:
+                bpy.ops.mesh.primitive_uv_sphere_add(radius=1.5,
+                    location=(base[0] + self.n, base[1] + self.n, base[2] + self.n // 2))
+                obj = context.active_object
+                obj["mc_block"] = "minecraft:crying_obsidian"
+                for c in list(obj.users_collection):
+                    c.objects.unlink(obj)
+                coll.objects.link(obj)
+            except Exception:  # noqa: BLE001
+                pass
+        self.report({"INFO"}, "Built concept '%s' in collection. Corrupt + Send to Minecraft." % self.concept)
         return {"FINISHED"}
 
 
@@ -964,15 +1130,20 @@ class RECORTE_PT_panel(bpy.types.Panel):
         layout.separator()
         layout.label(text="Cosmic-horror kit:")
         layout.operator("recorte.generate", icon="MOD_BUILD")
+        layout.operator("recorte.concept", icon="HIDE_OFF")
         layout.operator("recorte.module", icon="MESH_GRID")
-        layout.operator("recorte.scatter", icon="MOD_ARRAY")
-        layout.operator("recorte.corrupt", icon="MOD_NOISE")
+        row = layout.row(align=True)
+        row.operator("recorte.scatter", icon="MOD_ARRAY", text="Scatter")
+        row.operator("recorte.absurd_scale", icon="FULLSCREEN_ENTER", text="Absurd")
+        row = layout.row(align=True)
+        row.operator("recorte.deform", icon="MOD_SIMPLEDEFORM", text="Deform")
+        row.operator("recorte.corrupt", icon="MOD_NOISE", text="Corrupt")
 
 
 classes = (RECORTE_OT_import_latest, RECORTE_OT_ping, RECORTE_OT_activate_anim,
            RECORTE_OT_stack_nla, RECORTE_OT_send_to_mc, RECORTE_OT_corrupt, RECORTE_OT_module,
-           RECORTE_OT_scatter, RECORTE_OT_generate, RECORTE_OT_studio_scene,
-           RECORTE_OT_live, RECORTE_PT_panel)
+           RECORTE_OT_scatter, RECORTE_OT_generate, RECORTE_OT_deform, RECORTE_OT_absurd_scale,
+           RECORTE_OT_concept, RECORTE_OT_studio_scene, RECORTE_OT_live, RECORTE_PT_panel)
 
 
 def register():
