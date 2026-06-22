@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Recorte — Minecraft ↔ Blender",
     "author": "murilonerdx",
-    "version": (0, 7, 0),
+    "version": (0, 8, 0),
     "blender": (3, 0, 0),
     "location": "View3D > Sidebar (N) > Recorte",
     "description": "One-click import of the latest Recorte export from a running Minecraft instance.",
@@ -1011,6 +1011,61 @@ class RECORTE_OT_generate(bpy.types.Operator):
         return {"FINISHED"}
 
 
+class RECORTE_OT_example(bpy.types.Operator):
+    """Build a COMPLETE cosmic-horror example scene in one click: a corrupted liminal maze watched by a
+    giant eye, twisted spiral pillars at the corners and impossible stairs at the edge. Open it, study how
+    it's composed, tweak it, then Send to Minecraft. The fastest way to learn the recipe."""
+    bl_idname = "recorte.example"
+    bl_label = "Build example scene"
+    bl_options = {"REGISTER", "UNDO"}
+
+    def execute(self, context):
+        base = context.scene.cursor.location.copy()
+        coll = bpy.data.collections.new("horror_example")
+        context.scene.collection.children.link(coll)
+
+        def add(name, vf, block, loc):
+            me = bpy.data.meshes.new(name)
+            me.from_pydata(vf[0], [], vf[1])
+            me.update()
+            o = bpy.data.objects.new(name, me)
+            o.location = (base[0] + loc[0], base[1] + loc[1], base[2] + loc[2])
+            o["mc_block"] = block
+            coll.objects.link(o)
+            return o
+
+        step = 4
+        size = 12
+        span = size * step
+        cx, cy = span / 2.0, span / 2.0
+        # 1) the liminal maze floor (corrupted, no ceiling so you can read it)
+        maze = add("ex_maze", _maze(size, size, 3, 6, 7, 0.22, False), "minecraft:smooth_stone", (0, 0, 0))
+        try:
+            _noise_displace(maze, 0.5, 0.15, 1)
+        except Exception:  # noqa: BLE001
+            pass
+        # 2) a giant eye watching from above the centre (sclera + iris + pupil)
+        for rad, oy, blk in ((6.0, 0.0, "minecraft:bone_block"), (3.3, -3.7, "minecraft:warped_wart_block"),
+                             (1.4, -5.6, "minecraft:black_concrete")):
+            try:
+                bpy.ops.mesh.primitive_uv_sphere_add(radius=rad,
+                    location=(base[0] + cx, base[1] + cy + oy, base[2] + 18))
+                e = context.active_object
+                e["mc_block"] = blk
+                for c in list(e.users_collection):
+                    c.objects.unlink(e)
+                coll.objects.link(e)
+            except Exception:  # noqa: BLE001
+                break
+        # 3) twisted spiral pillars at the corners
+        for px, py in ((-4, -4), (span, -4), (-4, span), (span, span)):
+            add("ex_pillar", _spiral_pillar(22, 3, 2.5), "minecraft:basalt[axis=y]", (px, py, 0))
+        # 4) impossible stairs at one edge
+        add("ex_stairs", _penrose(9, 0.9), "minecraft:polished_blackstone", (-22, cy - 9, 0))
+        self.report({"INFO"}, "Example scene built in 'horror_example'. Select all (A) + Send to Minecraft.")
+        return {"FINISHED"}
+
+
 class RECORTE_OT_maze(bpy.types.Operator):
     """Generate a real LABYRINTH (recursive-backtracker maze) extruded into 3D walls + floor + ceiling,
     with random loops so corridors don't end normally — the liminal/Backrooms space, by algorithm."""
@@ -1315,6 +1370,7 @@ class RECORTE_PT_panel(bpy.types.Panel):
         layout.label(text="Then in-game: /recorte build")
         layout.separator()
         layout.label(text="Cosmic-horror algorithms:")
+        layout.operator("recorte.example", icon="OUTLINER_OB_LIGHT")
         layout.operator("recorte.maze", icon="MOD_BUILD")
         layout.operator("recorte.penrose", icon="SORTBYEXT")
         layout.operator("recorte.noise", icon="MOD_NOISE")
@@ -1331,8 +1387,8 @@ class RECORTE_PT_panel(bpy.types.Panel):
 
 classes = (RECORTE_OT_import_latest, RECORTE_OT_ping, RECORTE_OT_activate_anim,
            RECORTE_OT_stack_nla, RECORTE_OT_send_to_mc, RECORTE_OT_corrupt, RECORTE_OT_module,
-           RECORTE_OT_scatter, RECORTE_OT_generate, RECORTE_OT_maze, RECORTE_OT_penrose,
-           RECORTE_OT_noise, RECORTE_OT_deform, RECORTE_OT_absurd_scale,
+           RECORTE_OT_scatter, RECORTE_OT_generate, RECORTE_OT_example, RECORTE_OT_maze,
+           RECORTE_OT_penrose, RECORTE_OT_noise, RECORTE_OT_deform, RECORTE_OT_absurd_scale,
            RECORTE_OT_concept, RECORTE_OT_studio_scene, RECORTE_OT_live, RECORTE_PT_panel)
 
 

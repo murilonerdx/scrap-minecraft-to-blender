@@ -42,20 +42,9 @@ def put(loc):
     scene.cursor.location = loc
 
 
-# 1) labyrinth (no ceiling, so you can see into it) + noise corruption
+# the one-click example scene (the recipe the user reproduces)
 put((0, 0, 0))
-bpy.ops.recorte.maze(cells=12, cell=3, height=5, loop=0.2, seed=5, ceiling=False)
-maze = bpy.context.active_object
-bpy.ops.recorte.noise(strength=0.7, scale=0.16, cuts=1)
-# 2) impossible stairs
-put((-26, 4, 0))
-bpy.ops.recorte.penrose(side=9, rise=0.9)
-# 3) concentric eye (sclera/iris/pupil)
-put((28, 18, 9))
-bpy.ops.recorte.module(kind="EYE", size=9)
-# 4) spiral pillar
-put((26, -4, 0))
-bpy.ops.recorte.module(kind="SPIRAL", size=10)
+bpy.ops.recorte.example()
 
 meshes = [o for o in bpy.data.objects if o.type == "MESH"]
 for o in meshes:
