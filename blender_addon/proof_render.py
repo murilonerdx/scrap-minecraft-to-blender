@@ -1,7 +1,6 @@
-"""Visual proof: build the cosmic-horror scene with the real add-on, SAVE a .blend you can open, and
-RENDER a PNG you can look at. Run: blender --background --python proof_render.py"""
+"""Visual proof of the ALGORITHMIC cosmic-horror generators, COLOURED by Minecraft block so structures
+read (the eye's iris/pupil, the maze, etc.). Run: blender --background --python proof_render.py"""
 import bpy
-import sys
 import os
 import traceback
 import mathutils
@@ -11,6 +10,23 @@ BLEND = r"C:\Users\T-GAMER\Desktop\recorte-minecraft\build\horror_proof.blend"
 PNG = r"C:\Users\T-GAMER\Desktop\recorte-minecraft\build\horror_proof.png"
 os.makedirs(os.path.dirname(BLEND), exist_ok=True)
 
+# rough block -> colour so the gray clay turns into something readable
+COL = {
+    "bone_block": (0.85, 0.82, 0.7), "warped_wart_block": (0.0, 0.5, 0.5),
+    "black_concrete": (0.02, 0.02, 0.03), "smooth_stone": (0.55, 0.55, 0.58),
+    "polished_blackstone": (0.12, 0.12, 0.15), "basalt": (0.18, 0.18, 0.2),
+    "sculk": (0.03, 0.06, 0.1), "deepslate": (0.22, 0.22, 0.25), "cobweb": (0.9, 0.9, 0.92),
+}
+
+
+def colour_for(obj):
+    blk = str(obj.get("mc_block", "")).split("[")[0].replace("minecraft:", "")
+    for key, c in COL.items():
+        if key in blk:
+            return (c[0], c[1], c[2], 1.0)
+    return (0.4, 0.4, 0.43, 1.0)
+
+
 ns = {"__name__": "recorte_proof"}
 with open(ADDON, encoding="utf-8") as f:
     exec(compile(f.read(), ADDON, "exec"), ns)
@@ -19,51 +35,67 @@ print("ADDON", ns["bl_info"]["version"])
 
 bpy.ops.object.select_all(action="SELECT")
 bpy.ops.object.delete()
+scene = bpy.context.scene
 
-# build the scene with the actual kit operators
-bpy.ops.recorte.generate(grid=3, room=7, wrong=0.5)
-for k, loc in (("ARCH", (-14, 0, 0)), ("STAIRS", (-14, 10, 0)), ("EYE", (24, 6, 8)),
-               ("COCOON", (24, 16, 4)), ("WEB", (10, -14, 8)), ("PILLAR", (4, 24, 0))):
-    bpy.context.scene.cursor.location = loc
-    bpy.ops.recorte.module(kind=k, size=7)
-bpy.ops.object.select_all(action="SELECT")
-bpy.ops.recorte.deform(method="TWIST", angle=18.0)
-bpy.ops.recorte.corrupt(amount=0.25)
+
+def put(loc):
+    scene.cursor.location = loc
+
+
+# 1) labyrinth (no ceiling, so you can see into it) + noise corruption
+put((0, 0, 0))
+bpy.ops.recorte.maze(cells=12, cell=3, height=5, loop=0.2, seed=5, ceiling=False)
+maze = bpy.context.active_object
+bpy.ops.recorte.noise(strength=0.7, scale=0.16, cuts=1)
+# 2) impossible stairs
+put((-26, 4, 0))
+bpy.ops.recorte.penrose(side=9, rise=0.9)
+# 3) concentric eye (sclera/iris/pupil)
+put((28, 18, 9))
+bpy.ops.recorte.module(kind="EYE", size=9)
+# 4) spiral pillar
+put((26, -4, 0))
+bpy.ops.recorte.module(kind="SPIRAL", size=10)
+
 meshes = [o for o in bpy.data.objects if o.type == "MESH"]
+for o in meshes:
+    m = bpy.data.materials.new(o.name)
+    m.use_nodes = True
+    bsdf = m.node_tree.nodes.get("Principled BSDF")
+    if bsdf:
+        bsdf.inputs["Base Color"].default_value = colour_for(o)
+    o.data.materials.append(m)
 print("SCENE built: %d mesh objects" % len(meshes))
 
-# camera + sun framing the layout
-scene = bpy.context.scene
-cam_data = bpy.data.cameras.new("proof_cam")
-cam = bpy.data.objects.new("proof_cam", cam_data)
+cam_data = bpy.data.cameras.new("cam")
+cam = bpy.data.objects.new("cam", cam_data)
 scene.collection.objects.link(cam)
-cam.location = (55.0, -45.0, 42.0)
-target = mathutils.Vector((8.0, 8.0, 4.0))
-cam.rotation_euler = (target - cam.location).to_track_quat("-Z", "Y").to_euler()
+cam.location = (40.0, -52.0, 60.0)   # higher, looking down into the maze
+cam.rotation_euler = (mathutils.Vector((12.0, 12.0, 2.0)) - cam.location).to_track_quat("-Z", "Y").to_euler()
 scene.camera = cam
 sun_data = bpy.data.lights.new("sun", "SUN")
-sun_data.energy = 3.0
+sun_data.energy = 3.5
 sun = bpy.data.objects.new("sun", sun_data)
-sun.rotation_euler = (0.6, 0.2, 0.4)
+sun.rotation_euler = (0.5, 0.3, 0.6)
 scene.collection.objects.link(sun)
+if scene.world is None:
+    scene.world = bpy.data.worlds.new("w")
+scene.world.use_nodes = True
+bg = scene.world.node_tree.nodes.get("Background")
+if bg:
+    bg.inputs[0].default_value = (0.02, 0.02, 0.03, 1.0)
 
 bpy.ops.wm.save_as_mainfile(filepath=BLEND)
-print("SAVED .blend ->", BLEND)
-
-# render a still you can look at (Cycles CPU works headless)
+print("SAVED", BLEND)
 try:
     scene.render.engine = "CYCLES"
     scene.cycles.device = "CPU"
-    scene.cycles.samples = 16
-except Exception:
-    pass
-scene.render.resolution_x = 1100
-scene.render.resolution_y = 620
-scene.render.filepath = PNG
-try:
+    scene.cycles.samples = 24
+    scene.render.resolution_x = 1200
+    scene.render.resolution_y = 720
+    scene.render.filepath = PNG
     bpy.ops.render.render(write_still=True)
-    print("RENDERED PNG ->", PNG)
+    print("RENDERED", PNG)
 except Exception:
     traceback.print_exc()
-    print("render failed (open the .blend instead)")
 print("PROOF DONE")

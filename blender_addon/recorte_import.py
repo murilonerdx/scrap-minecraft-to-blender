@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Recorte — Minecraft ↔ Blender",
     "author": "murilonerdx",
-    "version": (0, 6, 0),
+    "version": (0, 7, 0),
     "blender": (3, 0, 0),
     "location": "View3D > Sidebar (N) > Recorte",
     "description": "One-click import of the latest Recorte export from a running Minecraft instance.",
@@ -686,6 +686,13 @@ def _new_mesh_obj(context, name, verts, faces, block=None):
     if block:
         obj["mc_block"] = block
     context.scene.collection.objects.link(obj)
+    try:   # make it the active+selected object so it's ready to deform/noise/send
+        for o in list(context.selected_objects):
+            o.select_set(False)
+        obj.select_set(True)
+        context.view_layer.objects.active = obj
+    except Exception:  # noqa: BLE001
+        pass
     return obj
 
 
@@ -755,6 +762,88 @@ def _web(radius=10, spokes=8, rings=4, thick=0.35):   # a flat spider-web: radia
     return verts, faces
 
 
+def _maze(cells_w, cells_h, cell=3, wall_h=4, seed=0, loopiness=0.18, ceiling=True):
+    """Recursive-backtracker labyrinth extruded to 3D walls + floor + ceiling. Random loops break the
+    'every corridor ends' expectation. Returns (verts, faces)."""
+    import random
+    rng = random.Random(seed)
+    visited = [[False] * cells_h for _ in range(cells_w)]
+    opened = set()
+    stack = [(0, 0)]
+    visited[0][0] = True
+    while stack:
+        x, y = stack[-1]
+        nb = [(x + dx, y + dy) for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))
+              if 0 <= x + dx < cells_w and 0 <= y + dy < cells_h and not visited[x + dx][y + dy]]
+        if not nb:
+            stack.pop()
+            continue
+        nx, ny = rng.choice(nb)
+        opened.add(frozenset(((x, y), (nx, ny))))
+        visited[nx][ny] = True
+        stack.append((nx, ny))
+    for x in range(cells_w):           # extra loops + occasional missing walls = liminal wrongness
+        for y in range(cells_h):
+            for nx, ny in ((x + 1, y), (x, y + 1)):
+                if nx < cells_w and ny < cells_h and rng.random() < loopiness:
+                    opened.add(frozenset(((x, y), (nx, ny))))
+    parts = []
+    step = cell + 1
+    for x in range(cells_w):
+        for y in range(cells_h):
+            ox, oy = x * step, y * step
+            if not (x + 1 < cells_w and frozenset(((x, y), (x + 1, y))) in opened):
+                parts.append(_box_at(ox + cell, oy, 0, 1, cell + 1, wall_h))
+            if not (y + 1 < cells_h and frozenset(((x, y), (x, y + 1))) in opened):
+                parts.append(_box_at(ox, oy + cell, 0, cell + 1, 1, wall_h))
+            if x == 0:
+                parts.append(_box_at(ox - 1, oy, 0, 1, cell + 1, wall_h))
+            if y == 0:
+                parts.append(_box_at(ox, oy - 1, 0, cell + 1, 1, wall_h))
+    w_total, h_total = cells_w * step, cells_h * step
+    parts.append(_box_at(-1, -1, -1, w_total + 1, h_total + 1, 1))        # floor
+    if ceiling:
+        parts.append(_box_at(-1, -1, wall_h, w_total + 1, h_total + 1, 1))
+    return _combine(parts)
+
+
+def _penrose(side=10, rise=0.7):
+    """Columns of increasing height walking a square loop — the impossible ascending staircase motif."""
+    path = ([(i, 0) for i in range(side)] + [(side - 1, i) for i in range(side)]
+            + [(side - 1 - i, side - 1) for i in range(side)] + [(0, side - 1 - i) for i in range(side)])
+    return _combine([_box_at(x * 2, y * 2, 0, 2, 2, max(1, int(1 + k * rise)))
+                     for k, (x, y) in enumerate(path)])
+
+
+def _spiral_pillar(height=22, radius=3, turns=2.0):
+    """A helix of blocks rising and twisting — an organic, retorcido pillar."""
+    import math
+    parts = []
+    for i in range(height):
+        a = (i / max(1, height)) * turns * 2 * math.pi
+        parts.append(_box_at(int(round(math.cos(a) * radius)), int(round(math.sin(a) * radius)), i, 2, 2, 1))
+    return _combine(parts)
+
+
+def _noise_displace(obj, strength=0.6, scale=0.25, cuts=2):
+    """Subdivide then push each vertex along its normal by Perlin noise — organic 'wrong' surfaces, not
+    random jitter."""
+    import bmesh
+    import mathutils
+    me = obj.data
+    bm = bmesh.new()
+    bm.from_mesh(me)
+    if cuts > 0 and bm.edges:
+        bmesh.ops.subdivide_edges(bm, edges=list(bm.edges), cuts=cuts, use_grid_fill=True)
+    bm.normal_update()
+    for v in bm.verts:
+        nz = mathutils.noise.noise(v.co * scale)
+        v.co += v.normal * (nz * strength)
+    bm.to_mesh(me)
+    bm.free()
+    me.update()
+
+
 class RECORTE_OT_corrupt(bpy.types.Operator):
     """Make the selected objects feel WRONG: small random rotations, non-uniform scale and per-vertex
     jitter. The 'start normal, then corrupt' cosmic-horror technique — subtle is scarier."""
@@ -790,26 +879,36 @@ class RECORTE_OT_module(bpy.types.Operator):
     kind: bpy.props.EnumProperty(name="Module", default="CORRIDOR", items=[  # noqa: F821
         ("CORRIDOR", "Corridor 3×3", ""), ("ROOM", "Hollow room", ""), ("PILLAR", "Pillar", ""),
         ("ARCH", "Broken arch", ""), ("STAIRS", "Stairs", ""), ("EYE", "Eye", ""),
-        ("COCOON", "Cocoon", ""), ("WEB", "Web", "")])
+        ("COCOON", "Cocoon", ""), ("WEB", "Web", ""), ("SPIRAL", "Spiral pillar", "")])
     size: bpy.props.IntProperty(name="Size/Length", default=8, min=1, max=64)  # noqa: F821
 
     def execute(self, context):
         s = self.size
-        cursor = context.scene.cursor.location
-        if self.kind in ("EYE", "COCOON"):
+        cur = context.scene.cursor.location
+        if self.kind == "EYE":   # concentric eye: sclera + iris + pupil, each its own block
+            r = max(2.0, s / 2.0)
+            specs = [(r, (0, 0, 0), "minecraft:bone_block", "eye_sclera"),
+                     (r * 0.55, (0, -r * 0.62, 0), "minecraft:warped_wart_block", "eye_iris"),
+                     (r * 0.22, (0, -r * 0.92, 0), "minecraft:black_concrete", "eye_pupil")]
+            for rad, off, blk, nm in specs:
+                try:
+                    bpy.ops.mesh.primitive_uv_sphere_add(radius=rad,
+                        location=(cur[0] + off[0], cur[1] + off[1], cur[2] + off[2]))
+                except Exception:  # noqa: BLE001
+                    break
+                o = context.active_object
+                o.name = nm
+                o["mc_block"] = blk
+            return {"FINISHED"}
+        if self.kind == "COCOON":
             try:
-                bpy.ops.mesh.primitive_uv_sphere_add(radius=max(1.0, s / 2.0), location=cursor)
+                bpy.ops.mesh.primitive_uv_sphere_add(radius=max(1.0, s / 2.0), location=cur)
             except Exception:  # noqa: BLE001
-                self.report({"WARNING"}, "Couldn't add sphere.")
                 return {"CANCELLED"}
             obj = context.active_object
-            if self.kind == "EYE":
-                obj.name = "horror_eye"
-                obj["mc_block"] = "minecraft:sculk"
-            else:
-                obj.name = "horror_cocoon"
-                obj.scale[2] = 2.2   # elongate into a cocoon
-                obj["mc_block"] = "minecraft:bone_block[axis=y]"
+            obj.name = "horror_cocoon"
+            obj.scale[2] = 2.2
+            obj["mc_block"] = "minecraft:bone_block[axis=y]"
             return {"FINISHED"}
         if self.kind == "CORRIDOR":
             v, f = _corridor(s)
@@ -826,6 +925,9 @@ class RECORTE_OT_module(bpy.types.Operator):
         elif self.kind == "WEB":
             v, f = _web(max(4, s))
             block = "minecraft:cobweb"
+        elif self.kind == "SPIRAL":
+            v, f = _spiral_pillar(max(8, s * 2), max(2, s // 3), 2.0)
+            block = "minecraft:basalt[axis=y]"
         else:  # STAIRS
             v, f = _stairs(max(3, s))
             block = "minecraft:polished_blackstone"
@@ -906,6 +1008,62 @@ class RECORTE_OT_generate(bpy.types.Operator):
                     made += 1
         self.report({"INFO"}, "Generated %d modules in collection 'liminal'. Corrupt + Send to Minecraft."
                     % made)
+        return {"FINISHED"}
+
+
+class RECORTE_OT_maze(bpy.types.Operator):
+    """Generate a real LABYRINTH (recursive-backtracker maze) extruded into 3D walls + floor + ceiling,
+    with random loops so corridors don't end normally — the liminal/Backrooms space, by algorithm."""
+    bl_idname = "recorte.maze"
+    bl_label = "Generate maze (liminal)"
+    bl_options = {"REGISTER", "UNDO"}
+    cells: bpy.props.IntProperty(name="Cells", default=10, min=2, max=40)  # noqa: F821
+    cell: bpy.props.IntProperty(name="Corridor width", default=3, min=1, max=8)  # noqa: F821
+    height: bpy.props.IntProperty(name="Wall height", default=5, min=2, max=16)  # noqa: F821
+    loop: bpy.props.FloatProperty(name="Loopiness", default=0.18, min=0.0, max=0.8)  # noqa: F821
+    seed: bpy.props.IntProperty(name="Seed", default=0)  # noqa: F821
+    ceiling: bpy.props.BoolProperty(name="Ceiling", default=True)  # noqa: F821
+
+    def execute(self, context):
+        v, f = _maze(self.cells, self.cells, self.cell, self.height, self.seed, self.loop, self.ceiling)
+        _new_mesh_obj(context, "liminal_maze", v, f, "minecraft:smooth_stone")
+        self.report({"INFO"}, "Maze: %d×%d cells. Try Noise-corrupt + Send." % (self.cells, self.cells))
+        return {"FINISHED"}
+
+
+class RECORTE_OT_penrose(bpy.types.Operator):
+    """The impossible ascending staircase — columns rising around a square loop (Penrose motif)."""
+    bl_idname = "recorte.penrose"
+    bl_label = "Impossible stairs"
+    bl_options = {"REGISTER", "UNDO"}
+    side: bpy.props.IntProperty(name="Side", default=10, min=3, max=40)  # noqa: F821
+    rise: bpy.props.FloatProperty(name="Rise", default=0.7, min=0.1, max=3.0)  # noqa: F821
+
+    def execute(self, context):
+        v, f = _penrose(self.side, self.rise)
+        _new_mesh_obj(context, "impossible_stairs", v, f, "minecraft:polished_blackstone")
+        return {"FINISHED"}
+
+
+class RECORTE_OT_noise(bpy.types.Operator):
+    """Corrupt the selected surfaces with Perlin noise: subdivide, then push vertices along their normals
+    — organic, melting, 'wrong' geometry (not random jitter). Bakes into the blocks on Send."""
+    bl_idname = "recorte.noise"
+    bl_label = "Noise-corrupt surfaces"
+    bl_options = {"REGISTER", "UNDO"}
+    strength: bpy.props.FloatProperty(name="Strength", default=0.7, min=0.0, max=4.0)  # noqa: F821
+    scale: bpy.props.FloatProperty(name="Scale", default=0.25, min=0.02, max=2.0)  # noqa: F821
+    cuts: bpy.props.IntProperty(name="Subdivide", default=2, min=0, max=4)  # noqa: F821
+
+    def execute(self, context):
+        n = 0
+        for obj in [o for o in context.selected_objects if o.type == "MESH"]:
+            try:
+                _noise_displace(obj, self.strength, self.scale, self.cuts)
+                n += 1
+            except Exception:  # noqa: BLE001
+                pass
+        self.report({"INFO"}, "Noise-corrupted %d surface(s)." % n)
         return {"FINISHED"}
 
 
@@ -1156,10 +1314,13 @@ class RECORTE_PT_panel(bpy.types.Panel):
         layout.operator("recorte.send_to_mc", icon="MESH_CUBE")
         layout.label(text="Then in-game: /recorte build")
         layout.separator()
-        layout.label(text="Cosmic-horror kit:")
-        layout.operator("recorte.generate", icon="MOD_BUILD")
+        layout.label(text="Cosmic-horror algorithms:")
+        layout.operator("recorte.maze", icon="MOD_BUILD")
+        layout.operator("recorte.penrose", icon="SORTBYEXT")
+        layout.operator("recorte.noise", icon="MOD_NOISE")
         layout.operator("recorte.concept", icon="HIDE_OFF")
-        layout.operator("recorte.module", icon="MESH_GRID")
+        layout.operator("recorte.generate", icon="MESH_GRID")
+        layout.operator("recorte.module", icon="MESH_CUBE")
         row = layout.row(align=True)
         row.operator("recorte.scatter", icon="MOD_ARRAY", text="Scatter")
         row.operator("recorte.absurd_scale", icon="FULLSCREEN_ENTER", text="Absurd")
@@ -1170,7 +1331,8 @@ class RECORTE_PT_panel(bpy.types.Panel):
 
 classes = (RECORTE_OT_import_latest, RECORTE_OT_ping, RECORTE_OT_activate_anim,
            RECORTE_OT_stack_nla, RECORTE_OT_send_to_mc, RECORTE_OT_corrupt, RECORTE_OT_module,
-           RECORTE_OT_scatter, RECORTE_OT_generate, RECORTE_OT_deform, RECORTE_OT_absurd_scale,
+           RECORTE_OT_scatter, RECORTE_OT_generate, RECORTE_OT_maze, RECORTE_OT_penrose,
+           RECORTE_OT_noise, RECORTE_OT_deform, RECORTE_OT_absurd_scale,
            RECORTE_OT_concept, RECORTE_OT_studio_scene, RECORTE_OT_live, RECORTE_PT_panel)
 
 
