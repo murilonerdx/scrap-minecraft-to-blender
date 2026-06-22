@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Recorte — Minecraft ↔ Blender",
     "author": "murilonerdx",
-    "version": (0, 8, 0),
+    "version": (0, 9, 0),
     "blender": (3, 0, 0),
     "location": "View3D > Sidebar (N) > Recorte",
     "description": "One-click import of the latest Recorte export from a running Minecraft instance.",
@@ -762,6 +762,33 @@ def _web(radius=10, spokes=8, rings=4, thick=0.35):   # a flat spider-web: radia
     return verts, faces
 
 
+def _paint_block(context, gx, gy, gz, block):
+    """Add a 1x1x1 block at grid cell (gx,gy,gz) into the object that holds this block type (one mesh per
+    block id keeps painting cheap and maps cleanly to the palette on Send). Returns the object."""
+    import bmesh
+    key = "paint_" + block.split("[")[0].replace("minecraft:", "").replace(":", "_")
+    obj = bpy.data.objects.get(key)
+    if obj is None or getattr(obj, "type", None) != "MESH":
+        me = bpy.data.meshes.new(key)
+        obj = bpy.data.objects.new(key, me)
+        obj["mc_block"] = block
+        context.scene.collection.objects.link(obj)
+    me = obj.data
+    bm = bmesh.new()
+    bm.from_mesh(me)
+    v, faces = _box_at(int(gx), int(gy), int(gz), 1, 1, 1)
+    bverts = [bm.verts.new(co) for co in v]
+    for face in faces:
+        try:
+            bm.faces.new([bverts[i] for i in face])
+        except Exception:  # noqa: BLE001  (duplicate face = painting over an existing cell)
+            pass
+    bm.to_mesh(me)
+    bm.free()
+    me.update()
+    return obj
+
+
 def _maze(cells_w, cells_h, cell=3, wall_h=4, seed=0, loopiness=0.18, ceiling=True):
     """Recursive-backtracker labyrinth extruded to 3D walls + floor + ceiling. Random loops break the
     'every corridor ends' expectation. Returns (verts, faces)."""
@@ -1009,6 +1036,100 @@ class RECORTE_OT_generate(bpy.types.Operator):
         self.report({"INFO"}, "Generated %d modules in collection 'liminal'. Corrupt + Send to Minecraft."
                     % made)
         return {"FINISHED"}
+
+
+class RECORTE_OT_block_pick(bpy.types.Operator):
+    """Set the active paint block (the quick-pick buttons call this)."""
+    bl_idname = "recorte.block_pick"
+    bl_label = "Pick block"
+    bl_options = {"REGISTER", "UNDO"}
+    block: bpy.props.StringProperty(default="minecraft:stone")  # noqa: F821
+
+    def execute(self, context):
+        context.scene.recorte_block = self.block
+        return {"FINISHED"}
+
+
+class RECORTE_OT_add_block(bpy.types.Operator):
+    """Paint one block at the 3D cursor (snapped to the grid) with the active block. Move the cursor with
+    Shift+Right-click (it snaps onto surfaces, Minecraft-style) and keep adding — the reliable way to
+    paint without a modal."""
+    bl_idname = "recorte.add_block"
+    bl_label = "Paint block at cursor"
+    bl_options = {"REGISTER", "UNDO"}
+
+    def execute(self, context):
+        import math
+        c = context.scene.cursor.location
+        _paint_block(context, math.floor(c.x), math.floor(c.y), math.floor(c.z),
+                     context.scene.recorte_block)
+        return {"FINISHED"}
+
+
+class RECORTE_OT_fill_selection(bpy.types.Operator):
+    """Paint the SELECTION: set every selected mesh object's block to the active block (WorldEdit //set)."""
+    bl_idname = "recorte.fill_selection"
+    bl_label = "Set block on selection"
+    bl_options = {"REGISTER", "UNDO"}
+
+    def execute(self, context):
+        n = 0
+        for o in [o for o in context.selected_objects if o.type == "MESH"]:
+            o["mc_block"] = context.scene.recorte_block
+            n += 1
+        self.report({"INFO"}, "Set %s on %d object(s)." % (context.scene.recorte_block, n))
+        return {"FINISHED"}
+
+
+class RECORTE_OT_paint(bpy.types.Operator):
+    """PAINT MODE: left-click in the 3D view to place the active block next to the face you click (or on
+    the ground), Ctrl+left-click to erase a clicked block's object, Right-click / Esc to finish. Navigate
+    normally while painting."""
+    bl_idname = "recorte.paint"
+    bl_label = "Paint blocks (click)"
+
+    def _cell(self, context, event):
+        import math
+        from bpy_extras import view3d_utils
+        region, rv3d = context.region, context.region_data
+        coord = (event.mouse_region_x, event.mouse_region_y)
+        direction = view3d_utils.region_2d_to_vector_3d(region, rv3d, coord)
+        origin = view3d_utils.region_2d_to_origin_3d(region, rv3d, coord)
+        deps = context.evaluated_depsgraph_get()
+        hit, loc, nrm, _idx, _obj, _m = context.scene.ray_cast(deps, origin, direction)
+        if hit:
+            p = loc + nrm * 0.5
+            return math.floor(p.x), math.floor(p.y), math.floor(p.z), _obj
+        if abs(direction.z) > 1e-6:                  # else drop onto the z=0 ground plane
+            t = -origin.z / direction.z
+            if t > 0:
+                p = origin + direction * t
+                return math.floor(p.x), math.floor(p.y), 0, None
+        return None
+
+    def modal(self, context, event):
+        if event.type == "LEFTMOUSE" and event.value == "PRESS":
+            if context.region and context.region.type == "WINDOW" and context.region_data:
+                cell = self._cell(context, event)
+                if cell:
+                    gx, gy, gz, obj = cell
+                    if event.ctrl and obj is not None and obj.name.startswith("paint_"):
+                        bpy.data.objects.remove(obj, do_unlink=True)   # erase: drop the clicked block object
+                    else:
+                        _paint_block(context, gx, gy, gz, context.scene.recorte_block)
+            return {"RUNNING_MODAL"}
+        if event.type in {"RIGHTMOUSE", "ESC"} and event.value == "PRESS":
+            self.report({"INFO"}, "Paint mode off.")
+            return {"FINISHED"}
+        return {"PASS_THROUGH"}   # let the user orbit/zoom while painting
+
+    def invoke(self, context, event):
+        if context.area is None or context.area.type != "VIEW_3D":
+            self.report({"WARNING"}, "Run this with the mouse over the 3D viewport.")
+            return {"CANCELLED"}
+        context.window_manager.modal_handler_add(self)
+        self.report({"INFO"}, "Paint mode ON — left-click to place, Ctrl+click to erase, Right-click/Esc to stop.")
+        return {"RUNNING_MODAL"}
 
 
 class RECORTE_OT_example(bpy.types.Operator):
@@ -1369,6 +1490,18 @@ class RECORTE_PT_panel(bpy.types.Panel):
         layout.operator("recorte.send_to_mc", icon="MESH_CUBE")
         layout.label(text="Then in-game: /recorte build")
         layout.separator()
+        layout.label(text="Block painter (WorldEdit):")
+        layout.prop(context.scene, "recorte_block", text="")
+        grid = layout.grid_flow(row_major=True, columns=2, align=True)
+        for label, blk in (("Stone", "minecraft:stone"), ("Deepslate", "minecraft:deepslate"),
+                           ("Sculk", "minecraft:sculk"), ("Obsidian", "minecraft:crying_obsidian"),
+                           ("Bone", "minecraft:bone_block"), ("Blackstone", "minecraft:polished_blackstone")):
+            grid.operator("recorte.block_pick", text=label).block = blk
+        layout.operator("recorte.paint", icon="BRUSH_DATA")
+        row = layout.row(align=True)
+        row.operator("recorte.add_block", icon="CURSOR", text="At cursor")
+        row.operator("recorte.fill_selection", icon="CHECKMARK", text="Set on sel.")
+        layout.separator()
         layout.label(text="Cosmic-horror algorithms:")
         layout.operator("recorte.example", icon="OUTLINER_OB_LIGHT")
         layout.operator("recorte.maze", icon="MOD_BUILD")
@@ -1388,7 +1521,8 @@ class RECORTE_PT_panel(bpy.types.Panel):
 classes = (RECORTE_OT_import_latest, RECORTE_OT_ping, RECORTE_OT_activate_anim,
            RECORTE_OT_stack_nla, RECORTE_OT_send_to_mc, RECORTE_OT_corrupt, RECORTE_OT_module,
            RECORTE_OT_scatter, RECORTE_OT_generate, RECORTE_OT_example, RECORTE_OT_maze,
-           RECORTE_OT_penrose, RECORTE_OT_noise, RECORTE_OT_deform, RECORTE_OT_absurd_scale,
+           RECORTE_OT_penrose, RECORTE_OT_noise, RECORTE_OT_block_pick, RECORTE_OT_add_block,
+           RECORTE_OT_fill_selection, RECORTE_OT_paint, RECORTE_OT_deform, RECORTE_OT_absurd_scale,
            RECORTE_OT_concept, RECORTE_OT_studio_scene, RECORTE_OT_live, RECORTE_PT_panel)
 
 
@@ -1402,6 +1536,8 @@ def register():
     bpy.types.Scene.recorte_voxel_solid = bpy.props.BoolProperty(
         name="Solid fill", description="Fill the interior of watertight meshes (off = surface/walls only)",
         default=False)
+    bpy.types.Scene.recorte_block = bpy.props.StringProperty(
+        name="Block", description="Active block to paint (accepts block-states)", default="minecraft:stone")
     for c in classes:
         bpy.utils.register_class(c)
 
