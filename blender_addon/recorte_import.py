@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Recorte — Minecraft ↔ Blender",
     "author": "murilonerdx",
-    "version": (0, 3, 0),
+    "version": (0, 4, 0),
     "blender": (3, 0, 0),
     "location": "View3D > Sidebar (N) > Recorte",
     "description": "One-click import of the latest Recorte export from a running Minecraft instance.",
@@ -676,6 +676,155 @@ class RECORTE_OT_send_to_mc(bpy.types.Operator):
         return {"FINISHED"}
 
 
+# --- Cosmic-horror toolkit: build the "wrong" architecture, then Send to Minecraft -----------------
+def _new_mesh_obj(context, name, verts, faces, block=None):
+    me = bpy.data.meshes.new(name)
+    me.from_pydata(verts, [], faces)
+    me.update()
+    obj = bpy.data.objects.new(name, me)
+    obj.location = context.scene.cursor.location.copy()
+    if block:
+        obj["mc_block"] = block
+    context.scene.collection.objects.link(obj)
+    return obj
+
+
+def _box(w, d, h):
+    v = [(0, 0, 0), (w, 0, 0), (w, d, 0), (0, d, 0), (0, 0, h), (w, 0, h), (w, d, h), (0, d, h)]
+    f = [(0, 1, 2, 3), (4, 5, 6, 7), (0, 1, 5, 4), (1, 2, 6, 5), (2, 3, 7, 6), (3, 0, 4, 7)]
+    return v, f
+
+
+def _corridor(length, w=3, h=3):   # 4 walls along +X, open ends (a hollow tube)
+    v = [(0, 0, 0), (length, 0, 0), (length, w, 0), (0, w, 0),
+         (0, 0, h), (length, 0, h), (length, w, h), (0, w, h)]
+    f = [(0, 1, 2, 3), (4, 5, 6, 7), (0, 1, 5, 4), (3, 2, 6, 7)]
+    return v, f
+
+
+class RECORTE_OT_corrupt(bpy.types.Operator):
+    """Make the selected objects feel WRONG: small random rotations, non-uniform scale and per-vertex
+    jitter. The 'start normal, then corrupt' cosmic-horror technique — subtle is scarier."""
+    bl_idname = "recorte.corrupt"
+    bl_label = "Corrupt selection"
+    bl_options = {"REGISTER", "UNDO"}
+    amount: bpy.props.FloatProperty(name="Amount", default=0.3, min=0.0, max=1.0)  # noqa: F821
+
+    def execute(self, context):
+        import random
+        import math
+        a = self.amount
+        objs = [o for o in context.selected_objects if o.type == "MESH"]
+        for obj in objs:
+            for i in range(3):
+                obj.rotation_euler[i] += math.radians(random.uniform(-12, 12) * a)
+                obj.scale[i] *= 1.0 + random.uniform(-0.25, 0.25) * a
+            for v in obj.data.vertices:
+                v.co.x += random.uniform(-0.18, 0.18) * a
+                v.co.y += random.uniform(-0.18, 0.18) * a
+                v.co.z += random.uniform(-0.18, 0.18) * a
+            obj.data.update()
+        self.report({"INFO"}, "Corrupted %d object(s)." % len(objs))
+        return {"FINISHED"}
+
+
+class RECORTE_OT_module(bpy.types.Operator):
+    """Add a cosmic-horror building module at the 3D cursor (corridor / room / pillar)."""
+    bl_idname = "recorte.module"
+    bl_label = "Add module"
+    bl_options = {"REGISTER", "UNDO"}
+    kind: bpy.props.EnumProperty(name="Module", default="CORRIDOR", items=[  # noqa: F821
+        ("CORRIDOR", "Corridor 3×3", ""), ("ROOM", "Hollow room", ""), ("PILLAR", "Pillar", "")])
+    size: bpy.props.IntProperty(name="Size/Length", default=8, min=1, max=64)  # noqa: F821
+
+    def execute(self, context):
+        s = self.size
+        if self.kind == "CORRIDOR":
+            v, f = _corridor(s)
+        elif self.kind == "ROOM":
+            v, f = _box(s, s, max(3, s - 2))
+        else:
+            v, f = _box(2, 2, s)
+        _new_mesh_obj(context, "horror_" + self.kind.lower(), v, f)
+        return {"FINISHED"}
+
+
+class RECORTE_OT_scatter(bpy.types.Operator):
+    """Duplicate the active object many times with random offset + rotation — repetition and liminal
+    sprawl (the 'forgetting' / 'repetition' concepts)."""
+    bl_idname = "recorte.scatter"
+    bl_label = "Scatter (repeat)"
+    bl_options = {"REGISTER", "UNDO"}
+    count: bpy.props.IntProperty(name="Copies", default=12, min=1, max=200)  # noqa: F821
+    spread: bpy.props.FloatProperty(name="Spread", default=20.0, min=0.0, max=500.0)  # noqa: F821
+    rot: bpy.props.FloatProperty(name="Rotate", default=0.15, min=0.0, max=1.0)  # noqa: F821
+
+    def execute(self, context):
+        import random
+        import math
+        src = context.active_object
+        if src is None or src.type != "MESH":
+            self.report({"WARNING"}, "Select a mesh to scatter.")
+            return {"CANCELLED"}
+        for _ in range(self.count):
+            copy = src.copy()
+            copy.data = src.data  # share the mesh (light); the user can make-single-user if needed
+            copy.location = (src.location[0] + random.uniform(-self.spread, self.spread),
+                             src.location[1] + random.uniform(-self.spread, self.spread),
+                             src.location[2] + random.uniform(-self.spread * 0.3, self.spread * 0.3))
+            for i in range(3):
+                copy.rotation_euler[i] = src.rotation_euler[i] + math.radians(random.uniform(-30, 30) * self.rot)
+            context.scene.collection.objects.link(copy)
+        self.report({"INFO"}, "Scattered %d copies." % self.count)
+        return {"FINISHED"}
+
+
+class RECORTE_OT_generate(bpy.types.Operator):
+    """Rule-based liminal layout: a grid of hollow rooms joined by corridors, each rotated slightly the
+    WRONG way, with random dead-ends — 'no corridor ends normally'. Then Corrupt + Send to Minecraft."""
+    bl_idname = "recorte.generate"
+    bl_label = "Generate liminal layout"
+    bl_options = {"REGISTER", "UNDO"}
+    grid: bpy.props.IntProperty(name="Grid", default=3, min=1, max=8)  # noqa: F821
+    room: bpy.props.IntProperty(name="Room size", default=7, min=3, max=24)  # noqa: F821
+    wrong: bpy.props.FloatProperty(name="Wrongness", default=0.4, min=0.0, max=1.0)  # noqa: F821
+
+    def execute(self, context):
+        import random
+        import math
+        spacing = self.room + 4
+        coll = bpy.data.collections.new("liminal")
+        context.scene.collection.children.link(coll)
+        base = context.scene.cursor.location.copy()
+        made = 0
+        for gx in range(self.grid):
+            for gy in range(self.grid):
+                rv, rf = _box(self.room, self.room, max(3, self.room - 2))
+                me = bpy.data.meshes.new("room")
+                me.from_pydata(rv, [], rf)
+                me.update()
+                o = bpy.data.objects.new("room_%d_%d" % (gx, gy), me)
+                o.location = (base[0] + gx * spacing, base[1] + gy * spacing, base[2])
+                o.rotation_euler[2] = math.radians(random.uniform(-15, 15) * self.wrong)
+                coll.objects.link(o)
+                made += 1
+                # a corridor toward +X neighbour (random dead-ends: sometimes it leads nowhere)
+                if gx < self.grid - 1 or random.random() < 0.5 * self.wrong:
+                    cv, cf = _corridor(4)
+                    cme = bpy.data.meshes.new("corr")
+                    cme.from_pydata(cv, [], cf)
+                    cme.update()
+                    co = bpy.data.objects.new("corr_%d_%d" % (gx, gy), cme)
+                    co.location = (base[0] + gx * spacing + self.room,
+                                   base[1] + gy * spacing + self.room // 2 - 1, base[2])
+                    co.rotation_euler[1] = math.radians(random.uniform(-8, 8) * self.wrong)  # slight incline
+                    coll.objects.link(co)
+                    made += 1
+        self.report({"INFO"}, "Generated %d modules in collection 'liminal'. Corrupt + Send to Minecraft."
+                    % made)
+        return {"FINISHED"}
+
+
 class RECORTE_OT_studio_scene(bpy.types.Operator):
     """Make the current scene render-ready (studio template #20): active camera, fps + resolution,
     faithful colour management, sky-dome-safe camera clipping and EEVEE glow. 'Import latest' does this
@@ -812,10 +961,17 @@ class RECORTE_PT_panel(bpy.types.Panel):
         layout.prop(context.scene, "recorte_voxel_solid")
         layout.operator("recorte.send_to_mc", icon="MESH_CUBE")
         layout.label(text="Then in-game: /recorte build")
+        layout.separator()
+        layout.label(text="Cosmic-horror kit:")
+        layout.operator("recorte.generate", icon="MOD_BUILD")
+        layout.operator("recorte.module", icon="MESH_GRID")
+        layout.operator("recorte.scatter", icon="MOD_ARRAY")
+        layout.operator("recorte.corrupt", icon="MOD_NOISE")
 
 
 classes = (RECORTE_OT_import_latest, RECORTE_OT_ping, RECORTE_OT_activate_anim,
-           RECORTE_OT_stack_nla, RECORTE_OT_send_to_mc, RECORTE_OT_studio_scene,
+           RECORTE_OT_stack_nla, RECORTE_OT_send_to_mc, RECORTE_OT_corrupt, RECORTE_OT_module,
+           RECORTE_OT_scatter, RECORTE_OT_generate, RECORTE_OT_studio_scene,
            RECORTE_OT_live, RECORTE_PT_panel)
 
 

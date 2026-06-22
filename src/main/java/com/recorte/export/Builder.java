@@ -82,12 +82,21 @@ public final class Builder {
         Recorte.LOGGER.info("Build pasted: {} blocks, {} skipped, at {}", p, sk, anchor);
     }
 
+    /** Resolves a palette id to a BlockState, honouring block-state properties so oriented blocks work,
+     *  e.g. {@code minecraft:oak_log[axis=x]} or {@code minecraft:oak_stairs[facing=east,half=top]}.
+     *  Falls back to the default state for a plain id (and strips any {@code [..]} if the parse fails). */
     private static BlockState resolve(String id) {
         try {
-            Block block = ForgeRegistries.BLOCKS.getValue(new ResourceLocation(id));
-            return block != null ? block.defaultBlockState() : null;
+            return net.minecraft.commands.arguments.blocks.BlockStateParser.parseForBlock(
+                    net.minecraft.core.registries.BuiltInRegistries.BLOCK.asLookup(), id, false).blockState();
         } catch (Throwable t) {
-            return null;
+            try {
+                String plain = id.contains("[") ? id.substring(0, id.indexOf('[')) : id;
+                Block block = ForgeRegistries.BLOCKS.getValue(new ResourceLocation(plain));
+                return block != null ? block.defaultBlockState() : null;
+            } catch (Throwable t2) {
+                return null;
+            }
         }
     }
 
