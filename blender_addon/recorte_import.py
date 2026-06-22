@@ -1,7 +1,7 @@
 bl_info = {
-    "name": "Recorte — Import from Minecraft",
+    "name": "Recorte — Minecraft ↔ Blender",
     "author": "murilonerdx",
-    "version": (0, 2, 0),
+    "version": (0, 3, 0),
     "blender": (3, 0, 0),
     "location": "View3D > Sidebar (N) > Recorte",
     "description": "One-click import of the latest Recorte export from a running Minecraft instance.",
@@ -26,6 +26,77 @@ def _fetch(port, path):
     url = "http://127.0.0.1:%d/%s" % (port, path)
     with _opener.open(url, timeout=5) as r:
         return r.read()
+
+
+def _post(port, path, data_bytes):
+    req = urllib.request.Request("http://127.0.0.1:%d/%s" % (port, path), data=data_bytes, method="POST")
+    with _opener.open(req, timeout=15) as r:
+        return r.read()
+
+
+# ---------------------------------------------------------------------------------------------------
+# Blender -> Minecraft: voxelize selected meshes and paste them WorldEdit-style (the reverse pipeline)
+# ---------------------------------------------------------------------------------------------------
+def _voxelize_object(context, obj, solid, palette, block_index, blocks, bounds):
+    """Voxelize one mesh into the shared blocks list. 1 Blender unit = 1 block; Blender Z-up becomes
+    Minecraft Y-up. Surface voxels (a wall passes near the cell) always count; with `solid`, interior
+    cells (odd ray crossings) count too. The block id comes from the object's `mc_block` custom property
+    (default minecraft:stone). Updates `bounds` = [minx,miny,minz] across all objects (Minecraft axes)."""
+    import mathutils
+    from mathutils.bvhtree import BVHTree
+
+    deps = context.evaluated_depsgraph_get()
+    obj_eval = obj.evaluated_get(deps)
+    mesh = obj_eval.to_mesh()
+    try:
+        mw = obj.matrix_world
+        verts = [mw @ v.co for v in mesh.vertices]
+        if not verts:
+            return
+        polys = [tuple(p.vertices) for p in mesh.polygons]
+        if not polys:
+            return
+        bvh = BVHTree.FromPolygons(verts, polys)
+    finally:
+        obj_eval.to_mesh_clear()
+
+    block = str(obj.get("mc_block", "minecraft:stone")) or "minecraft:stone"
+    if block not in block_index:
+        block_index[block] = len(palette)
+        palette.append(block)
+    bi = block_index[block]
+
+    xs = [v.x for v in verts]
+    ys = [v.y for v in verts]
+    zs = [v.z for v in verts]
+    import math
+    lo = (math.floor(min(xs)), math.floor(min(ys)), math.floor(min(zs)))
+    hi = (math.ceil(max(xs)), math.ceil(max(ys)), math.ceil(max(zs)))
+    surf = 0.6     # a wall within 0.6 of the cell centre -> a block (~1-block-thick shells)
+    plus_x = mathutils.Vector((1.0, 0.0, 0.0))
+
+    for bx in range(lo[0], hi[0] + 1):
+        for by in range(lo[1], hi[1] + 1):
+            for bz in range(lo[2], hi[2] + 1):
+                c = mathutils.Vector((bx + 0.5, by + 0.5, bz + 0.5))
+                hit = bvh.find_nearest(c)
+                is_block = hit is not None and hit[3] is not None and hit[3] <= surf
+                if not is_block and solid:
+                    crossings, origin = 0, c.copy()
+                    for _ in range(128):
+                        loc = bvh.ray_cast(origin, plus_x)[0]
+                        if loc is None:
+                            break
+                        crossings += 1
+                        origin = loc + plus_x * 1e-4
+                    is_block = (crossings % 2) == 1
+                if is_block:
+                    # Blender (x,y,z) Z-up -> Minecraft (x, z, y) Y-up
+                    mx, my, mz = bx, bz, by
+                    blocks.append((mx, my, mz, bi))
+                    bounds[0] = min(bounds[0], mx)
+                    bounds[1] = min(bounds[1], my)
+                    bounds[2] = min(bounds[2], mz)
 
 
 def _safe(label, fn, *args):
@@ -563,6 +634,48 @@ class RECORTE_OT_activate_anim(bpy.types.Operator):
         return {"FINISHED"}
 
 
+class RECORTE_OT_send_to_mc(bpy.types.Operator):
+    """Voxelize the selected mesh objects and send them to the running Minecraft (Blender -> Minecraft).
+    1 Blender unit = 1 block; each object's `mc_block` custom property picks the block (default stone).
+    Then run /recorte build in-game to paste the structure at your feet."""
+    bl_idname = "recorte.send_to_mc"
+    bl_label = "Send to Minecraft"
+    bl_options = {"REGISTER"}
+
+    def execute(self, context):
+        objs = [o for o in (context.selected_objects or list(context.scene.objects)) if o.type == "MESH"]
+        if not objs:
+            self.report({"WARNING"}, "Select at least one mesh object to send.")
+            return {"CANCELLED"}
+        import json as _json
+        palette, block_index, blocks = [], {}, []
+        bounds = [10 ** 9, 10 ** 9, 10 ** 9]
+        solid = bool(getattr(context.scene, "recorte_voxel_solid", False))
+        for obj in objs:
+            try:
+                _voxelize_object(context, obj, solid, palette, block_index, blocks, bounds)
+            except Exception as e:  # noqa: BLE001
+                print("[Recorte] voxelize failed for %s: %r" % (obj.name, e))
+        if not blocks:
+            self.report({"WARNING"}, "No blocks produced — meshes may be empty or too thin for the grid.")
+            return {"CANCELLED"}
+        bx, by, bz = bounds   # normalize so the structure's min corner is 0,0,0 (pastes at the player's feet)
+        cells = {}
+        for x, y, z, i in blocks:
+            cells[(x - bx, y - by, z - bz)] = i   # de-dup overlapping cells, last write wins
+        rows = [[x, y, z, i] for (x, y, z), i in cells.items()]
+        payload = {"name": (context.scene.name or "blender")[:40], "palette": palette, "blocks": rows}
+        port = context.scene.recorte_port
+        try:
+            _post(port, "build", _json.dumps(payload).encode("utf-8"))
+        except Exception as e:  # noqa: BLE001
+            self.report({"ERROR"}, "Couldn't reach Minecraft on port %d (%s). Is the game running?" % (port, e))
+            return {"CANCELLED"}
+        self.report({"INFO"}, "Sent %d blocks (%d block type(s)). In-game: run /recorte build to paste."
+                    % (len(rows), len(palette)))
+        return {"FINISHED"}
+
+
 class RECORTE_OT_studio_scene(bpy.types.Operator):
     """Make the current scene render-ready (studio template #20): active camera, fps + resolution,
     faithful colour management, sky-dome-safe camera clipping and EEVEE glow. 'Import latest' does this
@@ -694,10 +807,16 @@ class RECORTE_PT_panel(bpy.types.Panel):
         else:
             layout.operator("recorte.live", icon="PLAY")
         layout.label(text="In-game: /recorte live (or panel button)")
+        layout.separator()
+        layout.label(text="Build (Blender → Minecraft):")
+        layout.prop(context.scene, "recorte_voxel_solid")
+        layout.operator("recorte.send_to_mc", icon="MESH_CUBE")
+        layout.label(text="Then in-game: /recorte build")
 
 
 classes = (RECORTE_OT_import_latest, RECORTE_OT_ping, RECORTE_OT_activate_anim,
-           RECORTE_OT_stack_nla, RECORTE_OT_studio_scene, RECORTE_OT_live, RECORTE_PT_panel)
+           RECORTE_OT_stack_nla, RECORTE_OT_send_to_mc, RECORTE_OT_studio_scene,
+           RECORTE_OT_live, RECORTE_PT_panel)
 
 
 def register():
@@ -707,6 +826,9 @@ def register():
     bpy.types.Scene.recorte_studio_template = bpy.props.BoolProperty(
         name="Studio scene", description="Set up a render-ready scene (camera, fps, colour, glow) on import",
         default=True)
+    bpy.types.Scene.recorte_voxel_solid = bpy.props.BoolProperty(
+        name="Solid fill", description="Fill the interior of watertight meshes (off = surface/walls only)",
+        default=False)
     for c in classes:
         bpy.utils.register_class(c)
 
@@ -717,6 +839,7 @@ def unregister():
     del bpy.types.Scene.recorte_port
     del bpy.types.Scene.recorte_live
     del bpy.types.Scene.recorte_studio_template
+    del bpy.types.Scene.recorte_voxel_solid
 
 
 if __name__ == "__main__":

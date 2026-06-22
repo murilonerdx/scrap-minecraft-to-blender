@@ -4,6 +4,10 @@ Ideas to grow Recorte into a complete **Minecraft → Blender** bridge, focused 
 cinematics**. ✅ marks what already exists. (Versão em português abaixo / Portuguese version below.)
 
 ## ✅ Already works
+- ✅ **Build: Blender → Minecraft** — voxelize selected Blender meshes (1 unit = 1 block, `mc_block`
+  custom property per object, surface or solid fill) and **paste them WorldEdit-style** into a
+  single-player world with `/recorte build`. The reverse pipeline, for cosmic-horror / liminal builds.
+  Next: block-state palettes, a procedural "wrongness" toolkit (corridor modules, deformers, scatter).
 - Player (body, skin, 2nd layer, **armor + Curios/Artifacts**) with a skeleton.
 - Mobs with bones (vanilla) + capture fallback (GeckoLib).
 - Items, blocks and a **whole mod** in batch.

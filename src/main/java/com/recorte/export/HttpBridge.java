@@ -2,6 +2,7 @@ package com.recorte.export;
 
 import com.recorte.Recorte;
 import com.sun.net.httpserver.HttpServer;
+import net.minecraft.client.Minecraft;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -105,6 +106,20 @@ public final class HttpBridge {
                     return;
                 }
                 respond(exchange, 200, "image/png", frames.get(idx));
+            });
+            // Blender → Minecraft: receive a voxel structure to paste WorldEdit-style (POST body = JSON)
+            server.createContext("/build", exchange -> {
+                if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
+                    respond(exchange, 405, "text/plain", "POST a structure".getBytes());
+                    return;
+                }
+                byte[] body;
+                try (java.io.InputStream in = exchange.getRequestBody()) {
+                    body = in.readAllBytes();
+                }
+                String json = new String(body, java.nio.charset.StandardCharsets.UTF_8);
+                Minecraft.getInstance().execute(() -> Builder.receive(json));   // hop to the client thread
+                respond(exchange, 200, "text/plain", "received".getBytes());
             });
             server.createContext("/latest", exchange -> {
                 Path glb = lastGlb;

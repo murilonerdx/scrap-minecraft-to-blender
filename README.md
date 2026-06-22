@@ -194,6 +194,21 @@ scene** button re-applies it).
 link** in the add-on — the mod auto-exports a snapshot (**the world around you + nearby entities**)
 every ~2s and Blender re-imports it automatically, so the whole scene updates as you play.
 
+## 🧱 Build: Blender → Minecraft (voxelize & paste, WorldEdit-style)
+
+The reverse pipeline — model in Blender, paste it into the world as blocks:
+
+1. Model at **1 Blender unit = 1 block** (Z-up). Set each object's block by adding a **custom property
+   `mc_block`** (e.g. `minecraft:obsidian`); default is `minecraft:stone`.
+2. Select the meshes → in the **Recorte** panel click **Send to Minecraft** (tick **Solid fill** to fill
+   watertight meshes; off = surface/walls only — ideal for rooms and corridors).
+3. In-game, stand where you want it and run **`/recorte build`** — the structure pastes at your feet
+   (`/recorte build clear` discards a pending one). Single-player only; blocks are placed without
+   neighbour physics so the structure doesn't collapse.
+
+Great for **cosmic-horror / liminal builds**: model the *wrong* architecture in Blender (impossible
+geometry, absurd scales, twisted corridors via Simple Deform/Lattice) and drop it straight into Minecraft.
+
 ---
 
 ## 🧠 How it works

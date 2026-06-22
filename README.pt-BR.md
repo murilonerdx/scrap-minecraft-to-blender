@@ -180,6 +180,21 @@ câmera ativa, fps/resolução, color management fiel, clipping seguro pro domo 
 botão **Setup studio scene** reaplica). **Live:** rode `/recorte live` e clique **Start Live link** — o
 mod auto-exporta a cena ao redor a cada ~2s e o Blender re-importa sozinho.
 
+## 🧱 Construir: Blender → Minecraft (voxelizar e colar, estilo WorldEdit)
+
+O caminho inverso — modele no Blender e cole no mundo como blocos:
+
+1. Modele em **1 unidade do Blender = 1 bloco** (Z pra cima). Defina o bloco de cada objeto com uma
+   **propriedade customizada `mc_block`** (ex.: `minecraft:obsidian`); o padrão é `minecraft:stone`.
+2. Selecione as malhas → no painel **Recorte** clique **Send to Minecraft** (marque **Solid fill** pra
+   preencher malhas fechadas; desligado = só superfície/paredes — ideal pra salas e corredores).
+3. No jogo, fique onde quer e rode **`/recorte build`** — a estrutura cola nos seus pés
+   (`/recorte build clear` descarta uma pendente). Só single-player; os blocos são colados sem física de
+   vizinhança, então a estrutura não desaba.
+
+Ótimo pra **builds de horror cósmico / liminar**: modele a arquitetura *errada* no Blender (geometria
+impossível, escalas absurdas, corredores tortos via Simple Deform/Lattice) e jogue direto no Minecraft.
+
 ---
 
 ## 🧠 Como funciona

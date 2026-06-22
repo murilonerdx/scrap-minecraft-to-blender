@@ -38,6 +38,7 @@ public final class GltfSelfTest {
         assertFinite();
         assertNearestBone();
         assertNanRotationSanitized();
+        assertBuildStructure();
 
         Ir.Model model = buildRig();
 
@@ -365,6 +366,26 @@ public final class GltfSelfTest {
             throw new IllegalStateException("FAIL: NLA names not unique: " + out);
         }
         System.out.println("  nla-names OK: collisions de-duplicated, order preserved -> " + out);
+    }
+
+    /** Blender→Minecraft voxel structure (the build tool): JSON parse + validation. */
+    private static void assertBuildStructure() {
+        BuildStructure ok = BuildStructure.fromJson(
+                "{\"name\":\"shrine\",\"palette\":[\"minecraft:stone\",\"minecraft:obsidian\"],"
+                + "\"blocks\":[[0,0,0,0],[1,2,3,1]]}");
+        if (ok == null || ok.size() != 2 || !ok.name.equals("shrine")
+                || !ok.blockId(ok.blocks[1]).equals("minecraft:obsidian")) {
+            throw new IllegalStateException("FAIL: valid structure parse");
+        }
+        // rejects: empty, missing palette, out-of-range index, malformed row
+        if (BuildStructure.fromJson("{\"palette\":[\"minecraft:stone\"],\"blocks\":[]}") != null
+                || BuildStructure.fromJson("{\"blocks\":[[0,0,0,0]]}") != null
+                || BuildStructure.fromJson("{\"palette\":[\"minecraft:stone\"],\"blocks\":[[0,0,0,5]]}") != null
+                || BuildStructure.fromJson("{\"palette\":[\"minecraft:stone\"],\"blocks\":[[0,0]]}") != null
+                || BuildStructure.fromJson("not json") != null) {
+            throw new IllegalStateException("FAIL: invalid structures should parse to null");
+        }
+        System.out.println("  build-structure OK: valid parsed, empty/bad-index/malformed rejected");
     }
 
     /** A NaN rotation key (degenerate camera/limb) must be sanitised so the animation never carries NaN. */
