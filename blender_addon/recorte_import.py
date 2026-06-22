@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Recorte — Minecraft ↔ Blender",
     "author": "murilonerdx",
-    "version": (0, 5, 0),
+    "version": (0, 6, 0),
     "blender": (3, 0, 0),
     "location": "View3D > Sidebar (N) > Recorte",
     "description": "One-click import of the latest Recorte export from a running Minecraft instance.",
@@ -730,6 +730,31 @@ def _stairs(steps=8, run=1, width=3, rise=1):   # a solid staircase profile
     return _combine([_box_at(i * run, 0, 0, run, width, (i + 1) * rise) for i in range(steps)])
 
 
+def _web(radius=10, spokes=8, rings=4, thick=0.35):   # a flat spider-web: radial spokes + ring chords
+    import math
+    verts, faces = [], []
+
+    def strip(x0, y0, x1, y1):
+        dx, dy = x1 - x0, y1 - y0
+        ln = math.hypot(dx, dy) or 1.0
+        px, py = -dy / ln * thick, dx / ln * thick   # in-plane perpendicular for thickness
+        b = len(verts)
+        verts.extend([(x0 - px, y0 - py, 0), (x1 - px, y1 - py, 0),
+                      (x1 + px, y1 + py, 0), (x0 + px, y0 + py, 0)])
+        faces.append((b, b + 1, b + 2, b + 3))
+
+    for s in range(spokes):
+        a = 2 * math.pi * s / spokes
+        strip(0, 0, math.cos(a) * radius, math.sin(a) * radius)
+    for r in range(1, rings + 1):
+        rad = radius * r / rings
+        for s in range(spokes):
+            a0 = 2 * math.pi * s / spokes
+            a1 = 2 * math.pi * (s + 1) / spokes
+            strip(math.cos(a0) * rad, math.sin(a0) * rad, math.cos(a1) * rad, math.sin(a1) * rad)
+    return verts, faces
+
+
 class RECORTE_OT_corrupt(bpy.types.Operator):
     """Make the selected objects feel WRONG: small random rotations, non-uniform scale and per-vertex
     jitter. The 'start normal, then corrupt' cosmic-horror technique — subtle is scarier."""
@@ -765,7 +790,7 @@ class RECORTE_OT_module(bpy.types.Operator):
     kind: bpy.props.EnumProperty(name="Module", default="CORRIDOR", items=[  # noqa: F821
         ("CORRIDOR", "Corridor 3×3", ""), ("ROOM", "Hollow room", ""), ("PILLAR", "Pillar", ""),
         ("ARCH", "Broken arch", ""), ("STAIRS", "Stairs", ""), ("EYE", "Eye", ""),
-        ("COCOON", "Cocoon", "")])
+        ("COCOON", "Cocoon", ""), ("WEB", "Web", "")])
     size: bpy.props.IntProperty(name="Size/Length", default=8, min=1, max=64)  # noqa: F821
 
     def execute(self, context):
@@ -798,6 +823,9 @@ class RECORTE_OT_module(bpy.types.Operator):
         elif self.kind == "ARCH":
             v, f = _arch(max(4, s), max(5, s), 2, 1)
             block = "minecraft:cracked_deepslate_bricks"
+        elif self.kind == "WEB":
+            v, f = _web(max(4, s))
+            block = "minecraft:cobweb"
         else:  # STAIRS
             v, f = _stairs(max(3, s))
             block = "minecraft:polished_blackstone"

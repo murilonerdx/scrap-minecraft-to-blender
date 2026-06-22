@@ -192,8 +192,17 @@ O caminho inverso — modele no Blender e cole no mundo como blocos:
    (`/recorte build clear` descarta uma pendente). Só single-player; os blocos são colados sem física de
    vizinhança, então a estrutura não desaba.
 
-Ótimo pra **builds de horror cósmico / liminar**: modele a arquitetura *errada* no Blender (geometria
-impossível, escalas absurdas, corredores tortos via Simple Deform/Lattice) e jogue direto no Minecraft.
+Ótimo pra **builds de horror cósmico / liminar**: modele a arquitetura *errada* no Blender e jogue
+direto no Minecraft. O painel traz um **kit de horror cósmico** pra facilitar a parte *errada*:
+
+- **Generate liminal layout** — grade de salas + corredores, girados pro lado errado, com becos sem saída.
+- **Concept** — construa por ideia: *Observação* (olhos convergindo em você), *Repetição*, *Vazio*.
+- **Module** — corredor · sala · pilar · arco quebrado · escada · olho · casulo · teia (cada um com bloco
+  temático).
+- **Deform** (twist/bend/taper) · **Absurd scale** · **Scatter** · **Corrupt** (rotação/jitter aleatórios).
+
+Cada bloco (`mc_block`) aceita **block-states** completos — `minecraft:basalt[axis=y]`,
+`minecraft:oak_stairs[facing=east,half=top]` — pros blocos orientados e *errados* que o horror precisa.
 
 ---
 

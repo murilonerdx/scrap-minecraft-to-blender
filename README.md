@@ -206,8 +206,17 @@ The reverse pipeline — model in Blender, paste it into the world as blocks:
    (`/recorte build clear` discards a pending one). Single-player only; blocks are placed without
    neighbour physics so the structure doesn't collapse.
 
-Great for **cosmic-horror / liminal builds**: model the *wrong* architecture in Blender (impossible
-geometry, absurd scales, twisted corridors via Simple Deform/Lattice) and drop it straight into Minecraft.
+Great for **cosmic-horror / liminal builds**: model the *wrong* architecture in Blender and drop it
+straight into Minecraft. The panel ships a **cosmic-horror kit** to make the *wrong* part easy:
+
+- **Generate liminal layout** — a grid of rooms + corridors, rotated the wrong way, with dead-ends.
+- **Concept** — build by idea: *Observation* (eyes converging on you), *Repetition*, *Void*.
+- **Module** — corridor · room · pillar · broken arch · stairs · eye · cocoon · web (each with a
+  thematic block).
+- **Deform** (twist/bend/taper) · **Absurd scale** · **Scatter** · **Corrupt** (random rotation/jitter).
+
+Each block id (`mc_block`) accepts full **block-states** — `minecraft:basalt[axis=y]`,
+`minecraft:oak_stairs[facing=east,half=top]` — for the oriented, *wrong* blocks horror architecture needs.
 
 ---
 
